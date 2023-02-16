@@ -1,0 +1,26 @@
+To add:
+• Text
+• Images
+• Center modes
+• Gradient fill & stroke
+• Colorspaces
+• Imagedata
+• Get function
+• Curve vertex (Catmull-Rom spline to cubic bezier)
+• Finish DVector
+• Blendcolor
+• Keyboard events
+• Mouse events
+• Mouse & pmouse
+• Noise
+• mag & norm
+• QUARTER_PI constant
+• Fonts
+• Filters
+• Cursor
+
+Possibly to add:
+• Transformations from point for ease of use 
+• Store shapes in variables, maybe DShape
+• println-like console
+• Font library for Google Fonts
