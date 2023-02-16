@@ -45,14 +45,17 @@
         stroke(0);
         fill(255, 0, 255);
         beginShape();
-        beginShape();
         vertex(250, 150);
         bezierVertex(350, 80, 300, 20, 200, 100);
         bezierVertex(85, 30, 40, 80, 120, 150);
         bezierVertex(50, 250, 100, 300, 202, 200);
         bezierVertex(350, 350, 350, 200, 250, 150);
         endShape();
-        endShape(CLOSE);
+
+        fill(0);
+        noStroke();
+        textSize(30);
+        text("Testing!", 300, 50);
     </script>
 </body>
 
