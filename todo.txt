@@ -1,5 +1,4 @@
 To add:
-• Text
 • Images
 • Center modes
 • Gradient fill & stroke
@@ -13,10 +12,10 @@ To add:
 • Mouse events
 • Mouse & pmouse
 • Noise
-• Fonts
 • Filters
 • Cursor
 • DImage object
+• Errors for 2 beginShapes in a row
 
 Possibly to add:
 • Transformations from point for ease of use 
