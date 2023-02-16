@@ -66,7 +66,9 @@ Dark.constants = {
     "CURVE": 5,
     "BEZIER": 6,
     "CLOSE": 7,
-    "OPEN": 8
+    "OPEN": 8,
+    "CENTER": 9,
+    "CORNER": 10
 };
 
 // Add constants to window
@@ -204,9 +206,32 @@ var random = function(...args) {
     }
 };
 
+var cursor = function(type) {
+    Dark.settings.cursor = type;
+    Dark.canvas.style.cursor = type;
+};
+
+var loop = function() {
+    Dark.settings.looping = true;
+};
+
+var noLoop = function() {
+    Dark.settings.looping = false;
+};
+
 var frameRate = function(desiredFPS) {
     Dark.settings.frameStep = 1000 / desiredFPS;
 };
+
+var enableContextMenu = function() {
+    Dark.settings.contextMenu = true;
+    Dark.canvas.oncontextmenu = true;
+}
+
+var disableContextMenu = function() {
+    Dark.settings.contextMenu = false;
+    Dark.canvas.oncontextmenu = false;
+}
 
 // Debugging
 var format = function(obj) {
@@ -341,6 +366,14 @@ var angleMode = function(mode) {
     }
 };
 
+var ellipseMode = function(type = CENTER) {
+    Dark.settings.ellipseMode = type;
+};
+
+var rectMode = function(type = CORNER) {
+    Dark.settings.rectMode = type;
+};
+
 // Transformations
 var pushMatrix = function() {
     if(Dark.transforms.length > Dark.maxTransforms) {
@@ -388,23 +421,34 @@ var skew = function(h, v = 0) {
 
 // Shapes
 var rect = function(x, y, width, height) {
+    Dark.ctx.beginPath();
+    Dark.ctx.save();
+    if(Dark.settings.rectMode == CENTER) Dark.ctx.translate(- width / 2, - height / 2);
     Dark.ctx.rect(x, y, width, height);
     Dark.ctx.fill();
     Dark.ctx.stroke();
+    Dark.ctx.restore();
 };
 
 var ellipse = function(x, y, width, height) {
     Dark.ctx.beginPath();
+    Dark.ctx.save();
+    if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(width / 2, height / 2);
+    Dark.ctx.beginPath();
     Dark.ctx.ellipse(x, y, width / 2, height / 2, 0, 0, TAU, false);
     Dark.ctx.fill();
     Dark.ctx.stroke();
+    Dark.ctx.restore();
 };
 
 var arc = function(x, y, width, height, start, stop) {
+    Dark.ctx.save();
+    if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(width / 2, height / 2);
     Dark.ctx.beginPath();
     Dark.ctx.ellipse(x, y, width / 2, height / 2, 0, start, stop, false);
     Dark.ctx.fill();
     Dark.ctx.stroke();
+    Dark.ctx.restore();
 };
 
 var line = function(x1, y1, x2, y2) {
@@ -417,21 +461,19 @@ var line = function(x1, y1, x2, y2) {
 var point = function(x, y) {
     Dark.ctx.save();
     Dark.ctx.fillStyle = "rgba(0, 0, 0, 1)";
-    if(Dark.settings.strokeWeight > 1) {
-        Dark.ctx.beginPath();
-        Dark.ctx.arc(x, y, Dark.settings.strokeWeight / 2, 0, TAU);
-    } else {
-        Dark.ctx.rect(x, y, 1, 1);
-    }
+    if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(width / 2, height / 2);
     Dark.ctx.fill();
     Dark.ctx.restore();
 };
 
 var circle = function(x, y, radius) {
+    Dark.ctx.save();
+    if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(radius, radius);
     Dark.ctx.beginPath();
     Dark.ctx.arc(x, y, radius, 0, TAU);
     Dark.ctx.fill();
     Dark.ctx.stroke();
+    Dark.ctx.restore();
 };
 
 var square = function(x, y, side) {
@@ -539,6 +581,8 @@ var bezier = function(x1, y1, cx1, cy1, cx2, cy2, x2, y2) {
 // Text
 var textSize = function(size) {
     Dark.settings.textSize = size;
+    Dark.settings.font.size = size;
+    Dark.ctx.font = Dark.settings.font.toString();
 };
 
 var textFont = function(font) {
@@ -908,10 +952,12 @@ var DFont = function(str) {
         }
     }
 };
+DFont.parse = function(str) {
+    return new DFont(str);
+};
 DFont.prototype.toString = function() {
     return this.style + " " + this.weight + " " + this.variant + " " + this.size + "px " + this.family;
 };
-DFont.maxParameters = 11;
 DFont.weights = [
     "bold",
     "bolder",
@@ -940,11 +986,14 @@ angleMode(DEGREES);
 frameRate(60);
 textFont("12px Arial");
 
+Dark.settings.cursor = "auto";
+Dark.settings.looping = true;
+
 // Draw function
 Dark.raf = function(time) {
     const deltaFrame = time - Dark.lastFrame;
     const deltaTime = time - Dark.lastTime;
-    if(deltaFrame > Dark.settings.frameStep - deltaTime / 2) {
+    if(deltaFrame > Dark.settings.frameStep - deltaTime / 2 && Dark.settings.looping) {
         dt = deltaFrame;
         fps = 1000 / dt;
         draw();
