@@ -1,6 +1,5 @@
 To add:
 • Images
-• Center modes
 • Gradient fill & stroke
 • Colorspaces
 • Imagedata
