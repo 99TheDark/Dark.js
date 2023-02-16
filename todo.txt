@@ -13,9 +13,9 @@ To add:
 • Mouse & pmouse
 • Noise
 • Filters
-• Cursor
 • DImage object
 • Errors for 2 beginShapes in a row
+• Cursor lock function — lock()
 
 Possibly to add:
 • Transformations from point for ease of use 
