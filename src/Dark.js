@@ -20,23 +20,6 @@ var Dark = {
     */
 };
 
-// Constants
-const
-    DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-    PI = Math.PI,
-    HALF_PI = Math.PI / 2,
-    E = Math.E,
-    PHI = Math.PHI,
-    TAU = Math.PI * 2,
-    ROUND = 0,
-    FLAT = 1,
-    DEGREES = 2,
-    RADIANS = 3,
-    VERTEX = 4,
-    CURVE = 5,
-    BEZIER = 6,
-    CLOSE = 7
-
 // Create default canvas
 Dark.canvas = document.createElement("canvas");
 Dark.canvas.id = "Dark-default-canvas";
@@ -66,22 +49,29 @@ var frameCount = 0;
 var fps = 60;
 var draw = () => {};
 
+// Constants
 Dark.constants = {
-    "DAYS": DAYS,
-    "PI": PI,
-    "HALF_PI": HALF_PI,
-    "E": E,
-    "PHI": PHI,
-    "TAU": TAU,
-    "ROUND": ROUND,
-    "FLAT": FLAT,
-    "DEGREES": DEGREES,
-    "RADIANS": RADIANS,
-    "VERTEX": VERTEX,
-    "CURVE": CURVE,
-    "BEZIER": BEZIER,
-    "CLOSE": CLOSE
+    "DAYS": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    "PI": Math.PI,
+    "HALF_PI": Math.PI / 2,
+    "QUARTER_PI": Math.PI / 4,
+    "E": Math.E,
+    "PHI": Math.PHI,
+    "TAU": Math.PI * 2,
+    "ROUND": 0,
+    "FLAT": 1,
+    "DEGREES": 2,
+    "RADIANS": 3,
+    "VERTEX": 4,
+    "CURVE": 5,
+    "BEZIER": 6,
+    "CLOSE": 7
 };
+
+// Add constants to window
+for(const key in Dark.constants) {
+    window[key] = Dark.constants[key];
+}
 
 Dark.helper.angle = function(angle) {
     return (Dark.settings.angleMode == DEGREES) ? angle * PI / 180 : angle;
@@ -381,7 +371,7 @@ var rotate = function(angle) {
 };
 
 var scale = function(w, h) {
-    if(y == undefined) {
+    if(h == undefined) {
         Dark.ctx.scale(w, w);
     } else {
         Dark.ctx.scale(w, h);
@@ -472,8 +462,8 @@ var beginShape = function() {
     Dark.vertices.length = 0;
 };
 
-var endShape = function(type) {
-    if(Dark.vertices[0].type != VERTEX || Dark.vertices.length < 2) return;
+var endShape = function(type = CLOSE) {
+    if(Dark.vertices.length < 2 || Dark.vertices[0].type != VERTEX) return;
     Dark.ctx.beginPath();
     Dark.vertices.forEach(function(vert, index) {
         if(index == 0) {
@@ -482,7 +472,7 @@ var endShape = function(type) {
             switch(vert.type) {
                 case VERTEX:
                     const pt = vert.point;
-                    Dark.ctx.moveTo(pt.x, pt.y);
+                    Dark.ctx.lineTo(pt.x, pt.y);
                     break;
                 case CURVE:
                     // to be implemented
