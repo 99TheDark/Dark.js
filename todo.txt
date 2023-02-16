@@ -13,7 +13,6 @@ To add:
 • Mouse events
 • Mouse & pmouse
 • Noise
-• mag & norm
 • QUARTER_PI constant
 • Fonts
 • Filters
