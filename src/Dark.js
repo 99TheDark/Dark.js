@@ -65,7 +65,8 @@ Dark.constants = {
     "VERTEX": 4,
     "CURVE": 5,
     "BEZIER": 6,
-    "CLOSE": 7
+    "CLOSE": 7,
+    "OPEN": 8
 };
 
 // Add constants to window
@@ -535,6 +536,29 @@ var bezier = function(x1, y1, cx1, cy1, cx2, cy2, x2, y2) {
     endShape();
 };
 
+// Text
+var textSize = function(size) {
+    Dark.settings.textSize = size;
+};
+
+var textFont = function(font) {
+    if(typeof font === "string") {
+        font = new DFont(font);
+    }
+    if(font instanceof DFont) {
+        Dark.settings.font = font;
+        Dark.settings.textSize = font.size;
+        Dark.ctx.font = font.toString();
+    } else {
+        Dark.error(font + " is not a DFont.");
+    }
+};
+
+var text = function(text, x, y) {
+    Dark.ctx.fillText(text, x, y);
+    Dark.ctx.strokeText(text, x, y);
+};
+
 // Quick & Mathy functions
 // Map copied from ProcessingJS
 var min = (a, b) => (a < b) ? a : b;
@@ -606,6 +630,7 @@ var atanh = ang => Math.atanh(Dark.helper.angle(ang));
 var acsch = ang => Math.asinh(1 / Dark.helper.angle(ang));
 var asech = ang => Math.acosh(1 / Dark.helper.angle(ang));
 var acoth = ang => Math.atanh(1 / Dark.helper.angle(ang));
+var now = () => performance.now();
 
 // Vectors
 var DVector = function(x, y, z) {
@@ -847,7 +872,63 @@ DVector.prototype.array = function() {
 DVector.prototype.toString = function() {
     return "[" + this.x + ", " + this.y + ", " + this.z + "]";
 };
+
+var DFont = function(str) {
+    this.style = "normal";
+    this.variant = "normal";
+    this.weight = "normal";
+    this.size = 16;
+    this.family = "Arial";
+
+    let params = str.split(" ");
+    for(const i in params) {
+        const s = params[i];
+        switch(s) {
+            case "normal":
+                break;
+            case "italic":
+                this.style = "italic";
+                break;
+            case "bold":
+                this.weight = "bold";
+        }
+        if(s === "italic") {
+            this.style = "italic";
+        } else if(s === "small-caps") {
+            this.variant = "small-caps";
+        } else if(DFont.weights.includes(s)) {
+            this.weight = s;
+        } else if(s !== "normal") {
+            let parsed = parseInt(s);
+            if(isNaN(parsed)) {
+                this.family = s;
+            } else {
+                this.size = parsed;
+            }
+        }
+    }
+};
+DFont.prototype.toString = function() {
+    return this.style + " " + this.weight + " " + this.variant + " " + this.size + "px " + this.family;
+};
+DFont.maxParameters = 11;
+DFont.weights = [
+    "bold",
+    "bolder",
+    "lighter",
+    "100",
+    "200",
+    "300",
+    "400",
+    "500",
+    "600",
+    "700",
+    "800",
+    "900"
+];
+
 Dark.objects.DVector = DVector;
+Dark.objects.DFont = DFont;
 
 // Load default settings & functions
 fill(255);
@@ -857,6 +938,7 @@ strokeCap(ROUND);
 smooth();
 angleMode(DEGREES);
 frameRate(60);
+textFont("12px Arial");
 
 // Draw function
 Dark.raf = function(time) {
