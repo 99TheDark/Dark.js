@@ -19,6 +19,7 @@ var Dark = {
         error           | error with checking & counter
         keys            | key dictionary
         special         | list of special keycodes
+        mouseMap        | map from numbers to mouse name
         functions       | all the functions available
         variables       | all the variables available
         empties         | initially empty functions
@@ -52,7 +53,7 @@ Dark.tempCanvas.style.inset = "0px";
 Dark.tempCanvas.width = innerWidth;
 Dark.tempCanvas.height = innerHeight;
 Dark.canvas = Dark.tempCanvas;
-Dark.ctx = Dark.canvas.getContext("2d");
+Dark.ctx = Dark.canvas.getContext("2d", {willReadFrequently: true});
 
 Dark.keys = {};
 Dark.special = {
@@ -112,13 +113,23 @@ Dark.variables = {
     keyCode: undefined,
     keyIsPressed: false,
     mouseIsPressed: false,
+    mouseIsInside: false,
     mouseX: 0,
     mouseY: 0,
     pmouseX: 0,
     pmouseY: 0,
-    mouse: null,
-    pmouse: null
+    mouse: undefined,
+    pmouse: undefined,
+    mouseButton: undefined
 };
+
+Dark.mouseMap = [
+    "left",
+    "middle",
+    "right",
+    "back",
+    "forward"
+];
 
 Dark.empties = [
     "draw",
@@ -128,7 +139,6 @@ Dark.empties = [
     "mousePressed",
     "mouseReleased",
     "mouseMoved",
-    "mouseOver",
     "mouseIn",
     "mouseOut",
     "mouseDoubleClicked"
@@ -215,8 +225,8 @@ Dark.helper.bulkAdd("functions", {
             // It took me ~8 hours to figure this out. D:<
             let old = copy(Dark.ctx);
 
-            width = Dark.canvas.width = w;
-            height = Dark.canvas.height = h;
+            Dark.variables.width = width = Dark.canvas.width = w;
+            Dark.variables.height = height = Dark.canvas.height = h;
 
             for(const key in Dark.ctx) {
                 const value = old[key];
@@ -230,11 +240,11 @@ Dark.helper.bulkAdd("functions", {
     setCanvas: function(canvas) {
         if(canvas instanceof HTMLCanvasElement) {
             Dark.canvas = canvas;
-            width = canvas.width;
-            height = canvas.height;
+            Dark.variables.width = width = canvas.width;
+            Dark.variables.height = height = canvas.height;
 
             let old = copy(Dark.ctx);
-            Dark.ctx = canvas.getContext("2d");
+            Dark.ctx = canvas.getContext("2d", {willReadFrequently: true});
 
             for(const key in Dark.ctx) {
                 const value = old[key];
@@ -304,7 +314,7 @@ Dark.helper.bulkAdd("functions", {
         }
     },
 
-    cursor: function(type) {
+    cursor: function(type = "auto") {
         Dark.settings.cursor = type;
         Dark.canvas.style.cursor = type;
     },
@@ -500,13 +510,14 @@ Dark.helper.bulkAdd("functions", {
 
     skew: function(h, v = 0) {
         let transform = Dark.ctx.getTransform();
-        transform.b = v;
-        transform.c = h;
+        transform.b = v * 0.01;
+        transform.c = h * 0.01;
         Dark.ctx.setTransform(transform);
     },
 
     // Shapes
     rect: function(x, y, width, height) {
+        width = Math.abs(width), height = Math.abs(height);
         Dark.ctx.beginPath();
         Dark.ctx.save();
         if(Dark.settings.rectMode == CENTER) Dark.ctx.translate(- width / 2, - height / 2);
@@ -517,6 +528,7 @@ Dark.helper.bulkAdd("functions", {
     },
 
     ellipse: function(x, y, width, height) {
+        width = Math.abs(width), height = Math.abs(height);
         Dark.ctx.beginPath();
         Dark.ctx.save();
         if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(width / 2, height / 2);
@@ -546,6 +558,7 @@ Dark.helper.bulkAdd("functions", {
 
     point: function(x, y) {
         Dark.ctx.save();
+        Dark.ctx.beginPath();
         Dark.ctx.fillStyle = "rgba(0, 0, 0, 1)";
         if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(width / 2, height / 2);
         Dark.ctx.fill();
@@ -708,6 +721,33 @@ Dark.helper.bulkAdd("functions", {
     text: function(text, x, y) {
         Dark.ctx.fillText(text, x, y);
         Dark.ctx.strokeText(text, x, y);
+    },
+
+    // Images
+    get: function(...args) {
+        if(args.length == 0) {
+            return new DImage(
+                Dark.ctx.getImageData(0, 0, width, height),
+                Dark.canvas
+            );
+        } else if(args.length == 4) {
+            return new DImage(
+                Dark.ctx.getImageData(args[0], args[1], args[2], args[3]),
+                Dark.canvas
+            );
+        } else {
+            Dark.error(new Error("get requires 0 or 4 parameters, not " + args.length));
+        }
+    },
+
+    image: function(img, x, y, width, height) {
+        if(arguments.length == 3) {
+            Dark.ctx.drawImage(img.canvas, x, y);
+        } else if(arguments.length == 5) {
+            Dark.ctx.drawImage(img.canvas, x, y, width, height);
+        } else {
+            Dark.error(new Error("image requires 3 or 5 parameters, not " + arguments.length));
+        }
     },
 
     // Quick & Mathy functions
@@ -1052,6 +1092,7 @@ DVector.prototype.toString = function() {
     if(this.z == undefined) return "[" + this.x + ", " + this.y + "]";
     return "[" + this.x + ", " + this.y + ", " + this.z + "]";
 };
+
 var DFont = function(str) {
     this.style = "normal";
     this.variant = "normal";
@@ -1108,6 +1149,34 @@ DFont.weights = [
     "900"
 ];
 
+var DImage = function(imgData, source) {
+    this.width = imgData.width;
+    this.height = imgData.height;
+    this.imageData = imgData;
+    this.source = source;
+    this.canvas = new OffscreenCanvas(this.width, this.height);
+    this.ctx = this.canvas.getContext("2d", {willReadFrequently: true});
+    this.ctx.putImageData(imgData, 0, 0);
+};
+DImage.prototype.get = function(...args) {
+    if(args.length == 0) {
+        return this.copy();
+    } else if(args.length == 4) {
+        return new DImage(
+            this.ctx.getImageData(args[0], args[1], args[2], args[3]),
+            this.source
+        );
+    } else {
+        Dark.error(new Error("DImage.get requires 0 or 4 parameters, not " + args.length));
+    }
+};
+DImage.prototype.copy = function() {
+    return new DImage(
+        this.imageData,
+        this.source
+    );
+};
+
 Dark.objects.DVector = DVector;
 Dark.objects.DFont = DFont;
 
@@ -1116,17 +1185,17 @@ Dark.helper.loadEvents = function() {
 
     document.addEventListener("keydown", function(e) {
         e.preventDefault();
-        keyIsPressed = true;
-        key = e.key;
-        keyCode = e.keyCode;
+        Dark.variables.keyIsPressed = keyIsPressed = true;
+        Dark.variables.key = key = e.key;
+        Dark.variables.keyCode = keyCode = e.keyCode;
         keyPressed();
     });
 
     document.addEventListener("keyup", function(e) {
         e.preventDefault();
-        keyIsPressed = false;
-        key = undefined;
-        keyCode = undefined;
+        Dark.variables.keyIsPressed = keyIsPressed = false;
+        Dark.variables.key = key = undefined;
+        Dark.variables.keyCode = keyCode = undefined;
         keyReleased();
     });
 
@@ -1141,39 +1210,38 @@ Dark.helper.reloadEvents = function() {
 
     Dark.canvas.addEventListener("mousedown", function(e) {
         e.preventDefault();
-        mouseIsPressed = true;
+        Dark.variables.mouseIsPressed = mouseIsPressed = true;
+        Dark.variables.mouseButton = mouseButton = Dark.mouseMap[e.button];
         mousePressed();
     });
 
     Dark.canvas.addEventListener("mouseup", function(e) {
         e.preventDefault();
-        mouseIsPressed = false;
+        Dark.variables.mouseButton = mouseButton = undefined;
+        Dark.variables.mouseIsPressed = mouseIsPressed = false;
         mouseReleased();
     });
 
     Dark.canvas.addEventListener("mouseenter", function(e) {
         e.preventDefault();
+        Dark.variables.mouseIsInside = mouseIsInside = true;
         mouseIn();
     });
 
     Dark.canvas.addEventListener("mouseleave", function(e) {
+        Dark.variables.mouseIsInside = mouseIsInside = false;
         e.preventDefault();
         mouseOut();
-    });
-
-    Dark.canvas.addEventListener("mouseover", function(e) {
-        e.preventDefault();
-        mouseOver();
     });
 
     Dark.canvas.addEventListener("mousemove", function(e) {
         e.preventDefault();
         // https://stackoverflow.com/questions/3234256/find-mouse-position-relative-to-element
         let boundingBox = e.target.getBoundingClientRect();
-        pmouseX = pmouse.x = mouseX;
-        pmouseY = pmouse.y  = mouseY;
-        mouseX = mouse.x = constrain(round(e.pageX - boundingBox.x), 0, width);
-        mouseY = mouse.y = constrain(round(e.pageY - boundingBox.y), 0, height);
+        Dark.variables.pmouseX = pmouseX = pmouse.x = mouseX;
+        Dark.variables.pmouseY = pmouseY = pmouse.y  = mouseY;
+        Dark.variables.mouseX = mouseX = mouse.x = constrain(round(e.pageX - boundingBox.x), 0, width);
+        Dark.variables.mouseY = mouseY = mouse.y = constrain(round(e.pageY - boundingBox.y), 0, height);
         mouseMoved();
     });
 
@@ -1189,8 +1257,9 @@ Dark.raf = function(time) {
     const deltaFrame = time - Dark.lastFrame;
     const deltaTime = time - Dark.lastTime;
     if(deltaFrame > Dark.settings.frameStep - deltaTime / 2 && Dark.settings.looping) {
-        dt = deltaFrame;
-        fps = 1000 / dt;
+        Dark.variables.dt = dt = deltaFrame;
+        Dark.variables.fps = fps = 1000 / dt;
+        Dark.variables.frameCount = ++frameCount;
         draw();
         Dark.lastFrame = performance.now();
     }
