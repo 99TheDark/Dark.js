@@ -466,6 +466,10 @@ Dark.helper.bulkAdd("functions", {
         Dark.settings.rectMode = type;
     },
 
+    imageMode: function(type = CORNER) {
+        Dark.settings.imageMode = type;
+    },
+
     curveTightness: function(tightness = 0) {
         Dark.settings.curveTightness = tightness;
     },
@@ -604,6 +608,7 @@ Dark.helper.bulkAdd("functions", {
         Dark.vertices.length = 0;
     },
 
+    // https://www.cs.umd.edu/~reastman/slides/L19P01ParametricCurves.pdf
     endShape: function(type = OPEN) {
         if(Dark.vertices.length < 2 || Dark.vertices[0].type != VERTEX) return;
         Dark.ctx.beginPath();
@@ -740,14 +745,31 @@ Dark.helper.bulkAdd("functions", {
         }
     },
 
+    set: function(x, y, col) {
+        Dark.ctx.save();
+        Dark.ctx.fillStyle = Dark.helper.colorString(col);
+        Dark.ctx.fillRect(x, y, 1, 1);
+        Dark.ctx.restore();
+    },
+
     image: function(img, x, y, width, height) {
-        if(arguments.length == 3) {
-            Dark.ctx.drawImage(img.canvas, x, y);
-        } else if(arguments.length == 5) {
-            Dark.ctx.drawImage(img.canvas, x, y, width, height);
-        } else {
-            Dark.error(new Error("image requires 3 or 5 parameters, not " + arguments.length));
+        Dark.ctx.save();
+        if(Dark.settings.imageMode == CENTER) Dark.ctx.translate(- width / 2, - height / 2);
+        switch(arguments.length) {
+            default:
+                Dark.error(new Error("image requires 3 to 5 parameters, not " + arguments.length));
+                break;
+            case 3:
+                Dark.ctx.drawImage(img.canvas, x, y);
+                break;
+            case 4:
+                break;
+                Dark.ctx.drawImage(img.canvas, x, y, width, width);
+            case 5:
+                Dark.ctx.drawImage(img.canvas, x, y, width, height);
+                break;
         }
+        Dark.ctx.restore();
     },
 
     // Quick & Mathy functions
@@ -1177,8 +1199,66 @@ DImage.prototype.copy = function() {
     );
 };
 
+var DMatrix = function(width, height, val = 0) {
+    // https://stackoverflow.com/questions/53992415/how-to-fill-multidimensional-array-in-javascript
+    this.mat = Array(height).fill(null).map(() => Array(width).fill(val));
+    this.width = width;
+    this.height = height;
+};
+DMatrix.prototype.toString = function() {
+    let str = "";
+    for(const arr in this.mat) {
+        for(const item in this.mat[arr]) {
+            str += this.mat[arr][item] + " ";
+        }
+        str = str.replace(/ $/, "\n");
+    }
+    return str;
+};
+DMatrix.prototype.get = function(x, y) {
+    return this.mat[y][x];
+};
+DMatrix.prototype.set = function(x, y, val) {
+    this.mat[y][x] = val;
+};
+DMatrix.add = function(mat1, mat2) {
+    if(mat1.width == mat2.width && mat1.height == mat2.height) {
+        let mat = new DMatrix(mat1.width, mat1.height);
+        for(let y = 0; y < mat.height; y++) {
+            for(let x = 0; x < mat.width; x++) {
+                mat.set(y, x, mat1.get(x, y) + mat2.get(x, y));
+            }
+        }
+        return mat;
+    } else {
+        Dark.error(new Error("Cannot add two DMatrices with different dimensions"));
+    }
+};
+DMatrix.prototype.add = function(matrix) {
+    // cannot implement until add to set and constructor
+};
+DMatrix.sub = function(mat1, mat2) {
+    if(mat1.width == mat2.width && mat1.height == mat2.height) {
+        let mat = new DMatrix(mat1.width, mat1.height);
+        for(let y = 0; y < mat.height; y++) {
+            for(let x = 0; x < mat.width; x++) {
+                mat.set(y, x, mat1.get(x, y) - mat2.get(x, y));
+            }
+        }
+        return mat;
+    } else {
+        Dark.error(new Error("Cannot subtract two DMatrices with different dimensions"));
+    }
+};
+
+let mat = new DMatrix(4, 2);
+mat.set(2, 1, 8);
+console.log(mat.toString());
+
 Dark.objects.DVector = DVector;
 Dark.objects.DFont = DFont;
+Dark.objects.DImage = DImage;
+Dark.objects.DMatrix = DMatrix;
 
 // Key & mouse events
 Dark.helper.loadEvents = function() {
@@ -1287,11 +1367,14 @@ Dark.settings.cursor = "auto";
 Dark.settings.looping = true;
 
 // Load default settings & functions
+frameRate(60);
+smooth();
+ellipseMode(CENTER);
+rectMode(CORNER);
+imageMode(CORNER);
+angleMode(DEGREES);
+strokeCap(ROUND);
 fill(255);
 stroke(0);
 strokeWeight(1);
-strokeCap(ROUND);
-smooth();
-angleMode(DEGREES);
-frameRate(60);
 textFont("12px Arial");
