@@ -1,20 +1,20 @@
 To add:
-• Images
 • Gradient fill & stroke
 • Colorspaces
-• Imagedata
-• Get function
 • Curve vertex (Catmull-Rom spline to cubic bezier)
 • Finish DVector
 • Blendcolor
 • Noise
 • Filters
-• DImage object
 • Errors for 2 beginShapes in a row
 • Cursor lock function — lock()
 • Easier key use
-• Add mouseButton
-• Sync Dark.variables and global variables
+• Set variable function under helper
+• Allow negatives for arcs
+• Move maxErrorCount and maxTransforms to Dark.constants
+• Add set function (also to DImage)
+• Allow image to be scaled if only width is put
+• ImageMode center
 
 Possibly to add:
 • Transformations from point for ease of use 
@@ -24,6 +24,4 @@ Possibly to add:
 • DMatrix
 
 Bugs:
-• Fill glitching on triangle
-• Double click not working
 • Key typed not working
