@@ -21,6 +21,7 @@ To add:
 • Convert canvas matrix to and from DMatrix
 • Multiplication & division in DMatrix
 • Replace the == undefined with arguments.length
+• Option to use numbers in DMatrix's add, sub, mult, div, etc functions
 
 Possibly to add:
 • Transformations from point for ease of use 
