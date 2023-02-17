@@ -1201,9 +1201,17 @@ DImage.prototype.copy = function() {
 
 var DMatrix = function(width, height, val = 0) {
     // https://stackoverflow.com/questions/53992415/how-to-fill-multidimensional-array-in-javascript
-    this.mat = Array(height).fill(null).map(() => Array(width).fill(val));
-    this.width = width;
-    this.height = height;
+
+    if(width instanceof DMatrix || Array.isArray(width)) {
+        this.width = height;
+        this.height = val;
+        this.mat = Array(val).fill(null).map(() => Array(height).fill(0));
+        this.set(width);
+    } else {
+        this.width = width;
+        this.height = height;
+        this.mat = Array(height).fill(null).map(() => Array(width).fill(val));
+    }
 };
 DMatrix.prototype.toString = function() {
     let str = "";
@@ -1218,8 +1226,36 @@ DMatrix.prototype.toString = function() {
 DMatrix.prototype.get = function(x, y) {
     return this.mat[y][x];
 };
+DMatrix.set = function(matrix, x, y, val) {
+    matrix.set(x, y, val);
+};
 DMatrix.prototype.set = function(x, y, val) {
-    this.mat[y][x] = val;
+    if(x instanceof DMatrix) {
+        // DMatrix
+        for(let yp = 0; yp < x.height; yp++) {
+            for(let xp = 0; xp < x.width; xp++) {
+                this.mat[yp][xp] = x.mat[yp][xp];
+            }
+        }
+    } else if(Array.isArray(x)) {
+        if(Array.isArray(x[0])) {
+            // 2D array
+            for(let yp = 0; yp < x.length; yp++) {
+                for(let xp = 0; xp < x[0].length; xp++) {
+                    this.mat[yp][xp] = x[yp][xp];
+                }
+            }
+        } else {
+            // 1D array
+            for(let i = 0; i < this.width * this.height; i++) {
+                let xp = i % this.width;
+                let yp = Math.floor(i / this.width);
+                this.mat[yp][xp] = x[i];
+            }
+        }
+    } else {
+        this.mat[y][x] = val;
+    }
 };
 DMatrix.add = function(mat1, mat2) {
     if(mat1.width == mat2.width && mat1.height == mat2.height) {
@@ -1235,7 +1271,7 @@ DMatrix.add = function(mat1, mat2) {
     }
 };
 DMatrix.prototype.add = function(matrix) {
-    // cannot implement until add to set and constructor
+    this.set(DMatrix.add(this, matrix));
 };
 DMatrix.sub = function(mat1, mat2) {
     if(mat1.width == mat2.width && mat1.height == mat2.height) {
@@ -1250,10 +1286,9 @@ DMatrix.sub = function(mat1, mat2) {
         Dark.error(new Error("Cannot subtract two DMatrices with different dimensions"));
     }
 };
-
-let mat = new DMatrix(4, 2);
-mat.set(2, 1, 8);
-console.log(mat.toString());
+DMatrix.prototype.sub = function(matrix) {
+    this.set(DMatrix.sub(this, matrix));
+};
 
 Dark.objects.DVector = DVector;
 Dark.objects.DFont = DFont;
@@ -1319,7 +1354,7 @@ Dark.helper.reloadEvents = function() {
         // https://stackoverflow.com/questions/3234256/find-mouse-position-relative-to-element
         let boundingBox = e.target.getBoundingClientRect();
         Dark.variables.pmouseX = pmouseX = pmouse.x = mouseX;
-        Dark.variables.pmouseY = pmouseY = pmouse.y  = mouseY;
+        Dark.variables.pmouseY = pmouseY = pmouse.y = mouseY;
         Dark.variables.mouseX = mouseX = mouse.x = constrain(round(e.pageX - boundingBox.x), 0, width);
         Dark.variables.mouseY = mouseY = mouse.y = constrain(round(e.pageY - boundingBox.y), 0, height);
         mouseMoved();
@@ -1346,7 +1381,7 @@ Dark.raf = function(time) {
     Dark.lastTime = performance.now();
     requestAnimationFrame(Dark.raf);
 };
-    
+
 // Start draw function
 requestAnimationFrame(Dark.raf);
 
