@@ -11,54 +11,67 @@
 </head>
 
 <body>
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas" tabindex="1"></canvas>
     <script>
         setCanvas(document.getElementById("canvas"));
 
         size(1000, 600);
 
         // Demo code
-        background(180, 220, 240);
+        draw = function() {
+            background(180, 220, 240);
 
-        fill(252, 186, 3);
-        rect(100, 100, 500, 400);
+            fill(252, 186, 3);
+            rect(100, 100, 500, 400);
 
-        fill(235, 64, 52);
-        ellipse(800, 400, 200, 300);
+            fill(235, 64, 52);
+            ellipse(800, 400, 200, 300);
 
-        strokeWeight(5);
-        stroke(50, 168, 82);
-        line(100, 50, 500, 80);
+            strokeWeight(5);
+            stroke(50, 168, 82);
+            line(100, 50, 500, 80);
 
-        noStroke();
-        fill(66, 135, 245);
-        triangle(200, 200, 150, 300, 300, 300);
+            pushMatrix();
+            translate(0, 50);
+            noStroke();
+            fill(66, 135, 245);
+            triangle(200, 200, 150, 300, 300, 300);
+            popMatrix();
 
-        strokeWeight(15);
-        point(400, 350);
+            strokeWeight(15);
+            point(400, 350);
 
-        strokeWeight(3);
-        stroke(255, 0, 0);
-        quad(400, 200, 350, 300, 550, 300, 500, 150);
+            strokeWeight(3);
+            stroke(255, 0, 0);
+            quad(400, 200, 350, 300, 550, 300, 500, 150);
 
-        // From https://www.khanacademy.org/computer-programming/i/1896720848
-        stroke(0);
-        fill(255, 0, 255);
-        beginShape();
-        vertex(250, 150);
-        bezierVertex(350, 80, 300, 20, 200, 100);
-        bezierVertex(85, 30, 40, 80, 120, 150);
-        bezierVertex(50, 250, 100, 300, 202, 200);
-        bezierVertex(350, 350, 350, 200, 250, 150);
-        endShape();
+            // From https://www.khanacademy.org/computer-programming/i/1896720848
+            stroke(0);
+            fill(255, 0, 255);
+            beginShape();
+            vertex(250, 150);
+            bezierVertex(350, 80, 300, 20, 200, 100);
+            bezierVertex(85, 30, 40, 80, 120, 150);
+            bezierVertex(50, 250, 100, 300, 202, 200);
+            bezierVertex(350, 350, 350, 200, 250, 150);
+            endShape();
 
-        fill(0);
-        noStroke();
-        textSize(30);
-        text("Dark.js", 300, 50);
+            fill(0);
+            noStroke();
+            textSize(30);
+            text("Dark.js", 300, 50);
 
-        fill(0, 0, 255);
-        rect(100, 100, 100, 50);
+            pushMatrix();
+            skew(-0.5);
+            translate(0.5, 0);
+            fill(0, 0, 255);
+            rect(100, 100, 100, 50);
+            popMatrix();
+        }
+
+        mouseMoved = function() {
+            console.log(Dark.variables.mouseX);
+        };
     </script>
 </body>
 
