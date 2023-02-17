@@ -16,6 +16,6 @@ body {
 
 #canvas {
     border: 2px solid rgb(75, 75, 75);
-    border-radius: 8px;
+    border-radius: 7px;
     background-color: transparent;
 }
