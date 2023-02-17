@@ -19,9 +19,8 @@ To add:
 • Hermite curves (maybe smoothCurve)
 • Add copy function to DMatrix
 • Convert canvas matrix to and from DMatrix
-• Change set if first val is a 2d array or dmatrix
-• Allow inputting dmatrix or 2d array into DMatrix constructor
-• Finish DMatrix
+• Multiplication & division in DMatrix
+• Replace the == undefined with arguments.length
 
 Possibly to add:
 • Transformations from point for ease of use 
