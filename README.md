@@ -10,6 +10,6 @@ You most likely saw this from Khan Academy, in which case you can see more of wh
 
 Once this is done, I will probably make a Github Pages site with documentation & other miscellaneous things.
 
-1400 lines and counting.
-
 ### And of course, check out the amazing libraries this is based off of.
+
+<sup>1400 lines and counting.</sup>
