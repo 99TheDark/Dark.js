@@ -2,7 +2,6 @@ To add:
 • Gradient fill & stroke
 • Colorspaces
 • Curve vertex (Catmull-Rom spline to cubic bezier)
-• Finish DVector
 • Blendcolor
 • Noise
 • Filters
@@ -12,16 +11,23 @@ To add:
 • Set variable function under helper
 • Allow negatives for arcs
 • Move maxErrorCount and maxTransforms to Dark.constants
-• Add set function (also to DImage)
-• Allow image to be scaled if only width is put
-• ImageMode center
+• Add set function to DImage
+• DarkJS instances
+• Add DarkJS instance to image if certain function is run
+• Bezier point & tangent
+• Curve point & tangent
+• Hermite curves (maybe smoothCurve)
+• Add copy function to DMatrix
+• Convert canvas matrix to and from DMatrix
+• Change set if first val is a 2d array or dmatrix
+• Allow inputting dmatrix or 2d array into DMatrix constructor
+• Finish DMatrix
 
 Possibly to add:
 • Transformations from point for ease of use 
 • Store shapes in variables, maybe DShape
 • println-like console
 • Font library for Google Fonts
-• DMatrix
 
 Bugs:
 • Key typed not working
