@@ -7,14 +7,14 @@ To add:
 • Curve vertex (Catmull-Rom spline to cubic bezier)
 • Finish DVector
 • Blendcolor
-• Mouse & pmouse
 • Noise
 • Filters
 • DImage object
 • Errors for 2 beginShapes in a row
 • Cursor lock function — lock()
-• Attach key events and mouse events to canvas on creartion
 • Easier key use
+• Add mouseButton
+• Sync Dark.variables and global variables
 
 Possibly to add:
 • Transformations from point for ease of use 
@@ -22,3 +22,8 @@ Possibly to add:
 • println-like console
 • Font library for Google Fonts
 • DMatrix
+
+Bugs:
+• Fill glitching on triangle
+• Double click not working
+• Key typed not working
