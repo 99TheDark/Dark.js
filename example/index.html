@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DarkJS Testing</title>
+    <title>DarkJS Example</title>
     <link rel="stylesheet" href="style.css">
     <script src="../src/Dark.js"></script>
 </head>
@@ -62,16 +62,24 @@
             text("Dark.js", 300, 50);
 
             pushMatrix();
-            skew(-0.5);
-            translate(0.5, 0);
+            skew(-50);
+            translate(600, 100);
+            rotate(-10);
             fill(0, 0, 255);
             rect(100, 100, 100, 50);
             popMatrix();
-        }
 
-        mouseMoved = function() {
-            console.log(Dark.variables.mouseX);
-        };
+            stroke(0);
+            strokeWeight(2);
+            mouseIsPressed ? fill(0, 0, 0, 100) & cursor("pointer") : noFill() & cursor();
+            circle(mouseX, mouseY, 8);
+
+            let img = get();
+            fill(0);
+            noStroke();
+            rect(798, 458, 154, 94);
+            image(img, 800, 460, 150, 90);
+        }
     </script>
 </body>
 
