@@ -23,10 +23,11 @@ var Dark = {
         variables       | all the variables available
         empties         | initially empty functions
         tempCanvas      | a temporary canvas if none is selected
+        loadCatagories  | names of the keys to be loaded
     */
 };
 
-// Initiate Dark objects
+// Initiate objects & constants
 Dark.settings = {};
 Dark.helper = {};
 Dark.transforms = [];
@@ -36,11 +37,16 @@ Dark.functions = {};
 Dark.lastFrame = performance.now();
 Dark.raf = () => {};
 Dark.errorCount = 0;
-Dark.maxErrorCount = 50;
-Dark.maxTransforms = 1000;
+Dark.maxErrorCount = 50; // to move to constants
+Dark.maxTransforms = 1000; // to move to constants
+Dark.loadCatagories = [
+    "constants",
+    "functions",
+    "variables"
+];
 
 Dark.tempCanvas = document.createElement("canvas");
-Dark.tempCanvas.id = "Dark-default-canvas";
+Dark.tempCanvas.id = "DarkJS-default-canvas";
 Dark.tempCanvas.style.position = "absolute";
 Dark.tempCanvas.style.inset = "0px";
 Dark.tempCanvas.width = innerWidth;
@@ -105,7 +111,13 @@ Dark.variables = {
     key: undefined,
     keyCode: undefined,
     keyIsPressed: false,
-    mouseIsPressed: false
+    mouseIsPressed: false,
+    mouseX: 0,
+    mouseY: 0,
+    pmouseX: 0,
+    pmouseY: 0,
+    mouse: null,
+    pmouse: null
 };
 
 Dark.empties = [
@@ -232,6 +244,9 @@ Dark.helper.bulkAdd("functions", {
             }
 
             Dark.canvas.style.cursor = Dark.settings.cursor;
+            Dark.canvas.tabIndex = "1";
+
+            Dark.helper.reloadEvents();
         }
     },
 
@@ -330,10 +345,10 @@ Dark.helper.bulkAdd("functions", {
         if(r != undefined && g == undefined) g = r;
         if(g != undefined && b == undefined) b = g;
         if(a == undefined) a = 255;
-        r = Math.min(Math.max(r, 0), 255);
-        g = Math.min(Math.max(g, 0), 255);
-        b = Math.min(Math.max(b, 0), 255);
-        a = Math.min(Math.max(a, 0), 255);
+        r = constrain(r, 0, 255);
+        g = constrain(g, 0, 255);
+        b = constrain(b, 0, 255);
+        a = constrain(a, 0, 255);
         return (a << 24) + (r << 16) + (g << 8) + (b);
     },
 
@@ -793,6 +808,15 @@ var DVector = function(x, y, z) {
     this.y = y;
     this.z = z;
 };
+DVector.create = function(x, y, z) {
+    return new DVector(x, y, z);
+};
+DVector.zero2D = function() {
+    return new DVector(0, 0);
+};
+DVector.zero3D = function() {
+    return new DVector(0, 0, 0);
+};
 DVector.add = function(v1, v2) {
     if(v2 instanceof DVector) {
         return new DVector(
@@ -1025,9 +1049,9 @@ DVector.prototype.array = function() {
     ];
 };
 DVector.prototype.toString = function() {
+    if(this.z == undefined) return "[" + this.x + ", " + this.y + "]";
     return "[" + this.x + ", " + this.y + ", " + this.z + "]";
 };
-
 var DFont = function(str) {
     this.style = "normal";
     this.variant = "normal";
@@ -1087,67 +1111,78 @@ DFont.weights = [
 Dark.objects.DVector = DVector;
 Dark.objects.DFont = DFont;
 
-Dark.settings.cursor = "auto";
-Dark.settings.looping = true;
-
 // Key & mouse events
-document.addEventListener("keydown", function(e) {
-    e.preventDefault();
-    keyIsPressed = true;
-    key = e.key;
-    keyCode = e.keyCode;
-    keyPressed();
-});
+Dark.helper.loadEvents = function() {
 
-document.addEventListener("keyup", function(e) {
-    e.preventDefault();
-    keyIsPressed = false;
-    key = undefined;
-    keyCode = undefined;
-    keyReleased();
-});
+    document.addEventListener("keydown", function(e) {
+        e.preventDefault();
+        keyIsPressed = true;
+        key = e.key;
+        keyCode = e.keyCode;
+        keyPressed();
+    });
 
-document.addEventListener("keypress", function(e) {
-    e.preventDefault();
-    keyTyped();
-});
+    document.addEventListener("keyup", function(e) {
+        e.preventDefault();
+        keyIsPressed = false;
+        key = undefined;
+        keyCode = undefined;
+        keyReleased();
+    });
 
-document.addEventListener("mousedown", function(e) {
-    e.preventDefault();
-    mouseIsPressed = true;
-    mousePressed();
-});
+    document.addEventListener("keypress", function(e) {
+        e.preventDefault();
+        keyTyped();
+    });
 
-document.addEventListener("mouseup", function(e) {
-    e.preventDefault();
-    mouseIsPressed = false;
-    mousePressed();
-});
+};
 
-document.addEventListener("mouseenter", function(e) {
-    e.preventDefault();
-    mouseIn();
-});
+Dark.helper.reloadEvents = function() {
 
-document.addEventListener("mouseleave", function(e) {
-    e.preventDefault();
-    mouseOut();
-});
+    Dark.canvas.addEventListener("mousedown", function(e) {
+        e.preventDefault();
+        mouseIsPressed = true;
+        mousePressed();
+    });
 
-document.addEventListener("mouseover", function(e) {
-    e.preventDefault();
-    mouseOver();
-});
+    Dark.canvas.addEventListener("mouseup", function(e) {
+        e.preventDefault();
+        mouseIsPressed = false;
+        mouseReleased();
+    });
 
-document.addEventListener("mousemove", function(e) {
-    e.preventDefault();
-    mouseMoved();
-});
+    Dark.canvas.addEventListener("mouseenter", function(e) {
+        e.preventDefault();
+        mouseIn();
+    });
 
-document.addEventListener("dblclick", function(e) {
-    e.preventDefault();
-    mouseDoubleClicked();
-});
+    Dark.canvas.addEventListener("mouseleave", function(e) {
+        e.preventDefault();
+        mouseOut();
+    });
+
+    Dark.canvas.addEventListener("mouseover", function(e) {
+        e.preventDefault();
+        mouseOver();
+    });
+
+    Dark.canvas.addEventListener("mousemove", function(e) {
+        e.preventDefault();
+        // https://stackoverflow.com/questions/3234256/find-mouse-position-relative-to-element
+        let boundingBox = e.target.getBoundingClientRect();
+        pmouseX = pmouse.x = mouseX;
+        pmouseY = pmouse.y  = mouseY;
+        mouseX = mouse.x = constrain(round(e.pageX - boundingBox.x), 0, width);
+        mouseY = mouse.y = constrain(round(e.pageY - boundingBox.y), 0, height);
+        mouseMoved();
+    });
+
+    Dark.canvas.addEventListener("dblclick", function(e) {
+        e.preventDefault();
+        mouseDoubleClicked();
+    });
+
+};
 
 // Draw function
 Dark.raf = function(time) {
@@ -1162,24 +1197,25 @@ Dark.raf = function(time) {
     Dark.lastTime = performance.now();
     requestAnimationFrame(Dark.raf);
 };
-
+    
 // Start draw function
 requestAnimationFrame(Dark.raf);
 
-// Add constants to window
-for(const key in Dark.constants) {
-    window[key] = Dark.constants[key];
-}
+// Add variables to global space
+Dark.loadCatagories.forEach(function(catagory) {
+    for(const key in Dark[catagory]) {
+        window[key] = Dark[catagory][key];
+    }
+});
 
-// Add functions to window
-for(const key in Dark.functions) {
-    window[key] = Dark.functions[key];
-}
+// Load event listeners for document
+Dark.helper.loadEvents();
 
-// Add variables to window
-for(const key in Dark.variables) {
-    window[key] = Dark.variables[key];
-}
+// Setup later options
+mouse = DVector.zero2D();
+pmouse = DVector.zero2D();
+Dark.settings.cursor = "auto";
+Dark.settings.looping = true;
 
 // Load default settings & functions
 fill(255);
