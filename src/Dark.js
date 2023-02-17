@@ -17,17 +17,14 @@ var Dark = {
         objects         | special Dark.js objects like DVector
         warn            | warn with checking & counter
         error           | error with checking & counter
+        keys            | key dictionary
+        special         | list of special keycodes
+        functions       | all the functions available
+        variables       | all the variables available
+        empties         | initially empty functions
+        tempCanvas      | a temporary canvas if none is selected
     */
 };
-
-// Create default canvas
-Dark.canvas = document.createElement("canvas");
-Dark.canvas.id = "Dark-default-canvas";
-Dark.canvas.style.position = "absolute";
-Dark.canvas.style.inset = "0px";
-
-// Context
-Dark.ctx = Dark.canvas.getContext("2d");
 
 // Initiate Dark objects
 Dark.settings = {};
@@ -35,19 +32,97 @@ Dark.helper = {};
 Dark.transforms = [];
 Dark.vertices = [];
 Dark.objects = {};
+Dark.functions = {};
 Dark.lastFrame = performance.now();
 Dark.raf = () => {};
 Dark.errorCount = 0;
 Dark.maxErrorCount = 50;
 Dark.maxTransforms = 1000;
 
-var width = Dark.canvas.width;
-var height = Dark.canvas.height;
+Dark.tempCanvas = document.createElement("canvas");
+Dark.tempCanvas.id = "Dark-default-canvas";
+Dark.tempCanvas.style.position = "absolute";
+Dark.tempCanvas.style.inset = "0px";
+Dark.tempCanvas.width = innerWidth;
+Dark.tempCanvas.height = innerHeight;
+Dark.canvas = Dark.tempCanvas;
+Dark.ctx = Dark.canvas.getContext("2d");
 
-var dt = 0;
-var frameCount = 0;
-var fps = 60;
-var draw = () => {};
+Dark.keys = {};
+Dark.special = {
+    16: "shift",
+    10: "enter",
+    8: "delete",
+    32: "space",
+    18: "option",
+    17: "control",
+    157: "command",
+    38: "up",
+    40: "down",
+    37: "left",
+    39: "right",
+    112: "f1",
+    113: "f2",
+    114: "f3",
+    115: "f4",
+    116: "f5",
+    117: "f6",
+    118: "f7",
+    119: "f8",
+    120: "f9",
+    121: "f10",
+    122: "f11",
+    123: "f12",
+    20: "capslock",
+    190: "period",
+    188: "comma",
+    191: "slash",
+    220: "backslash",
+    48: "zero",
+    49: "one",
+    50: "two",
+    51: "three",
+    52: "four",
+    53: "five",
+    54: "six",
+    55: "seven",
+    56: "eight",
+    57: "nine",
+    189: "minus",
+    187: "equals",
+    219: "left_bracket",
+    221: "right_bracket",
+    222: "single_quote",
+    186: "semicolon"
+};
+
+Dark.variables = {
+    width: innerWidth,
+    height: innerHeight,
+    dt: 0,
+    frameCount: 0,
+    fps: 60,
+    key: undefined,
+    keyCode: undefined,
+    keyIsPressed: false,
+    mouseIsPressed: false
+};
+
+Dark.empties = [
+    "draw",
+    "keyPressed",
+    "keyReleased",
+    "keyTyped",
+    "mousePressed",
+    "mouseReleased",
+    "mouseMoved",
+    "mouseOver",
+    "mouseIn",
+    "mouseOut",
+    "mouseDoubleClicked"
+];
+
+Dark.empties.forEach(emp => Dark.functions[emp] = () => {});
 
 // Constants
 Dark.constants = {
@@ -68,13 +143,11 @@ Dark.constants = {
     "CLOSE": 7,
     "OPEN": 8,
     "CENTER": 9,
-    "CORNER": 10
+    "CORNER": 10,
+    "BOLD": 11,
+    "ITALIC": 12,
+    "NORMAL": 13
 };
-
-// Add constants to window
-for(const key in Dark.constants) {
-    window[key] = Dark.constants[key];
-}
 
 Dark.helper.angle = function(angle) {
     return (Dark.settings.angleMode == DEGREES) ? angle * PI / 180 : angle;
@@ -93,6 +166,12 @@ Dark.helper.doError = function(type, err) {
     Dark.errorCount++;
 };
 
+Dark.helper.bulkAdd = function(loc, obj) {
+    for(const key in obj) {
+        Dark[loc][key] = obj[key];
+    }
+};
+
 Dark.warn = function(warning) {
     Dark.helper.doError("warn", warning);
 };
@@ -101,173 +180,596 @@ Dark.error = function(error) {
     Dark.helper.doError("error", error);
 };
 
-// Very handy function to copy objects
-var copy = function(e) {
-    if(typeof e === "object") {
-        let obj = {};
-        for(const key in e) {
-            obj[key] = e[key];
+Dark.helper.bulkAdd("functions", {
+
+    // Very handy function to copy objects
+    copy: function(e) {
+        if(typeof e === "object") {
+            let obj = {};
+            for(const key in e) {
+                obj[key] = e[key];
+            }
+            return obj;
+        } else {
+            Dark.warn("\"" + e + "\" is not an object!");
+            return e;
         }
-        return obj;
-    } else {
-        Dark.warn("\"" + e + "\" is not an object!");
-        return e;
-    }
-};
+    },
 
-// Setup functions & getters
-var size = function(w = window.innerWidth, h = window.innerHeight) {
-    if(typeof w === "number" && typeof h === "number" && width > 0 && height > 0) {
-        // Because for some reason changing width & height reset all parameters >:(
-        // It took me ~8 hours to figure this out. D:<
-        let old = copy(Dark.ctx);
+    // Setup functions & getters
+    size: function(w = innerWidth, h = innerHeight) {
+        if(typeof w === "number" && typeof h === "number" && width > 0 && height > 0) {
+            // Because for some reason changing width & height reset all parameters >:(
+            // It took me ~8 hours to figure this out. D:<
+            let old = copy(Dark.ctx);
 
-        width = Dark.canvas.width = w;
-        height = Dark.canvas.height = h;
+            width = Dark.canvas.width = w;
+            height = Dark.canvas.height = h;
 
-        for(const key in Dark.ctx) {
-            const value = old[key];
-            if(key !== "canvas" && typeof value !== "function") {
-                Dark.ctx[key] = value;
+            for(const key in Dark.ctx) {
+                const value = old[key];
+                if(key !== "canvas" && typeof value !== "function") {
+                    Dark.ctx[key] = value;
+                }
             }
         }
-    }
-};
+    },
 
-var setCanvas = function(canvas) {
-    if(canvas instanceof HTMLCanvasElement) {
-        Dark.canvas = canvas;
-        width = canvas.width;
-        height = canvas.height;
+    setCanvas: function(canvas) {
+        if(canvas instanceof HTMLCanvasElement) {
+            Dark.canvas = canvas;
+            width = canvas.width;
+            height = canvas.height;
 
-        let old = copy(Dark.ctx);
-        Dark.ctx = canvas.getContext("2d");
+            let old = copy(Dark.ctx);
+            Dark.ctx = canvas.getContext("2d");
 
-        for(const key in Dark.ctx) {
-            const value = old[key];
-            if(key !== "canvas" && typeof value !== "function") {
-                Dark.ctx[key] = value;
+            for(const key in Dark.ctx) {
+                const value = old[key];
+                if(key !== "canvas" && typeof value !== "function") {
+                    Dark.ctx[key] = value;
+                }
             }
+
+            Dark.canvas.style.cursor = Dark.settings.cursor;
         }
-    }
-};
+    },
 
-var getCanvas = function() {
-    return Dark.canvas;
-};
+    getCanvas: function() {
+        return Dark.canvas;
+    },
 
-var getContext = function() {
-    return Dark.ctx;
-};
+    getContext: function() {
+        return Dark.ctx;
+    },
 
-// Math-y
-var dist = function(x1, y1, x2, y2) {
-    let dx = x2 - x1;
-    let dy = y2 - y1;
-    return Math.sqrt(dx * dx + dy * dy);
-};
+    // Math-y
+    dist: function(x1, y1, x2, y2) {
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        return Math.sqrt(dx * dx + dy * dy);
+    },
 
-var gamma = function(z) {
-    // Stirling's Approximation
-    return Math.sqrt(TAU / z) * (((z + 1 / (12 * z + 1 / (10 * z))) / E) ** z);
-};
+    gamma: function(z) {
+        // Stirling's Approximation
+        return Math.sqrt(TAU / z) * (((z + 1 / (12 * z + 1 / (10 * z))) / E) ** z);
+    },
 
-// Not very accurate, pretty good up to the hundreths
-var factorial = function(num) {
-    return Number.isInteger(num) ? intFactorial(num) : gamma(num + 1);
-};
+    // Not very accurate, pretty good up to the hundreths
+    factorial: function(num) {
+        return Number.isInteger(num) ? intFactorial(num) : gamma(num + 1);
+    },
 
-// Integer-only factorial, 100% accurate and faster
-var intFactorial = function(num) {
-    num = Math.floor(num);
+    // Integer-only factorial, 100% accurate and faster
+    intFactorial: function(num) {
+        num = Math.floor(num);
 
-    let total = num;
-    while(--num > 1) {
-        total *= num;
-    }
-    return total;
-};
+        let total = num;
+        while(--num > 1) {
+            total *= num;
+        }
+        return total;
+    },
 
-var choose = function(n, k) {
-    return intFactorial(n) / (intFactorial(n - k) * intFactorial(k));
-};
+    choose: function(n, k) {
+        return intFactorial(n) / (intFactorial(n - k) * intFactorial(k));
+    },
 
-// Very close to ProcessingJS code
-var random = function(...args) {
-    switch(args.length) {
-        default:
-            return Math.random() * (args[1] - args[0]) + args[0];
-            break;
-        case 0:
-            return Math.random();
-            break;
-        case 1:
-            return Math.random() * args[0];
-    }
-};
+    // Very close to ProcessingJS code
+    random: function(...args) {
+        switch(args.length) {
+            default:
+                return Math.random() * (args[1] - args[0]) + args[0];
+                break;
+            case 0:
+                return Math.random();
+                break;
+            case 1:
+                return Math.random() * args[0];
+        }
+    },
 
-var cursor = function(type) {
-    Dark.settings.cursor = type;
-    Dark.canvas.style.cursor = type;
-};
+    cursor: function(type) {
+        Dark.settings.cursor = type;
+        Dark.canvas.style.cursor = type;
+    },
 
-var loop = function() {
-    Dark.settings.looping = true;
-};
+    loop: function() {
+        Dark.settings.looping = true;
+    },
 
-var noLoop = function() {
-    Dark.settings.looping = false;
-};
+    noLoop: function() {
+        Dark.settings.looping = false;
+    },
 
-var frameRate = function(desiredFPS) {
-    Dark.settings.frameStep = 1000 / desiredFPS;
-};
+    frameRate: function(desiredFPS) {
+        Dark.settings.frameStep = 1000 / desiredFPS;
+    },
 
-var enableContextMenu = function() {
-    Dark.settings.contextMenu = true;
-    Dark.canvas.oncontextmenu = true;
-}
+    enableContextMenu: function() {
+        Dark.settings.contextMenu = true;
+        Dark.canvas.oncontextmenu = true;
+    },
 
-var disableContextMenu = function() {
-    Dark.settings.contextMenu = false;
-    Dark.canvas.oncontextmenu = false;
-}
+    disableContextMenu: function() {
+        Dark.settings.contextMenu = false;
+        Dark.canvas.oncontextmenu = false;
+    },
 
-// Debugging
-var format = function(obj) {
-    if(typeof obj === "object" && obj !== null) {
-        return JSON.stringify(copy(obj), null, "    ");
-    } else {
-        return obj + "";
-    }
-};
+    // Debugging
+    format: function(obj) {
+        if(typeof obj === "object" && obj !== null) {
+            return JSON.stringify(copy(obj), null, "    ");
+        } else {
+            return obj + "";
+        }
+    },
 
-// Color
-var color = function(r, g, b, a) {
-    if(r != undefined && g == undefined) g = r;
-    if(g != undefined && b == undefined) b = g;
-    if(a == undefined) a = 255;
-    r = Math.min(Math.max(r, 0), 255);
-    g = Math.min(Math.max(g, 0), 255);
-    b = Math.min(Math.max(b, 0), 255);
-    a = Math.min(Math.max(a, 0), 255);
-    return (a << 24) + (r << 16) + (g << 8) + (b);
-};
+    // Color
+    color: function(r, g, b, a) {
+        if(r != undefined && g == undefined) g = r;
+        if(g != undefined && b == undefined) b = g;
+        if(a == undefined) a = 255;
+        r = Math.min(Math.max(r, 0), 255);
+        g = Math.min(Math.max(g, 0), 255);
+        b = Math.min(Math.max(b, 0), 255);
+        a = Math.min(Math.max(a, 0), 255);
+        return (a << 24) + (r << 16) + (g << 8) + (b);
+    },
 
-// Splitting color into parts
-var red = color => (color >> 16) & 255;
-var green = color => (color >> 8) & 255;
-var blue = color => color & 255;
-var alpha = color => (color >> 24) & 255;
+    // Splitting color into parts
+    red: color => (color >> 16) & 255,
+    green: color => (color >> 8) & 255,
+    blue: color => color & 255,
+    alpha: color => (color >> 24) & 255,
 
-var lerpColor = function(c1, c2, percent) {
-    return color(
-        lerp(red(c1), red(c2), percent),
-        lerp(green(c1), green(c2), percent),
-        lerp(blue(c1), blue(c2), percent),
-        lerp(alpha(c1), alpha(c2), percent)
-    );
-};
+    lerpColor: function(c1, c2, percent) {
+        return color(
+            lerp(red(c1), red(c2), percent),
+            lerp(green(c1), green(c2), percent),
+            lerp(blue(c1), blue(c2), percent),
+            lerp(alpha(c1), alpha(c2), percent)
+        );
+    },
+
+    fill: function(r, g, b, a) {
+        let c = Dark.settings.fill = Dark.helper.colorValue(r, g, b, a);
+        Dark.ctx.fillStyle = Dark.helper.colorString(c);
+    },
+
+    noFill: function() {
+        Dark.settings.fill = 0;
+        Dark.ctx.fillStyle = "rgba(0, 0, 0, 0)";
+    },
+
+    stroke: function(r, g, b, a) {
+        // Same as fill
+        let c = Dark.settings.stroke = Dark.helper.colorValue(r, g, b, a);
+        Dark.ctx.strokeStyle = Dark.helper.colorString(c);
+    },
+
+    noStroke: function() {
+        Dark.settings.stroke = 0;
+        Dark.ctx.strokeStyle = "rgba(0, 0, 0, 0)";
+    },
+
+    background: function(r, g, b, a) {
+        Dark.ctx.save();
+        let c = Dark.helper.colorValue(r, g, b, a);
+        Dark.ctx.fillStyle = Dark.helper.colorString(c);
+        Dark.ctx.fillRect(0, 0, width, height);
+        Dark.ctx.restore();
+    },
+
+    clear: function() {
+        Dark.ctx.clearRect(0, 0, width, height);
+    },
+
+    // Drawing modes
+    strokeCap: function(mode) {
+        switch(mode) {
+            default:
+                Dark.error(new Error("Invalid strokeCap type"));
+                break;
+            case FLAT:
+                Dark.ctx.lineCap = "butt";
+                Dark.settings.strokeCap = FLAT;
+                break;
+            case ROUND:
+                Dark.ctx.lineCap = "round";
+                Dark.settings.strokeCap = ROUND;
+                break;
+        }
+    },
+
+    strokeWeight: function(weight) {
+        Dark.settings.strokeWeight = weight;
+        Dark.ctx.lineWidth = weight;
+    },
+
+    smooth: function() {
+        Dark.settings.smoothing = true;
+        Dark.ctx.imageSmoothingEnabled = true;
+        Dark.ctx.imageSmoothingQuality = "high";
+    },
+
+    noSmooth: function() {
+        Dark.settings.smoothing = true;
+        Dark.ctx.imageSmoothingEnabled = false;
+        Dark.ctx.imageSmoothingQuality = "low";
+    },
+
+    angleMode: function(mode) {
+        switch(mode) {
+            default:
+                Dark.error(new Error("Invalid angleMode type"));
+                break;
+            case DEGREES:
+                Dark.settings.angleMode = DEGREES;
+                break;
+            case RADIANS:
+                Dark.settings.angleMode = RADIANS;
+                break;
+        }
+    },
+
+    ellipseMode: function(type = CENTER) {
+        Dark.settings.ellipseMode = type;
+    },
+
+    rectMode: function(type = CORNER) {
+        Dark.settings.rectMode = type;
+    },
+
+    curveTightness: function(tightness = 0) {
+        Dark.settings.curveTightness = tightness;
+    },
+
+    // Transformations
+    pushMatrix: function() {
+        if(Dark.transforms.length > Dark.maxTransforms) {
+            Dark.error("Maximum matrix stack size reached, pushMatrix() called " + Dark.maxTransforms + " times.");
+        } else {
+            Dark.transforms.push(Dark.ctx.getTransform());
+        }
+    },
+
+    popMatrix: function() {
+        let transform = Dark.transforms.pop();
+        if(transform == undefined) {
+            Dark.error(new Error("No more transforms to restore in popMatrix"));
+        } else {
+            Dark.ctx.setTransform(transform);
+        }
+    },
+
+    resetMatrix: function() {
+        Dark.transforms.length = 0;
+    },
+
+    translate: function(x, y) {
+        Dark.ctx.translate(x, y);
+    },
+
+    rotate: function(angle) {
+        Dark.ctx.rotate(Dark.helper.angle(angle));
+    },
+
+    scale: function(w, h) {
+        if(h == undefined) {
+            Dark.ctx.scale(w, w);
+        } else {
+            Dark.ctx.scale(w, h);
+        }
+    },
+
+    skew: function(h, v = 0) {
+        let transform = Dark.ctx.getTransform();
+        transform.b = v;
+        transform.c = h;
+        Dark.ctx.setTransform(transform);
+    },
+
+    // Shapes
+    rect: function(x, y, width, height) {
+        Dark.ctx.beginPath();
+        Dark.ctx.save();
+        if(Dark.settings.rectMode == CENTER) Dark.ctx.translate(- width / 2, - height / 2);
+        Dark.ctx.rect(x, y, width, height);
+        Dark.ctx.fill();
+        Dark.ctx.stroke();
+        Dark.ctx.restore();
+    },
+
+    ellipse: function(x, y, width, height) {
+        Dark.ctx.beginPath();
+        Dark.ctx.save();
+        if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(width / 2, height / 2);
+        Dark.ctx.beginPath();
+        Dark.ctx.ellipse(x, y, width / 2, height / 2, 0, 0, TAU, false);
+        Dark.ctx.fill();
+        Dark.ctx.stroke();
+        Dark.ctx.restore();
+    },
+
+    arc: function(x, y, width, height, start, stop) {
+        Dark.ctx.save();
+        if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(width / 2, height / 2);
+        Dark.ctx.beginPath();
+        Dark.ctx.ellipse(x, y, width / 2, height / 2, 0, start, stop, false);
+        Dark.ctx.fill();
+        Dark.ctx.stroke();
+        Dark.ctx.restore();
+    },
+
+    line: function(x1, y1, x2, y2) {
+        Dark.ctx.beginPath();
+        Dark.ctx.moveTo(x1, y1);
+        Dark.ctx.lineTo(x2, y2);
+        Dark.ctx.stroke();
+    },
+
+    point: function(x, y) {
+        Dark.ctx.save();
+        Dark.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(width / 2, height / 2);
+        Dark.ctx.fill();
+        Dark.ctx.restore();
+    },
+
+    circle: function(x, y, radius) {
+        Dark.ctx.save();
+        if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(radius, radius);
+        Dark.ctx.beginPath();
+        Dark.ctx.arc(x, y, radius, 0, TAU);
+        Dark.ctx.fill();
+        Dark.ctx.stroke();
+        Dark.ctx.restore();
+    },
+
+    square: function(x, y, side) {
+        rect(x, y, side, side);
+    },
+
+    triangle: function(x1, y1, x2, y2, x3, y3) {
+        Dark.ctx.beginPath();
+        Dark.ctx.moveTo(x1, y1);
+        Dark.ctx.lineTo(x2, y2);
+        Dark.ctx.lineTo(x3, y3);
+        Dark.ctx.closePath();
+        Dark.ctx.fill();
+        Dark.ctx.stroke();
+    },
+
+    quad: function(x1, y1, x2, y2, x3, y3, x4, y4) {
+        Dark.ctx.beginPath();
+        Dark.ctx.moveTo(x1, y1);
+        Dark.ctx.lineTo(x2, y2);
+        Dark.ctx.lineTo(x3, y3);
+        Dark.ctx.lineTo(x4, y4);
+        Dark.ctx.closePath();
+        Dark.ctx.fill();
+        Dark.ctx.stroke();
+    },
+
+    beginShape: function() {
+        Dark.vertices.length = 0;
+    },
+
+    endShape: function(type = OPEN) {
+        if(Dark.vertices.length < 2 || Dark.vertices[0].type != VERTEX) return;
+        Dark.ctx.beginPath();
+        Dark.vertices.forEach(function(vert, index) {
+            if(index == 0) {
+                Dark.ctx.moveTo(vert.point.x, vert.point.y);
+            } else {
+                switch(vert.type) {
+                    case VERTEX:
+                        let pt = vert.point;
+                        Dark.ctx.lineTo(pt.x, pt.y);
+                        break;
+                    case CURVE:
+                        // to be implemented
+                        let node = vert.node;
+                        break;
+                    case BEZIER:
+                        let pts = vert.points;
+                        Dark.ctx.bezierCurveTo(pts[0].x, pts[0].y, pts[1].x, pts[1].y, pts[2].x, pts[2].y);
+                        break;
+                }
+            }
+        });
+        if(type == CLOSE) Dark.ctx.closePath();
+        Dark.ctx.fill();
+        Dark.ctx.stroke();
+    },
+
+    // Kinda copied from ski, though slightly different (curveVertex)
+    vertex: function(x, y) {
+        Dark.vertices.push({
+            type: VERTEX,
+            point: {
+                x: x,
+                y: y
+            }
+        });
+    },
+
+    curveVertex: function(cx, cy) {
+        Dark.vertices.push({
+            type: CURVE,
+            node: {
+                x: cx,
+                y: cy
+            }
+        });
+    },
+
+    bezierVertex: function(x1, y1, x2, y2, x3, y3) {
+        Dark.vertices.push({
+            type: BEZIER,
+            points: [
+                {
+                    x: x1,
+                    y: y1,
+                }, {
+                    x: x2,
+                    y: y2
+                }, {
+                    x: x3,
+                    y: y3
+                }
+            ]
+        });
+    },
+
+    bezier: function(x1, y1, cx1, cy1, cx2, cy2, x2, y2) {
+        beginShape();
+        vertex(x1, y1);
+        bezierVertex(cx1, cy1, cx2, cy2, x2, y2);
+        endShape();
+    },
+
+    reloadFont: function() {
+        Dark.ctx.font = Dark.settings.font.toString();
+    },
+
+    // Text
+    textSize: function(size) {
+        Dark.settings.textSize = size;
+        Dark.settings.font.size = size;
+        reloadFont();
+    },
+
+    textFont: function(font) {
+        if(typeof font === "string") {
+            font = new DFont(font);
+        }
+        if(font instanceof DFont) {
+            Dark.settings.font = font;
+            Dark.settings.textSize = font.size;
+            reloadFont();
+        } else {
+            Dark.error(font + " is not a DFont.");
+        }
+    },
+
+    textStyle: function(style) {
+        switch(style) {
+            default:
+                Dark.settings.font.weight = "normal";
+                Dark.settings.font.style = "normal";
+                break;
+            case BOLD:
+                Dark.settings.font.weight = "bold";
+                break;
+            case ITALIC:
+                Dark.settings.font.style = "italic";
+                break;
+        }
+        reloadFont();
+    },
+
+    text: function(text, x, y) {
+        Dark.ctx.fillText(text, x, y);
+        Dark.ctx.strokeText(text, x, y);
+    },
+
+    // Quick & Mathy functions
+    // Map copied from ProcessingJS
+    min: (a, b) => (a < b) ? a : b,
+    max: (a, b) => (a > b) ? a : b,
+    log10: num => Math.log10(num),
+    log2: num => Math.log2(num),
+    log: num => Math.log(num),
+    logBase: (base, num) => Math.log(base) / Math.log(num),
+    mag: (a, b) => Math.sqrt(a * a + b * b),
+    norm: (num, min, max) => (num - min) / (max - min),
+    constrain: (num, min, max) => Math.min(Math.max(num, min), max),
+    lerp: (val1, val2, percent) => (val2 - val1) * percent + val1,
+    map: (num, min1, max1, min2, max2) => min2 + (max2 - min2) / (max1 - min1) * (value - min1),
+    sq: num => num * num,
+    cb: num => num * num * num,
+    pow: (num, power) => num ** power,
+    root: (num, power) => num ** (1 / power),
+    sqrt: num => Math.sqrt(num),
+    cbrt: num => Math.cbrt(num),
+    exp: num => E ** num,
+    floor: num => Math.floor(num),
+    round: num => Math.round(num),
+    ceil: num => Math.ceil(num),
+    trunc: num => Math.trunc(num),
+    deci: num => num - Math.trunc(num),
+    abs: num => (num < 0) ? - num : num,
+    sign: num => Math.sign(num),
+    bsign: num => (num < 0) ? -1 : 1,
+    degrees: angle => angle * 180 / PI,
+    radians: angle => angle * PI / 180,
+    millennium: () => Math.floor(new Date().getFullYear() / 1000),
+    century: () => Math.floor(new Date().getFullYear() / 100),
+    decade: () => Math.floor(new Date().getFullYear() / 10),
+    year: () => new Date().getFullYear(),
+    month: () => new Date().getMonth(),
+    day: () => new Date().getDate(),
+    hour: () => new Date().getHours(),
+    minute: () => new Date().getMinutes(),
+    second: () => new Date().getSeconds(),
+    millis: () => Math.floor(performance.now()),
+    micro: () => Math.floor((performance.now() * 1000) % 1000),
+    nano: () => Math.floor((performance.now() * 1000000) % 1000),
+    today: () => DAYS[new Date().getDay()],
+    timezone: () => - new Date().getTimezoneOffset() / 60,
+    degrees: rad => rad * 180 / PI,
+    radians: deg => deg * PI / 180,
+    sin: ang => Math.sin(Dark.helper.angle(ang)),
+    cos: ang => Math.cos(Dark.helper.angle(ang)),
+    tan: ang => Math.tan(Dark.helper.angle(ang)),
+    csc: ang => 1 / Math.sin(Dark.helper.angle(ang)),
+    sec: ang => 1 / Math.cos(Dark.helper.angle(ang)),
+    cot: ang => 1 / Math.tan(Dark.helper.angle(ang)),
+    atan2: (dy, dx) => Dark.helper.angleBack(Math.atan2(dy, dx)),
+    asin: ang => Math.asin(Dark.helper.angle(ang)),
+    acos: ang => Math.acos(Dark.helper.angle(ang)),
+    atan: ang => Math.atan(Dark.helper.angle(ang)),
+    acsc: ang => Math.asin(1 / Dark.helper.angle(ang)),
+    asec: ang => Math.acos(1 / Dark.helper.angle(ang)),
+    acot: ang => Math.atan(1 / Dark.helper.angle(ang)),
+    sinh: ang => Math.sinh(Dark.helper.angle(ang)),
+    cosh: ang => Math.cosh(Dark.helper.angle(ang)),
+    tanh: ang => Math.tanh(Dark.helper.angle(ang)),
+    csch: ang => 1 / Math.sinh(Dark.helper.angle(ang)),
+    sech: ang => 1 / Math.cosh(Dark.helper.angle(ang)),
+    coth: ang => 1 / Math.tanh(Dark.helper.angle(ang)),
+    asinh: ang => Math.asinh(Dark.helper.angle(ang)),
+    acosh: ang => Math.acosh(Dark.helper.angle(ang)),
+    atanh: ang => Math.atanh(Dark.helper.angle(ang)),
+    acsch: ang => Math.asinh(1 / Dark.helper.angle(ang)),
+    asech: ang => Math.acosh(1 / Dark.helper.angle(ang)),
+    acoth: ang => Math.atanh(1 / Dark.helper.angle(ang)),
+    now: () => performance.now(),
+    reciprocal: num => 1 / num
+
+});
 
 Dark.helper.colorValue = function(r, g, b, a) {
     if(r != undefined && g == undefined) {
@@ -284,397 +786,6 @@ Dark.helper.colorValue = function(r, g, b, a) {
 Dark.helper.colorString = function(c) {
     return "rgba(" + red(c) + ", " + green(c) + ", " + blue(c) + ", " + alpha(c) / 255 + ")";
 };
-
-var fill = function(r, g, b, a) {
-    let c = Dark.settings.fill = Dark.helper.colorValue(r, g, b, a);
-    Dark.ctx.fillStyle = Dark.helper.colorString(c);
-};
-
-var noFill = function() {
-    Dark.settings.fill = 0;
-    Dark.ctx.fillStyle = "rgba(0, 0, 0, 0)";
-};
-
-var stroke = function(r, g, b, a) {
-    // Same as fill
-    let c = Dark.settings.stroke = Dark.helper.colorValue(r, g, b, a);
-    Dark.ctx.strokeStyle = Dark.helper.colorString(c);
-};
-
-var noStroke = function() {
-    Dark.settings.stroke = 0;
-    Dark.ctx.strokeStyle = "rgba(0, 0, 0, 0)";
-};
-
-var background = function(r, g, b, a) {
-    Dark.ctx.save();
-    let c = Dark.helper.colorValue(r, g, b, a);
-    Dark.ctx.fillStyle = Dark.helper.colorString(c);
-    Dark.ctx.fillRect(0, 0, width, height);
-    Dark.ctx.restore();
-};
-
-var clear = function() {
-    Dark.ctx.clearRect(0, 0, width, height);
-};
-
-// Drawing modes
-var strokeCap = function(mode) {
-    switch(mode) {
-        default:
-            Dark.error(new Error("Invalid strokeCap type"));
-            break;
-        case FLAT:
-            Dark.ctx.lineCap = "butt";
-            Dark.settings.strokeCap = FLAT;
-            break;
-        case ROUND:
-            Dark.ctx.lineCap = "round";
-            Dark.settings.strokeCap = ROUND;
-            break;
-    }
-};
-
-var strokeWeight = function(weight) {
-    Dark.settings.strokeWeight = weight;
-    Dark.ctx.lineWidth = weight;
-};
-
-var smooth = function() {
-    Dark.settings.smoothing = true;
-    Dark.ctx.imageSmoothingEnabled = true;
-    Dark.ctx.imageSmoothingQuality = "high";
-};
-
-var noSmooth = function() {
-    Dark.settings.smoothing = true;
-    Dark.ctx.imageSmoothingEnabled = false;
-    Dark.ctx.imageSmoothingQuality = "low";
-};
-
-var angleMode = function(mode) {
-    switch(mode) {
-        default:
-            Dark.error(new Error("Invalid angleMode type"));
-            break;
-        case DEGREES:
-            Dark.settings.angleMode = DEGREES;
-            break;
-        case RADIANS:
-            Dark.settings.angleMode = RADIANS;
-            break;
-    }
-};
-
-var ellipseMode = function(type = CENTER) {
-    Dark.settings.ellipseMode = type;
-};
-
-var rectMode = function(type = CORNER) {
-    Dark.settings.rectMode = type;
-};
-
-// Transformations
-var pushMatrix = function() {
-    if(Dark.transforms.length > Dark.maxTransforms) {
-        Dark.error("Maximum matrix stack size reached, pushMatrix() called " + Dark.maxTransforms + " times.");
-    } else {
-        Dark.transforms.push(Dark.ctx.getTransform());
-    }
-};
-
-var popMatrix = function() {
-    let transform = Dark.transforms.pop();
-    if(transform == undefined) {
-        Dark.error(new Error("No more transforms to restore in popMatrix"));
-    } else {
-        Dark.ctx.setTransform(transform);
-    }
-};
-
-var resetMatrix = function() {
-    Dark.transforms.length = 0;
-};
-
-var translate = function(x, y) {
-    Dark.ctx.translate(x, y);
-};
-
-var rotate = function(angle) {
-    Dark.ctx.rotate(Dark.helper.angle(angle));
-};
-
-var scale = function(w, h) {
-    if(h == undefined) {
-        Dark.ctx.scale(w, w);
-    } else {
-        Dark.ctx.scale(w, h);
-    }
-};
-
-var skew = function(h, v = 0) {
-    let transform = Dark.ctx.getTransform();
-    transform.b = v;
-    transform.c = h;
-    Dark.ctx.setTransform(transform);
-};
-
-// Shapes
-var rect = function(x, y, width, height) {
-    Dark.ctx.beginPath();
-    Dark.ctx.save();
-    if(Dark.settings.rectMode == CENTER) Dark.ctx.translate(- width / 2, - height / 2);
-    Dark.ctx.rect(x, y, width, height);
-    Dark.ctx.fill();
-    Dark.ctx.stroke();
-    Dark.ctx.restore();
-};
-
-var ellipse = function(x, y, width, height) {
-    Dark.ctx.beginPath();
-    Dark.ctx.save();
-    if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(width / 2, height / 2);
-    Dark.ctx.beginPath();
-    Dark.ctx.ellipse(x, y, width / 2, height / 2, 0, 0, TAU, false);
-    Dark.ctx.fill();
-    Dark.ctx.stroke();
-    Dark.ctx.restore();
-};
-
-var arc = function(x, y, width, height, start, stop) {
-    Dark.ctx.save();
-    if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(width / 2, height / 2);
-    Dark.ctx.beginPath();
-    Dark.ctx.ellipse(x, y, width / 2, height / 2, 0, start, stop, false);
-    Dark.ctx.fill();
-    Dark.ctx.stroke();
-    Dark.ctx.restore();
-};
-
-var line = function(x1, y1, x2, y2) {
-    Dark.ctx.beginPath();
-    Dark.ctx.moveTo(x1, y1);
-    Dark.ctx.lineTo(x2, y2);
-    Dark.ctx.stroke();
-};
-
-var point = function(x, y) {
-    Dark.ctx.save();
-    Dark.ctx.fillStyle = "rgba(0, 0, 0, 1)";
-    if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(width / 2, height / 2);
-    Dark.ctx.fill();
-    Dark.ctx.restore();
-};
-
-var circle = function(x, y, radius) {
-    Dark.ctx.save();
-    if(Dark.settings.ellipseMode == CORNER) Dark.ctx.translate(radius, radius);
-    Dark.ctx.beginPath();
-    Dark.ctx.arc(x, y, radius, 0, TAU);
-    Dark.ctx.fill();
-    Dark.ctx.stroke();
-    Dark.ctx.restore();
-};
-
-var square = function(x, y, side) {
-    rect(x, y, side, side);
-};
-
-var triangle = function(x1, y1, x2, y2, x3, y3) {
-    Dark.ctx.beginPath();
-    Dark.ctx.moveTo(x1, y1);
-    Dark.ctx.lineTo(x2, y2);
-    Dark.ctx.lineTo(x3, y3);
-    Dark.ctx.closePath();
-    Dark.ctx.fill();
-    Dark.ctx.stroke();
-};
-
-var quad = function(x1, y1, x2, y2, x3, y3, x4, y4) {
-    Dark.ctx.beginPath();
-    Dark.ctx.moveTo(x1, y1);
-    Dark.ctx.lineTo(x2, y2);
-    Dark.ctx.lineTo(x3, y3);
-    Dark.ctx.lineTo(x4, y4);
-    Dark.ctx.closePath();
-    Dark.ctx.fill();
-    Dark.ctx.stroke();
-};
-
-var beginShape = function() {
-    Dark.vertices.length = 0;
-};
-
-var endShape = function(type = CLOSE) {
-    if(Dark.vertices.length < 2 || Dark.vertices[0].type != VERTEX) return;
-    Dark.ctx.beginPath();
-    Dark.vertices.forEach(function(vert, index) {
-        if(index == 0) {
-            Dark.ctx.moveTo(vert.point.x, vert.point.y);
-        } else {
-            switch(vert.type) {
-                case VERTEX:
-                    const pt = vert.point;
-                    Dark.ctx.lineTo(pt.x, pt.y);
-                    break;
-                case CURVE:
-                    // to be implemented
-                    break;
-                case BEZIER:
-                    const pts = vert.points;
-                    Dark.ctx.bezierCurveTo(pts[0].x, pts[0].y, pts[1].x, pts[1].y, pts[2].x, pts[2].y);
-                    break;
-            }
-        }
-    });
-    if(type == CLOSE) Dark.ctx.closePath();
-    Dark.ctx.fill();
-    Dark.ctx.stroke();
-};
-
-// Kinda copied from ski, though slightly different (curveVertex)
-var vertex = function(x, y) {
-    Dark.vertices.push({
-        type: VERTEX,
-        point: {
-            x: x,
-            y: y
-        }
-    });
-};
-
-var curveVertex = function(cx, cy) {
-    Dark.vertices.push({
-        type: CURVE,
-        node: {
-            x: cx,
-            y: cy
-        }
-    });
-};
-
-var bezierVertex = function(x1, y1, x2, y2, x3, y3) {
-    Dark.vertices.push({
-        type: BEZIER,
-        points: [
-            {
-                x: x1,
-                y: y1,
-            }, {
-                x: x2,
-                y: y2
-            }, {
-                x: x3,
-                y: y3
-            }
-        ]
-    });
-};
-
-var bezier = function(x1, y1, cx1, cy1, cx2, cy2, x2, y2) {
-    beginShape();
-    vertex(x1, y1);
-    bezierVertex(cx1, cy1, cx2, cy2, x2, y2);
-    endShape();
-};
-
-// Text
-var textSize = function(size) {
-    Dark.settings.textSize = size;
-    Dark.settings.font.size = size;
-    Dark.ctx.font = Dark.settings.font.toString();
-};
-
-var textFont = function(font) {
-    if(typeof font === "string") {
-        font = new DFont(font);
-    }
-    if(font instanceof DFont) {
-        Dark.settings.font = font;
-        Dark.settings.textSize = font.size;
-        Dark.ctx.font = font.toString();
-    } else {
-        Dark.error(font + " is not a DFont.");
-    }
-};
-
-var text = function(text, x, y) {
-    Dark.ctx.fillText(text, x, y);
-    Dark.ctx.strokeText(text, x, y);
-};
-
-// Quick & Mathy functions
-// Map copied from ProcessingJS
-var min = (a, b) => (a < b) ? a : b;
-var max = (a, b) => (a > b) ? a : b;
-var log10 = num => Math.log10(num);
-var log2 = num => Math.log2(num);
-var log = num => Math.log(num);
-var logBase = (base, num) => Math.log(base) / Math.log(num);
-var mag = (a, b) => Math.sqrt(a * a + b * b);
-var norm = (num, min, max) => (num - min) / (max - min);
-var constrain = (num, min, max) => Math.min(Math.max(num, min), max);
-var lerp = (val1, val2, percent) => (val2 - val1) * percent + val1;
-var map = (num, min1, max1, min2, max2) => min2 + (max2 - min2) / (max1 - min1) * (value - min1);
-var sq = num => num * num;
-var cb = num => num * num * num;
-var pow = (num, power) => num ** power;
-var root = (num, power) => num ** (1 / power);
-var sqrt = num => Math.sqrt(num);
-var cbrt = num => Math.cbrt(num);
-var exp = num => E ** num;
-var floor = num => Math.floor(num);
-var round = num => Math.round(num);
-var ceil = num => Math.ceil(num);
-var trunc = num => Math.trunc(num);
-var deci = num => num - Math.trunc(num);
-var abs = num => (num < 0) ? - num : num;
-var sign = num => Math.sign(num);
-var bsign = num => (num < 0) ? -1 : 1;
-var degrees = angle => angle * 180 / PI;
-var radians = angle => angle * PI / 180;
-var millennium = () => Math.floor(new Date().getFullYear() / 1000);
-var century = () => Math.floor(new Date().getFullYear() / 100);
-var decade = () => Math.floor(new Date().getFullYear() / 10);
-var year = () => new Date().getFullYear();
-var month = () => new Date().getMonth();
-var day = () => new Date().getDate();
-var hour = () => new Date().getHours();
-var minute = () => new Date().getMinutes();
-var second = () => new Date().getSeconds();
-var millis = () => Math.floor(performance.now());
-var micro = () => Math.floor((performance.now() * 1000) % 1000);
-var nano = () => Math.floor((performance.now() * 1000000) % 1000);
-var today = () => DAYS[new Date().getDay()];
-var timezone = () => - new Date().getTimezoneOffset() / 60;
-var degrees = rad => rad * 180 / PI;
-var radians = deg => deg * PI / 180;
-var sin = ang => Math.sin(Dark.helper.angle(ang));
-var cos = ang => Math.cos(Dark.helper.angle(ang));
-var tan = ang => Math.tan(Dark.helper.angle(ang));
-var csc = ang => 1 / Math.sin(Dark.helper.angle(ang));
-var sec = ang => 1 / Math.cos(Dark.helper.angle(ang));
-var cot = ang => 1 / Math.tan(Dark.helper.angle(ang));
-var atan2 = (dy, dx) => Dark.helper.angleBack(Math.atan2(dy, dx));
-var asin = ang => Math.asin(Dark.helper.angle(ang));
-var acos = ang => Math.acos(Dark.helper.angle(ang));
-var atan = ang => Math.atan(Dark.helper.angle(ang));
-var acsc = ang => Math.asin(1 / Dark.helper.angle(ang));
-var asec = ang => Math.acos(1 / Dark.helper.angle(ang));
-var acot = ang => Math.atan(1 / Dark.helper.angle(ang));
-var sinh = ang => Math.sinh(Dark.helper.angle(ang));
-var cosh = ang => Math.cosh(Dark.helper.angle(ang));
-var tanh = ang => Math.tanh(Dark.helper.angle(ang));
-var csch = ang => 1 / Math.sinh(Dark.helper.angle(ang));
-var sech = ang => 1 / Math.cosh(Dark.helper.angle(ang));
-var coth = ang => 1 / Math.tanh(Dark.helper.angle(ang));
-var asinh = ang => Math.asinh(Dark.helper.angle(ang));
-var acosh = ang => Math.acosh(Dark.helper.angle(ang));
-var atanh = ang => Math.atanh(Dark.helper.angle(ang));
-var acsch = ang => Math.asinh(1 / Dark.helper.angle(ang));
-var asech = ang => Math.acosh(1 / Dark.helper.angle(ang));
-var acoth = ang => Math.atanh(1 / Dark.helper.angle(ang));
-var now = () => performance.now();
 
 // Vectors
 var DVector = function(x, y, z) {
@@ -976,18 +1087,67 @@ DFont.weights = [
 Dark.objects.DVector = DVector;
 Dark.objects.DFont = DFont;
 
-// Load default settings & functions
-fill(255);
-stroke(0);
-strokeWeight(2);
-strokeCap(ROUND);
-smooth();
-angleMode(DEGREES);
-frameRate(60);
-textFont("12px Arial");
-
 Dark.settings.cursor = "auto";
 Dark.settings.looping = true;
+
+// Key & mouse events
+document.addEventListener("keydown", function(e) {
+    e.preventDefault();
+    keyIsPressed = true;
+    key = e.key;
+    keyCode = e.keyCode;
+    keyPressed();
+});
+
+document.addEventListener("keyup", function(e) {
+    e.preventDefault();
+    keyIsPressed = false;
+    key = undefined;
+    keyCode = undefined;
+    keyReleased();
+});
+
+document.addEventListener("keypress", function(e) {
+    e.preventDefault();
+    keyTyped();
+});
+
+document.addEventListener("mousedown", function(e) {
+    e.preventDefault();
+    mouseIsPressed = true;
+    mousePressed();
+});
+
+document.addEventListener("mouseup", function(e) {
+    e.preventDefault();
+    mouseIsPressed = false;
+    mousePressed();
+});
+
+document.addEventListener("mouseenter", function(e) {
+    e.preventDefault();
+    mouseIn();
+});
+
+document.addEventListener("mouseleave", function(e) {
+    e.preventDefault();
+    mouseOut();
+});
+
+document.addEventListener("mouseover", function(e) {
+    e.preventDefault();
+    mouseOver();
+});
+
+document.addEventListener("mousemove", function(e) {
+    e.preventDefault();
+    mouseMoved();
+});
+
+document.addEventListener("dblclick", function(e) {
+    e.preventDefault();
+    mouseDoubleClicked();
+});
 
 // Draw function
 Dark.raf = function(time) {
@@ -1003,6 +1163,30 @@ Dark.raf = function(time) {
     requestAnimationFrame(Dark.raf);
 };
 
+// Start draw function
 requestAnimationFrame(Dark.raf);
 
-console.log(Dark);
+// Add constants to window
+for(const key in Dark.constants) {
+    window[key] = Dark.constants[key];
+}
+
+// Add functions to window
+for(const key in Dark.functions) {
+    window[key] = Dark.functions[key];
+}
+
+// Add variables to window
+for(const key in Dark.variables) {
+    window[key] = Dark.variables[key];
+}
+
+// Load default settings & functions
+fill(255);
+stroke(0);
+strokeWeight(1);
+strokeCap(ROUND);
+smooth();
+angleMode(DEGREES);
+frameRate(60);
+textFont("12px Arial");
