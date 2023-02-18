@@ -8,11 +8,9 @@ To add:
 • Errors for 2 beginShapes in a row
 • Cursor lock function — lock()
 • Easier key use
-• Set variable function under helper
 • Allow negatives for arcs
 • Move maxErrorCount and maxTransforms to Dark.constants
 • Add set function to DImage
-• DarkJS instances
 • Add DarkJS instance to image if certain function is run
 • Bezier point & tangent
 • Curve point & tangent
@@ -20,17 +18,19 @@ To add:
 • Add copy function to DMatrix
 • Convert canvas matrix to and from DMatrix
 • Multiplication & division in DMatrix
-• Replace the == undefined with arguments.length
 • Option to use numbers in DMatrix's add, sub, mult, div, etc functions
-• Replace all the Dark.variables stuff with IIFE and a constructor for Dark + global setGlobal for choosing the main
 • Add credits
+• Add key constants like LEFT, RIGHT, UP, DOWN, CONTROL, SHIFT, etc
+• Apply matrix transformations to DVectors
+• Add reset function
+• Replace == undefined with !
+• Test if === is necessary for strings, if not replace for speed
 
 Possibly to add:
 • Transformations from point for ease of use 
 • Store shapes in variables, maybe DShape
 • println-like console
 • Font library for Google Fonts
-• Seperate Dark.js into many different scripts
 • Audio
 
 Bugs:
