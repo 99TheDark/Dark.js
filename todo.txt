@@ -22,12 +22,16 @@ To add:
 • Multiplication & division in DMatrix
 • Replace the == undefined with arguments.length
 • Option to use numbers in DMatrix's add, sub, mult, div, etc functions
+• Replace all the Dark.variables stuff with IIFE and a constructor for Dark + global setGlobal for choosing the main
+• Add credits
 
 Possibly to add:
 • Transformations from point for ease of use 
 • Store shapes in variables, maybe DShape
 • println-like console
 • Font library for Google Fonts
+• Seperate Dark.js into many different scripts
+• Audio
 
 Bugs:
 • Key typed not working
