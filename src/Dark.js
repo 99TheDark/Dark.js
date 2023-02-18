@@ -15,6 +15,7 @@ var Dark = function() {
     d.objects = Dark.objects;
     d.constants = Dark.constants;
 
+    // Load in variables to their default values
     for(const key in Dark.variables) {
         d[key] = Dark.variables[key];
     }
@@ -138,18 +139,6 @@ var Dark = function() {
 
     };
 
-    var colorValue = function(r, g, b, a) {
-        if(r != undefined && g == undefined) {
-            if(r <= 255) {
-                return d.color(r, r, r);
-            } else {
-                return r;
-            }
-        } else {
-            return d.color(r, g, b, a);
-        }
-    };
-
     var colorString = function(c) {
         return "rgba(" + d.red(c) + ", " + d.green(c) + ", " + d.blue(c) + ", " + d.alpha(c) / 255 + ")";
     };
@@ -158,7 +147,7 @@ var Dark = function() {
 
         // Very handy function to copy objects
         copy: function(e) {
-            if(typeof e === "object") {
+            if(typeof e == "object") {
                 let obj = {};
                 for(const key in e) {
                     obj[key] = e[key];
@@ -172,7 +161,7 @@ var Dark = function() {
 
         // Setup functions & getters
         size: function(w = innerWidth, h = innerHeight) {
-            if(typeof w === "number" && typeof h === "number" && w > 0 && h > 0) {
+            if(typeof w == "number" && typeof h == "number" && w > 0 && h > 0) {
                 // Because for some reason changing width & height reset all parameters >:(
                 // It took me ~8 hours to figure this out. D:<
                 let old = d.copy(d.ctx);
@@ -295,7 +284,7 @@ var Dark = function() {
 
         // Debugging
         format: function(obj) {
-            if(typeof obj === "object" && obj !== null) {
+            if(typeof obj == "object" && obj !== null) {
                 return JSON.stringify(copy(obj), null, "    ");
             } else {
                 return obj + "";
@@ -304,9 +293,9 @@ var Dark = function() {
 
         // Color
         color: function(r, g, b, a) {
-            if(r != undefined && g == undefined) g = r;
-            if(g != undefined && b == undefined) b = g;
-            if(a == undefined) a = 255;
+            if(arguments.length == 1) b = g = r;
+            if(arguments.length == 2) a = g, g = r, b = r;
+            if(!a) a = 255;
             r = d.constrain(r, 0, 255);
             g = d.constrain(g, 0, 255);
             b = d.constrain(b, 0, 255);
@@ -329,8 +318,8 @@ var Dark = function() {
             );
         },
 
-        fill: function(r, g, b, a) {
-            let c = d.settings.fill = colorValue(r, g, b, a);
+        fill: function(...args) {
+            let c = d.settings.fill = d.color.apply(null, args);
             d.ctx.fillStyle = colorString(c);
         },
 
@@ -339,9 +328,9 @@ var Dark = function() {
             d.ctx.fillStyle = "rgba(0, 0, 0, 0)";
         },
 
-        stroke: function(r, g, b, a) {
+        stroke: function(...args) {
             // Same as fill
-            let c = d.settings.stroke = colorValue(r, g, b, a);
+            let c = d.settings.stroke = d.color.apply(null, args);
             d.ctx.strokeStyle = colorString(c);
         },
 
@@ -350,9 +339,9 @@ var Dark = function() {
             d.ctx.strokeStyle = "rgba(0, 0, 0, 0)";
         },
 
-        background: function(r, g, b, a) {
+        background: function(...args) {
             d.ctx.save();
-            let c = colorValue(r, g, b, a);
+            let c = d.color.apply(null, args);
             d.ctx.fillStyle = colorString(c);
             d.ctx.fillRect(0, 0, d.width, d.height);
             d.ctx.restore();
@@ -437,7 +426,7 @@ var Dark = function() {
 
         popMatrix: function() {
             let transform = d.transforms.pop();
-            if(transform == undefined) {
+            if(!transform) {
                 Dark.error(new Error("No more transforms to restore in popMatrix"));
             } else {
                 d.ctx.setTransform(transform);
@@ -613,6 +602,16 @@ var Dark = function() {
             });
         },
 
+        smoothVertex: function(sx, sy) {
+            d.vertices.push({
+                type: d.constants.SMOOTH,
+                node: {
+                    x: sx,
+                    y: sy
+                }
+            });
+        },
+
         bezierVertex: function(x1, y1, x2, y2, x3, y3) {
             d.vertices.push({
                 type: d.constants.BEZIER,
@@ -650,7 +649,7 @@ var Dark = function() {
         },
 
         textFont: function(font) {
-            if(typeof font === "string") {
+            if(typeof font == "string") {
                 font = new d.objects.DFont(font);
             }
             if(font instanceof d.objects.DFont) {
@@ -878,14 +877,15 @@ Dark.constants = {
     "RADIANS": 3,
     "VERTEX": 4,
     "CURVE": 5,
-    "BEZIER": 6,
-    "CLOSE": 7,
-    "OPEN": 8,
-    "CENTER": 9,
-    "CORNER": 10,
-    "BOLD": 11,
-    "ITALIC": 12,
-    "NORMAL": 13
+    "SMOOTH": 6,
+    "BEZIER": 7,
+    "CLOSE": 8,
+    "OPEN": 9,
+    "CENTER": 10,
+    "CORNER": 11,
+    "BOLD": 12,
+    "ITALIC": 13,
+    "NORMAL": 14
 };
 
 // Variables to be private
@@ -941,12 +941,12 @@ Dark.defaultContextSettings = {
 
 // Debugging
 Dark.copy = function(e) {
-    if(typeof e === "object" || typeof e === "function") {
+    if(typeof e == "object" || typeof e == "function") {
         let obj = {};
         for(const key in e) {
             obj[key] = e[key];
         }
-        if(typeof e === "function" && Object.keys(obj).length == 0) return e;
+        if(typeof e == "function" && Object.keys(obj).length == 0) return e;
         return obj;
     } else {
         Dark.warn("\"" + e + "\" is not an object!");
@@ -956,7 +956,7 @@ Dark.copy = function(e) {
 
 Dark.format = function(obj) {
     let copied = Dark.copy(obj);
-    if(typeof copied === "object" && (typeof obj === "object" || typeof obj === "function")) {
+    if(typeof copied == "object" && (typeof obj == "object" || typeof obj == "function")) {
         return JSON.stringify(Dark.copy(obj), null, "    ");
     } else {
         return obj + "";
@@ -974,7 +974,7 @@ Dark.error = function(error) {
 // Important function: sets the Dark object that has global access
 Dark.setMain = function(dark) {
     if(dark instanceof Dark) {
-        if(Dark.main != undefined) Dark.main.isMain = false;
+        if(Dark.main) Dark.main.isMain = false;
         Dark.main = dark;
         dark.isMain = true;
     } else {
@@ -990,7 +990,7 @@ Dark.getMain = function() {
 Dark.globallyUpdateVariables = function(m) {
     // Update empties so they can be defined
     Dark.empties.forEach(function(key) {
-        if(window[key] != undefined) m[key] = window[key];
+        if(window[key]) m[key] = window[key];
     });
     // Update global variables
     for(const mainKey in m) {
@@ -998,7 +998,7 @@ Dark.globallyUpdateVariables = function(m) {
         if(Dark.ignoreGlobal.includes(mainKey)) continue;
         if(Dark.empties.includes(mainKey)) continue;
         // Else set
-        if(typeof m[mainKey] === "object") {
+        if(typeof m[mainKey] == "object") {
             for(const key in m[mainKey]) {
                 window[key] = m[mainKey][key];
             }
@@ -1159,7 +1159,7 @@ Dark.objects = (function() {
         return v.mag();
     };
     DVector.prototype.mag = function() {
-        if(this.z == undefined) {
+        if(!this.z) {
             return Math.sqrt(this.x * this.x + this.y * this.y);
         } else {
             return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
@@ -1169,7 +1169,7 @@ Dark.objects = (function() {
         return v.magSq();
     };
     DVector.prototype.magSq = function() {
-        if(this.z == undefined) {
+        if(!this.z) {
             return this.x * this.x + this.y * this.y;
         } else {
             return this.x * this.x + this.y * this.y + this.z * this.z;
@@ -1201,10 +1201,10 @@ Dark.objects = (function() {
     };
     DVector.dot = function(v1, v2) {
         if(typeof v2 == "number") {
-            if(v1.z == undefined) return v1.x * v2 + v1.y * v2;
+            if(!v1.z) return v1.x * v2 + v1.y * v2;
             return v1.x * v2 + v1.y * v2 + v1.z * v2;
         } else {
-            if(v1.z == undefined || v2.z == undefined) return v1.x * v2.x + v1.y * v2.y;
+            if(!v1.z || !v2.z) return v1.x * v2.x + v1.y * v2.y;
             return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
         }
     };
@@ -1257,7 +1257,7 @@ Dark.objects = (function() {
         ];
     };
     DVector.prototype.toString = function() {
-        if(this.z == undefined) return "[" + this.x + ", " + this.y + "]";
+        if(!this.z) return "[" + this.x + ", " + this.y + "]";
         return "[" + this.x + ", " + this.y + ", " + this.z + "]";
     };
 
@@ -1281,9 +1281,9 @@ Dark.objects = (function() {
                 case "bold":
                     this.weight = "bold";
             }
-            if(s === "italic") {
+            if(s == "italic") {
                 this.style = "italic";
-            } else if(s === "small-caps") {
+            } else if(s == "small-caps") {
                 this.variant = "small-caps";
             } else if(DFont.weights.includes(s)) {
                 this.weight = s;
@@ -1451,4 +1451,5 @@ Dark.objects = (function() {
 Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
-// TODO: Freeze Dark object
+// Freeze objects
+Object.freeze(Dark);
