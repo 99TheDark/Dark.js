@@ -9,7 +9,6 @@ To add:
 • Cursor lock function — lock()
 • Easier key use
 • Allow negatives for arcs
-• Move maxErrorCount and maxTransforms to Dark.constants
 • Add set function to DImage
 • Add DarkJS instance to image if certain function is run
 • Bezier point & tangent
@@ -23,8 +22,9 @@ To add:
 • Add key constants like LEFT, RIGHT, UP, DOWN, CONTROL, SHIFT, etc
 • Apply matrix transformations to DVectors
 • Add reset function
-• Replace == undefined with !
-• Test if === is necessary for strings, if not replace for speed
+• 2D flag instead of !z
+• DMatrix.identity
+• DMatrix.dot
 
 Possibly to add:
 • Transformations from point for ease of use 
