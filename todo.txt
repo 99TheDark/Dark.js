@@ -31,7 +31,7 @@ Possibly to add:
 • Transformations from point for ease of use 
 • Store shapes in variables, maybe DShape
 • println-like console
-• Font library for Google Fonts
+• Font library for Google Fonts (Like https://www.khanacademy.org/computer-programming/i/6162502356762624)
 • Audio
 • Local storage, cookies, etc easy support
 
