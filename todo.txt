@@ -35,6 +35,7 @@ Possibly to add:
 • println-like console
 • Font library for Google Fonts
 • Audio
+• Local storage, cookies, etc easy support
 
 Bugs:
 • Key typed not working
