@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DarkJS Example</title>
     <link rel="stylesheet" href="style.css">
-    <script src="../src/Dark-min.js"></script>
+    <script src="../src/Dark.js"></script>
     <link rel="icon" type="image/x-icon" href="../images/favicons/favicon.ico?v=2">
 </head>
 
@@ -42,9 +42,6 @@
             triangle(200, 200, 150, 300, 300, 300);
             popMatrix();
 
-            strokeWeight(15);
-            point(400, 350);
-
             strokeWeight(3);
             stroke(255, 0, 0);
             quad(400, 200, 350, 300, 550, 300, 500, 150);
@@ -72,6 +69,20 @@
             fill(0, 0, 255);
             rect(100, 100, 100, 50);
             popMatrix();
+
+            fill(255, 0, 0);
+            beginShape();
+            vertex(184, 291);
+            curveVertex(184, 291);
+            curveVertex(168, 119);
+            curveVertex(121, 117);
+            vertex(132, 295);
+            vertex(132, 200);
+            endShape();
+
+            stroke(0);
+            strokeWeight(15);
+            point(width / 2, height / 2);
 
             stroke(0);
             strokeWeight(2);
