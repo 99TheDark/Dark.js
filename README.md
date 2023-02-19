@@ -8,7 +8,7 @@ If you find any glitches or want any featues that haven't already been listed un
 
 You most likely saw this from Khan Academy, in which case you can see more of what I do on my [Profile](https://www.khanacademy.org/profile/kaid_1007444411542956194078854/projects).
 
-Once this is done, I will probably make a Github Pages site with documentation & other miscellaneous things.
+Once this is done, I will probably make a Github Pages site with documentation & other miscellaneous things. If this goes well, I may also purchase a domain name.
 
 ### And of course, check out the amazing libraries this is based off of.
 
