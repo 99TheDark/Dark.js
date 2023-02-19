@@ -345,6 +345,7 @@ var Dark = function() {
 
         background: function(...args) {
             d.ctx.save();
+            d.ctx.resetTransform();
             let c = d.color.apply(null, args);
             d.ctx.fillStyle = colorString(c);
             d.ctx.fillRect(0, 0, d.width, d.height);
@@ -1122,8 +1123,17 @@ Dark.objects = (function() {
     DVector.zero2D = function() {
         return new DVector(0, 0);
     };
+    DVector.prototype.zero2D = function() {
+        [this.x, this.y] = [0, 0];
+
+        this.z = undefined;
+        this.is2D = true;
+    };
     DVector.zero3D = function() {
         return new DVector(0, 0, 0);
+    };
+    DVector.prototype.zero3D = function() {
+        [this.x, this.y, this.z] = [0, 0, 0];
     };
     DVector.add = function(v1, v2) {
         if(v2 instanceof DVector) {
