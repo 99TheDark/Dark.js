@@ -203,10 +203,21 @@ var Dark = function() {
         },
 
         // Math-y
-        dist: function(x1, y1, x2, y2) {
-            let dx = x2 - x1;
-            let dy = y2 - y1;
-            return d.sqrt(dx * dx + dy * dy);
+        dist: function(...args) {
+            let dx, dy, dz = 0;
+            if(args.length = 6) {
+                // x1, y1, x2, y2
+                dx = args[2] - args[0];
+                dy = args[3] - args[1];
+            } else if(args.length == 4) {
+                // x1, y1, z1, x2, y2, z2
+                dx = args[3] - args[0];
+                let dy = args[4] - args[1];
+                let dz = args[5] - args[2];
+            } else {
+                Dark.error(new Error("dist requires 4 or 6 parameters, not " + args.length));
+            }
+            return d.sqrt(dx * dx + dy * dy + dz * dz);
         },
 
         gamma: function(z) {
@@ -1333,6 +1344,23 @@ Dark.objects = (function() {
     };
     DVector.prototype.lerp = function(v, percent) {
         return DVector.lerp(this, v, percent);
+    };
+    DVector.dist = function(v1, v2) {
+        let dx, dy, dz = 0;
+        if(v1.is2D && v2.is2D) {
+            dx = v2.x - v1.x;
+            dy = v2.y - v1.y;
+        } else if(!v1.is2D && !v2.is2D) {
+            dx = v2.x - v1.x;
+            dy = v2.y - v1.y;
+            dz = v2.z - v1.z;
+        } else {
+            Dark.error(new Error("Cannot find the distance between a 2D and 3D DVector"));
+        }
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    };
+    DVector.prototype.dist = function(vector) {
+        return DVector.dist(this, vector);
     };
     DVector.get = function(v) {
         return v.get();
