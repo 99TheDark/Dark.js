@@ -879,8 +879,8 @@ var Dark = function() {
             Dark.globallyUpdateVariables(d);
         }
         if(deltaFrame > d.settings.frameStep - deltaTime / 2 && d.settings.looping) {
-            d.dt = dt = deltaFrame;
-            d.fps = fps = 1000 / dt;
+            d.dt = deltaFrame / 1000;
+            d.fps = 1000 / deltaTime;
             d.frameCount = ++d.frameCount;
             d.draw();
             lastFrame = performance.now();
