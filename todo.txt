@@ -17,7 +17,6 @@ To add:
 • Add copy function to DMatrix
 • Convert canvas matrix to and from DMatrix
 • Option to use numbers in DMatrix's add, sub, mult, etc functions
-• Add credits
 • Add key constants like LEFT, RIGHT, UP, DOWN, CONTROL, SHIFT, etc
 • Apply matrix transformations to DVectors
 • Add reset function
@@ -27,6 +26,7 @@ To add:
 • Add rounded rectangles
 • textAlign
 • DMatrix.inverse
+• Generic DMatrix.mult
 
 Possibly to add:
 • Transformations from point for ease of use 
