@@ -16,18 +16,17 @@ To add:
 • Hermite curves (maybe smoothCurve)
 • Add copy function to DMatrix
 • Convert canvas matrix to and from DMatrix
-• Multiplication & division in DMatrix
-• Option to use numbers in DMatrix's add, sub, mult, div, etc functions
+• Option to use numbers in DMatrix's add, sub, mult, etc functions
 • Add credits
 • Add key constants like LEFT, RIGHT, UP, DOWN, CONTROL, SHIFT, etc
 • Apply matrix transformations to DVectors
 • Add reset function
 • 2D flag instead of !z
 • DMatrix.identity
-• DMatrix.dot
 • Make sure no default canvas gets the same ID
 • Add rounded rectangles
 • textAlign
+• DMatrix.inverse
 
 Possibly to add:
 • Transformations from point for ease of use 
