@@ -25,6 +25,7 @@ To add:
 • strokeJoin
 • OffscreenCanvas instead of normal canvas for default
 • Fix curveVertex
+• Clean up curveVertex code
 
 Possibly to add:
 • Transformations from point for ease of use 
