@@ -35,4 +35,3 @@ Possibly to add:
 
 Bugs:
 • Key typed not working
-• Something horrible happened to shapes in 0.3.3
