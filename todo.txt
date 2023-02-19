@@ -1,7 +1,6 @@
 To add:
 • Gradient fill & stroke
 • Colorspaces
-• Curve vertex (Catmull-Rom spline to cubic bezier)
 • Blendcolor
 • Noise (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
 • Filters
@@ -24,6 +23,8 @@ To add:
 • textAlign
 • DMatrix.inverse
 • strokeJoin
+• OffscreenCanvas instead of normal canvas for default
+• Fix curveVertex
 
 Possibly to add:
 • Transformations from point for ease of use 
