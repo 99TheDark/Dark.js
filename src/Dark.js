@@ -6,6 +6,7 @@ var Dark = function() {
 
     // Shorter = faster to type
     let d = this;
+    let k = Dark.constants; // Quicker typing
 
     Dark.instances.push(d);
 
@@ -13,7 +14,7 @@ var Dark = function() {
     d.transforms = [];
     d.vertices = [];
     d.objects = Dark.objects;
-    d.constants = Dark.constants;
+    k = Dark.constants;
 
     // Load in variables to their default values
     for(const key in Dark.variables) {
@@ -52,11 +53,11 @@ var Dark = function() {
     };
 
     var angle = function(angle) {
-        return (d.settings.angleMode == d.constants.DEGREES) ? angle * d.constants.PI / 180 : angle;
+        return (d.settings.angleMode == k.DEGREES) ? angle * k.PI / 180 : angle;
     };
 
     var angleBack = function(angle) {
-        return (d.settings.angleMode == d.constants.DEGREES) ? angle * 180 / d.constants.PI : angle;
+        return (d.settings.angleMode == k.DEGREES) ? angle * 180 / k.PI : angle;
     };
 
     var loadEvents = function() {
@@ -209,7 +210,7 @@ var Dark = function() {
 
         gamma: function(z) {
             // Stirling's Approximation
-            return d.sqrt(d.constants.TAU / z) * (((z + 1 / (12 * z + 1 / (10 * z))) / E) ** z);
+            return d.sqrt(k.TAU / z) * (((z + 1 / (12 * z + 1 / (10 * z))) / E) ** z);
         },
 
         // Not very accurate, pretty good up to the hundreths
@@ -348,13 +349,13 @@ var Dark = function() {
                 default:
                     Dark.error(new Error("Invalid strokeCap type"));
                     break;
-                case d.constants.FLAT:
+                case k.FLAT:
                     d.ctx.lineCap = "butt";
-                    d.settings.strokeCap = d.constants.FLAT;
+                    d.settings.strokeCap = k.FLAT;
                     break;
-                case d.constants.ROUND:
+                case k.ROUND:
                     d.ctx.lineCap = "round";
-                    d.settings.strokeCap = d.constants.ROUND;
+                    d.settings.strokeCap = k.ROUND;
                     break;
             }
         },
@@ -381,24 +382,24 @@ var Dark = function() {
                 default:
                     Dark.error(new Error("Invalid angleMode type"));
                     break;
-                case d.constants.DEGREES:
-                    d.settings.angleMode = d.constants.DEGREES;
+                case k.DEGREES:
+                    d.settings.angleMode = k.DEGREES;
                     break;
-                case d.constants.RADIANS:
-                    d.settings.angleMode = d.constants.RADIANS;
+                case k.RADIANS:
+                    d.settings.angleMode = k.RADIANS;
                     break;
             }
         },
 
-        ellipseMode: function(type = d.constants.CENTER) {
+        ellipseMode: function(type = k.CENTER) {
             d.settings.ellipseMode = type;
         },
 
-        rectMode: function(type = d.constants.CORNER) {
+        rectMode: function(type = k.CORNER) {
             d.settings.rectMode = type;
         },
 
-        imageMode: function(type = d.constants.CORNER) {
+        imageMode: function(type = k.CORNER) {
             d.settings.imageMode = type;
         },
 
@@ -456,7 +457,7 @@ var Dark = function() {
             width = Math.abs(width), height = Math.abs(height);
             d.ctx.beginPath();
             d.ctx.save();
-            if(d.settings.rectMode == d.constants.CENTER) d.ctx.translate(- width / 2, - height / 2);
+            if(d.settings.rectMode == k.CENTER) d.ctx.translate(- width / 2, - height / 2);
             d.ctx.rect(x, y, width, height);
             d.ctx.fill();
             d.ctx.stroke();
@@ -467,9 +468,9 @@ var Dark = function() {
             width = Math.abs(width), height = Math.abs(height);
             d.ctx.beginPath();
             d.ctx.save();
-            if(d.settings.ellipseMode == d.constants.CORNER) d.ctx.translate(width / 2, height / 2);
+            if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(width / 2, height / 2);
             d.ctx.beginPath();
-            d.ctx.ellipse(x, y, width / 2, height / 2, 0, 0, d.constants.TAU, false);
+            d.ctx.ellipse(x, y, width / 2, height / 2, 0, 0, k.TAU, false);
             d.ctx.fill();
             d.ctx.stroke();
             d.ctx.restore();
@@ -477,7 +478,7 @@ var Dark = function() {
 
         arc: function(x, y, width, height, start, stop) {
             d.ctx.save();
-            if(d.settings.ellipseMode == d.constants.CORNER) d.ctx.translate(width / 2, height / 2);
+            if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(width / 2, height / 2);
             d.ctx.beginPath();
             d.ctx.ellipse(x, y, width / 2, height / 2, 0, start, stop, false);
             d.ctx.fill();
@@ -496,16 +497,16 @@ var Dark = function() {
             d.ctx.save();
             d.ctx.beginPath();
             d.ctx.fillStyle = "rgba(0, 0, 0, 1)";
-            if(d.settings.ellipseMode == d.constants.CORNER) d.ctx.translate(width / 2, height / 2);
+            if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(width / 2, height / 2);
             d.ctx.fill();
             d.ctx.restore();
         },
 
         circle: function(x, y, radius) {
             d.ctx.save();
-            if(d.settings.ellipseMode == d.constants.CORNER) d.ctx.translate(radius, radius);
+            if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(radius, radius);
             d.ctx.beginPath();
-            d.ctx.arc(x, y, radius, 0, d.constants.TAU);
+            d.ctx.arc(x, y, radius, 0, k.TAU);
             d.ctx.fill();
             d.ctx.stroke();
             d.ctx.restore();
@@ -541,33 +542,33 @@ var Dark = function() {
         },
 
         // https://www.cs.umd.edu/~reastman/slides/L19P01ParametricCurves.pdf
-        endShape: function(type = d.constants.OPEN) {
-            if(d.vertices.length < 2 || d.vertices[0].type != d.constants.VERTEX) return;
+        endShape: function(type = k.OPEN) {
+            if(d.vertices.length < 2 || d.vertices[0].type != k.VERTEX) return;
             d.ctx.beginPath();
             d.vertices.forEach(function(vert, index) {
                 if(index == 0) {
                     d.ctx.moveTo(vert.point.x, vert.point.y);
                 } else {
                     switch(vert.type) {
-                        case d.constants.VERTEX:
+                        case k.VERTEX:
                             let pt = vert.point;
                             d.ctx.lineTo(pt.x, pt.y);
                             break;
-                        case d.constants.CURVE:
+                        case k.CURVE:
                             // to be implemented
                             let node = vert.node;
                             break;
-                        case d.constants.BEZIER:
+                        case k.BEZIER:
                             let pts = vert.points;
                             d.ctx.bezierCurveTo(pts[0].x, pts[0].y, pts[1].x, pts[1].y, pts[2].x, pts[2].y);
                             break;
-                        case d.constants.SMOOTH:
+                        case k.SMOOTH:
                             // to be implemented
                             break;
                     }
                 }
             });
-            if(type == d.constants.CLOSE) d.ctx.closePath();
+            if(type == k.CLOSE) d.ctx.closePath();
             d.ctx.fill();
             d.ctx.stroke();
         },
@@ -575,7 +576,7 @@ var Dark = function() {
         // Kinda copied from ski, though slightly different (curveVertex)
         vertex: function(x, y) {
             d.vertices.push({
-                type: d.constants.VERTEX,
+                type: k.VERTEX,
                 point: {
                     x: x,
                     y: y
@@ -585,7 +586,7 @@ var Dark = function() {
 
         curveVertex: function(cx, cy) {
             d.vertices.push({
-                type: d.constants.CURVE,
+                type: k.CURVE,
                 node: {
                     x: cx,
                     y: cy
@@ -595,7 +596,7 @@ var Dark = function() {
 
         smoothVertex: function(sx, sy) {
             d.vertices.push({
-                type: d.constants.SMOOTH,
+                type: k.SMOOTH,
                 node: {
                     x: sx,
                     y: sy
@@ -605,7 +606,7 @@ var Dark = function() {
 
         bezierVertex: function(x1, y1, x2, y2, x3, y3) {
             d.vertices.push({
-                type: d.constants.BEZIER,
+                type: k.BEZIER,
                 points: [
                     {
                         x: x1,
@@ -662,10 +663,10 @@ var Dark = function() {
                     d.settings.font.weight = "normal";
                     d.settings.font.style = "normal";
                     break;
-                case d.constants.BOLD:
+                case k.BOLD:
                     d.settings.font.weight = "bold";
                     break;
-                case d.constants.ITALIC:
+                case k.ITALIC:
                     d.settings.font.style = "italic";
                     break;
             }
@@ -696,14 +697,14 @@ var Dark = function() {
 
         set: function(x, y, col) {
             d.ctx.save();
-            d.ctx.fillStyle = d.helper.colorString(col);
+            d.ctx.fillStyle = colorString(col);
             d.ctx.fillRect(x, y, 1, 1);
             d.ctx.restore();
         },
 
         image: function(img, x, y, width, height) {
             d.ctx.save();
-            if(d.settings.imageMode == d.constants.CENTER) d.ctx.translate(- width / 2, - height / 2);
+            if(d.settings.imageMode == k.CENTER) d.ctx.translate(- width / 2, - height / 2);
             switch(arguments.length) {
                 default:
                     Dark.error(new Error("image requires 3 to 5 parameters, not " + arguments.length));
@@ -749,8 +750,8 @@ var Dark = function() {
         abs: num => (num < 0) ? - num : num,
         sign: num => Math.sign(num),
         bsign: num => (num < 0) ? -1 : 1,
-        degrees: angle => angle * 180 / d.constants.PI,
-        radians: angle => angle * d.constants.PI / 180,
+        degrees: angle => angle * 180 / k.PI,
+        radians: angle => angle * k.PI / 180,
         millennium: () => Math.floor(new Date().getFullYear() / 1000),
         century: () => Math.floor(new Date().getFullYear() / 100),
         decade: () => Math.floor(new Date().getFullYear() / 10),
@@ -819,11 +820,11 @@ var Dark = function() {
     // Set defaults
     d.frameRate(60);
     d.smooth();
-    d.ellipseMode(d.constants.CENTER);
-    d.rectMode(d.constants.CORNER);
-    d.imageMode(d.constants.CORNER);
-    d.angleMode(d.constants.DEGREES);
-    d.strokeCap(d.constants.ROUND);
+    d.ellipseMode(k.CENTER);
+    d.rectMode(k.CORNER);
+    d.imageMode(k.CORNER);
+    d.angleMode(k.DEGREES);
+    d.strokeCap(k.ROUND);
     d.fill(255);
     d.stroke(0);
     d.strokeWeight(1);
@@ -975,6 +976,13 @@ Dark.error = function(error) {
     Dark.doError("error", error);
 };
 
+Dark.colorParse = {
+    red: color => (color >> 16) & 255,
+    green: color => (color >> 8) & 255,
+    blue: color => color & 255,
+    alpha: color => (color >> 24) & 255
+};
+
 // Important function: sets the Dark object that has global access
 Dark.setMain = function(dark) {
     if(dark instanceof Dark) {
@@ -1016,9 +1024,18 @@ Dark.objects = (function() {
 
     // Vectors
     let DVector = function(x, y, z) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
+        if(arguments.length == 3) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.is2D = false;
+        } else if(arguments.length == 2) {
+            this.x = x;
+            this.y = y;
+            this.is2D = true;
+        } else {
+            Dark.error(new Error("DVector requires 2 or 3 parameters, not " + arguments.length));
+        }
     };
     DVector.create = function(x, y, z) {
         return new DVector(x, y, z);
@@ -1163,7 +1180,7 @@ Dark.objects = (function() {
         return v.mag();
     };
     DVector.prototype.mag = function() {
-        if(!this.z) {
+        if(this.is2D) {
             return Math.sqrt(this.x * this.x + this.y * this.y);
         } else {
             return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
@@ -1173,7 +1190,7 @@ Dark.objects = (function() {
         return v.magSq();
     };
     DVector.prototype.magSq = function() {
-        if(!this.z) {
+        if(this.is2D) {
             return this.x * this.x + this.y * this.y;
         } else {
             return this.x * this.x + this.y * this.y + this.z * this.z;
@@ -1205,11 +1222,16 @@ Dark.objects = (function() {
     };
     DVector.dot = function(v1, v2) {
         if(typeof v2 == "number") {
-            if(!v1.z) return v1.x * v2 + v1.y * v2;
+            if(v1.is2D) return v1.x * v2 + v1.y * v2;
             return v1.x * v2 + v1.y * v2 + v1.z * v2;
         } else {
-            if(!v1.z || !v2.z) return v1.x * v2.x + v1.y * v2.y;
-            return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+            if(v1.is2D && v2.is2D) {
+                return v1.x * v2.x + v1.y * v2.y;
+            } else if(!v1.is2D && !v2.is2D) {
+                return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+            } else {
+                Dark.error(new Error("Cannot take the dot product of a 2D and 3D vector"));
+            }
         }
     };
     DVector.prototype.dot = function(v) {
@@ -1217,15 +1239,15 @@ Dark.objects = (function() {
     };
     DVector.flip = function(v) {
         return new Vector(
-            - v.x,
-            - v.y,
-            - v.z
+            -v.x,
+            -v.y,
+            -v.z
         );
     };
     DVector.prototype.flip = function() {
-        this.x = - this.x;
-        this.y = - this.y;
-        this.z = - this.z;
+        this.x = -this.x;
+        this.y = -this.y;
+        this.z = -this.z;
     };
     DVector.limit = function(v, max) {
         if(v.mag() > max) v.mult(max / v.mag());
@@ -1254,14 +1276,21 @@ Dark.objects = (function() {
         [this.x, this.y, this.z] = [v.x, v.y, v.z];
     };
     DVector.prototype.array = function() {
-        return [
-            this.x,
-            this.y,
-            this.z
-        ];
+        if(this.is2D) {
+            return [
+                this.x,
+                this.y
+            ];
+        } else {
+            return [
+                this.x,
+                this.y,
+                this.z
+            ];
+        }
     };
     DVector.prototype.toString = function() {
-        if(!this.z) return "[" + this.x + ", " + this.y + "]";
+        if(this.is2D) return "[" + this.x + ", " + this.y + "]";
         return "[" + this.x + ", " + this.y + ", " + this.z + "]";
     };
 
@@ -1344,6 +1373,13 @@ Dark.objects = (function() {
             Dark.error(new Error("DImage.get requires 0 or 4 parameters, not " + args.length));
         }
     };
+    DImage.prototype.set = function(x, y, col) {
+        let index = x + y * this.width;
+        this.imageData.data[index] = Dark.colorParse.red(col);
+        this.imageData.data[index + 1] = Dark.colorParse.green(col);
+        this.imageData.data[index + 2] = Dark.colorParse.blue(col);
+        this.imageData.data[index + 3] = Dark.colorParse.alpha(col);
+    };
     DImage.prototype.copy = function() {
         return new DImage(
             this.imageData,
@@ -1423,6 +1459,20 @@ Dark.objects = (function() {
     };
     DMatrix.prototype.dot = function(matrix) {
         return DMatrix.dot(this, matrix);
+    };
+    DMatrix.identity = function(size) {
+        let mat = new DMatrix(size, size);
+        for(let i = 0; i < size; i++) {
+            mat.set(i, i, 1);
+        }
+        return mat;
+    };
+    DMatrix.prototype.identity = function() {
+        if(this.width == this.height) {
+            this.mat = DMatrix.identity(this.width).mat; // this.width or this.height
+        } else {
+            Dark.error(new Error("Only DMatrices with square dimensions have identity DMatrices"));
+        }
     };
     DMatrix.add = function(mat1, mat2) {
         if(mat1.width == mat2.width && mat1.height == mat2.height) {
