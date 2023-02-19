@@ -23,6 +23,7 @@ To add:
 • Add rounded rectangles
 • textAlign
 • DMatrix.inverse
+• strokeJoin
 
 Possibly to add:
 • Transformations from point for ease of use 
@@ -34,3 +35,4 @@ Possibly to add:
 
 Bugs:
 • Key typed not working
+• Something horrible happened to shapes in 0.3.3
