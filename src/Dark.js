@@ -59,15 +59,6 @@ var Dark = function() {
         return (d.settings.angleMode == d.constants.DEGREES) ? angle * 180 / d.constants.PI : angle;
     };
 
-    var doError = function(type, err) {
-        if(Dark.errorCount == Dark.maxErrorCount) {
-            console.warn("Too many warnings and errors have been made, the rest will not display.");
-        } else if(Dark.errorCount < Dark.maxErrorCount) {
-            console[type](err);
-        }
-        Dark.errorCount++;
-    };
-
     var loadEvents = function() {
 
         document.addEventListener("keydown", function(e) {
@@ -127,8 +118,8 @@ var Dark = function() {
             let boundingBox = e.target.getBoundingClientRect();
             d.pmouseX = d.pmouse.x = d.mouseX;
             d.pmouseY = d.pmouse.y = d.mouseY;
-            d.mouseX = d.mouse.x = d.constrain(round(e.pageX - boundingBox.x), 0, width);
-            d.mouseY = d.mouse.y = d.constrain(round(e.pageY - boundingBox.y), 0, height);
+            d.mouseX = d.mouse.x = d.constrain(d.round(e.pageX - boundingBox.x), 0, width);
+            d.mouseY = d.mouse.y = d.constrain(d.round(e.pageY - boundingBox.y), 0, height);
             d.mouseMoved();
         });
 
@@ -213,12 +204,12 @@ var Dark = function() {
         dist: function(x1, y1, x2, y2) {
             let dx = x2 - x1;
             let dy = y2 - y1;
-            return Math.sqrt(dx * dx + dy * dy);
+            return d.sqrt(dx * dx + dy * dy);
         },
 
         gamma: function(z) {
             // Stirling's Approximation
-            return Math.sqrt(d.constants.TAU / z) * (((z + 1 / (12 * z + 1 / (10 * z))) / E) ** z);
+            return d.sqrt(d.constants.TAU / z) * (((z + 1 / (12 * z + 1 / (10 * z))) / E) ** z);
         },
 
         // Not very accurate, pretty good up to the hundreths
@@ -228,7 +219,7 @@ var Dark = function() {
 
         // Integer-only factorial, 100% accurate and faster
         intFactorial: function(num) {
-            num = Math.floor(num);
+            num = d.floor(num);
 
             let total = num;
             while(--num > 1) {
@@ -311,10 +302,10 @@ var Dark = function() {
 
         lerpColor: function(c1, c2, percent) {
             return color(
-                lerp(red(c1), red(c2), percent),
-                lerp(green(c1), green(c2), percent),
-                lerp(blue(c1), blue(c2), percent),
-                lerp(alpha(c1), alpha(c2), percent)
+                d.lerp(d.red(c1), d.red(c2), percent),
+                d.lerp(d.green(c1), d.green(c2), percent),
+                d.lerp(d.blue(c1), d.blue(c2), percent),
+                d.lerp(d.alpha(c1), d.alpha(c2), percent)
             );
         },
 
@@ -963,12 +954,21 @@ Dark.format = function(obj) {
     }
 };
 
+Dark.doError = function(type, err) {
+    if(Dark.errorCount == Dark.maxErrorCount) {
+        console.warn("Too many warnings and errors have been made, the rest will not display.");
+    } else if(Dark.errorCount < Dark.maxErrorCount) {
+        console[type](err);
+    }
+    Dark.errorCount++;
+};
+
 Dark.warn = function(warning) {
-    Dark.helper.doError("warn", warning);
+    Dark.doError("warn", warning);
 };
 
 Dark.error = function(error) {
-    Dark.helper.doError("error", error);
+    Dark.doError("error", error);
 };
 
 // Important function: sets the Dark object that has global access
@@ -1232,9 +1232,9 @@ Dark.objects = (function() {
     };
     DVector.lerp = function(v1, v2, percent) {
         return new DVector(
-            lerp(v1.x, v2.x, percent),
-            lerp(v1.y, v2.y, percent),
-            lerp(v1.z, v2.z, percent)
+            Dark.main.lerp(v1.x, v2.x, percent),
+            Dark.main.lerp(v1.y, v2.y, percent),
+            Dark.main.lerp(v1.z, v2.z, percent)
         );
     };
     DVector.prototype.lerp = function(v, percent) {
@@ -1351,26 +1351,26 @@ Dark.objects = (function() {
     let DMatrix = function(width, height, val = 0) {
         // https://stackoverflow.com/questions/53992415/how-to-fill-multidimensional-array-in-javascript
 
-        if(width instanceof DMatrix || Array.isArray(width)) {
-            this.width = height;
-            this.height = val;
-            this.mat = Array(val).fill(null).map(() => Array(height).fill(0));
+        if(width instanceof DMatrix) {
+            this.width = width.width;
+            this.height = width.height;
+            this.mat = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
+            this.set(width);
+        } else if(Array.isArray(width)) {
+            if(Array.isArray(width[0])) {
+                this.width = width[0].length;
+                this.height = width.length;
+            } else {
+                this.width = height;
+                this.height = val;
+            }
+            this.mat = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
             this.set(width);
         } else {
             this.width = width;
             this.height = height;
             this.mat = Array(height).fill(null).map(() => Array(width).fill(val));
         }
-    };
-    DMatrix.prototype.toString = function() {
-        let str = "";
-        for(const arr in this.mat) {
-            for(const item in this.mat[arr]) {
-                str += this.mat[arr][item] + " ";
-            }
-            str = str.replace(/ $/, "\n");
-        }
-        return str;
     };
     DMatrix.prototype.get = function(x, y) {
         return this.mat[y][x];
@@ -1406,6 +1406,20 @@ Dark.objects = (function() {
             this.mat[y][x] = val;
         }
     };
+    DMatrix.dot = function(mat1, mat2, row, col) {
+        if(mat1.width == mat2.height && mat1.height == mat2.width) {
+            let sum = 0;
+            for(let i = 0; i < mat1.width; i++) { // Either mat1.width or mat2.height
+                sum += mat1.get(i, row) * mat2.get(col, i);
+            }
+            return sum;
+        } else {
+            Dark.error(new Error("Can only take the dot product of two DMatrices with opposite dimensions"));
+        }
+    };
+    DMatrix.prototype.dot = function(matrix) {
+        return DMatrix.dot(this, matrix);
+    };
     DMatrix.add = function(mat1, mat2) {
         if(mat1.width == mat2.width && mat1.height == mat2.height) {
             let mat = new DMatrix(mat1.width, mat1.height);
@@ -1437,6 +1451,30 @@ Dark.objects = (function() {
     };
     DMatrix.prototype.sub = function(matrix) {
         this.set(DMatrix.sub(this, matrix));
+    };
+    DMatrix.mult = function(mat1, mat2) {
+        if(mat1.width == mat2.height && mat1.height == mat2.width) {
+            let size = mat1.height; // mat1.height or mat2.width
+            let mat = new DMatrix(size, size); 
+            for(let y = 0; y < size; y++) {
+                for(let x = 0; x < size; x++) {
+                    mat.set(x, y, DMatrix.dot(mat1, mat2, y, x));
+                }
+            }
+            return mat;
+        } else {
+            Dark.error(new Error("Can only multiply two DMatrices with opposite dimensions"));
+        }
+    }
+    DMatrix.prototype.toString = function() {
+        let str = "";
+        for(const arr in this.mat) {
+            for(const item in this.mat[arr]) {
+                str += this.mat[arr][item] + " ";
+            }
+            str = str.replace(/ $/, "\n");
+        }
+        return str;
     };
 
     return {
