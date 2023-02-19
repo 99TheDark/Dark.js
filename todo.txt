@@ -26,7 +26,6 @@ To add:
 • Add rounded rectangles
 • textAlign
 • DMatrix.inverse
-• Generic DMatrix.mult
 
 Possibly to add:
 • Transformations from point for ease of use 
