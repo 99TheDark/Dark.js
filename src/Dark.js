@@ -14,7 +14,7 @@ var Dark = function() {
     d.transforms = [];
     d.vertices = [];
     d.objects = Dark.objects;
-    k = Dark.constants;
+    k = d.constants = Dark.constants;
 
     // Load in variables to their default values
     for(const key in Dark.variables) {
