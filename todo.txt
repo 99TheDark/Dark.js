@@ -3,14 +3,13 @@ To add:
 • Colorspaces
 • Curve vertex (Catmull-Rom spline to cubic bezier)
 • Blendcolor
-• Noise
+• Noise (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
 • Filters
 • Errors for 2 beginShapes in a row
+• Clear vertices after endShape
 • Cursor lock function — lock()
 • Easier key use
 • Allow negatives for arcs
-• Add set function to DImage
-• Add DarkJS instance to image if certain function is run
 • Bezier point & tangent
 • Curve point & tangent
 • Hermite curves (maybe smoothCurve)
@@ -18,10 +17,8 @@ To add:
 • Convert canvas matrix to and from DMatrix
 • Option to use numbers in DMatrix's add, sub, mult, etc functions
 • Add key constants like LEFT, RIGHT, UP, DOWN, CONTROL, SHIFT, etc
-• Apply matrix transformations to DVectors
+• Apply matrix transformations to DVectors (DOMMatrix)
 • Add reset function
-• 2D flag instead of !z
-• DMatrix.identity
 • Make sure no default canvas gets the same ID
 • Add rounded rectangles
 • textAlign
