@@ -652,6 +652,10 @@ var Dark = function() {
             }
         },
 
+        createFont: function(txt) {
+            return DFont.parse(txt);
+        },
+
         textStyle: function(style) {
             switch(style) {
                 default:
@@ -1455,7 +1459,7 @@ Dark.objects = (function() {
     DMatrix.mult = function(mat1, mat2) {
         if(mat1.width == mat2.height && mat1.height == mat2.width) {
             let size = mat1.height; // mat1.height or mat2.width
-            let mat = new DMatrix(size, size); 
+            let mat = new DMatrix(size, size);
             for(let y = 0; y < size; y++) {
                 for(let x = 0; x < size; x++) {
                     mat.set(x, y, DMatrix.dot(mat1, mat2, y, x));
@@ -1465,7 +1469,13 @@ Dark.objects = (function() {
         } else {
             Dark.error(new Error("Can only multiply two DMatrices with opposite dimensions"));
         }
-    }
+    };
+    DMatrix.prototype.mult = function(matrix) {
+        let mat = DMatrix.mult(this, matrix);
+        this.width = mat.width;
+        this.height = mat.height;
+        this.mat = mat.mat;
+    };
     DMatrix.prototype.toString = function() {
         let str = "";
         for(const arr in this.mat) {
