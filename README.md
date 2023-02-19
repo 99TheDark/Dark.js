@@ -1,4 +1,4 @@
-# Dark.js
+# Dark.js ![CodeFactor](https://www.codefactor.io/repository/github/99thedark/dark.js/badge)
 
 Closesly modeled after both [Processing.js](https://github.com/processing-js/processing-js) and [ski.js](https://github.com/thelegendski/ski.js/).
 Dark.js hopes to fix a few technicaly issues with ski.js, be much faster than ProcessingJS, but also add new features that make using Dark.js worth it.
@@ -12,4 +12,5 @@ Once this is done, I will probably make a Github Pages site with documentation &
 
 ### And of course, check out the amazing libraries this is based off of.
 
-<sup>1400 lines and counting.</sup>
+<sup>1400 lines and counting.</sup><br>
+<sub>Minified: 21.2KB</sub>
