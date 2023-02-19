@@ -25,6 +25,9 @@ To add:
 • 2D flag instead of !z
 • DMatrix.identity
 • DMatrix.dot
+• Make sure no default canvas gets the same ID
+• Add rounded rectangles
+• textAlign
 
 Possibly to add:
 • Transformations from point for ease of use 
