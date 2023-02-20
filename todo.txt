@@ -25,6 +25,9 @@ To add:
 • Have a Dark instance in main object for ease of use functions
 • Add back Dark.special, accidentally deleted it
 • Replace object (() => {})() with !() => {}
+• Image masking
+• Dark.observe(object, GET/SET, function) (using Proxy)
+• preventDefault() and allowDefault()
 
 Possibly to add:
 • Transformations from point for ease of use 
