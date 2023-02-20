@@ -131,6 +131,12 @@ var Dark = function() {
             d.mouseMoved();
         });
 
+        d.canvas.addEventListener("wheel", function(e) {
+            e.preventDefault();
+            // has deltaX, deltaY and deltaZ <- the weird one
+            d.mouseScrolled();
+        });
+
         d.canvas.addEventListener("dblclick", function(e) {
             e.preventDefault();
             d.mouseDoubleClicked();
@@ -722,6 +728,7 @@ var Dark = function() {
 
         reloadFont: function() {
             d.ctx.font = d.settings.font.toString();
+            d.settings.genericTextMeasure = d.ctx.measureText("0");
         },
 
         // Text
@@ -762,6 +769,18 @@ var Dark = function() {
                     break;
             }
             d.reloadFont();
+        },
+
+        textWidth: function(text) {
+            return d.ctx.measureText(text).width;
+        },
+
+        textAscent: function() {
+            return d.settings.genericTextMeasure.fontBoundingBoxAscent;
+        },
+
+        textDescent: function() {
+            return d.settings.genericTextMeasure.fontBoundingBoxDescent;
         },
 
         text: function(text, x, y) {
@@ -961,6 +980,7 @@ Dark.empties = [
     "mousePressed",
     "mouseReleased",
     "mouseMoved",
+    "mouseScrolled",
     "mouseIn",
     "mouseOut",
     "mouseDoubleClicked",
