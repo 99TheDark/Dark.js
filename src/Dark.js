@@ -62,6 +62,11 @@ var Dark = function() {
         return (d.settings.angleMode == k.DEGREES) ? angle * 180 / k.PI : angle;
     };
 
+    var cacheVert = function(vert) {
+        d.vertices.push(vert);
+        vert.points.forEach(v => d.vertexCache.push(new DVector(v.x, v.y)));
+    };
+
     var loadEvents = function() {
 
         document.addEventListener("keydown", function(e) {
@@ -603,6 +608,7 @@ var Dark = function() {
         // https://www.cs.umd.edu/~reastman/slides/L19P01ParametricCurves.pdf
         endShape: function(type = k.OPEN) {
             if(d.vertices.length < 2 || d.vertices[0].type != k.VERTEX) return;
+            let latest = 0;
             d.ctx.beginPath();
             d.vertices.forEach(function(vert, index) {
                 if(index == 0) {
@@ -615,27 +621,22 @@ var Dark = function() {
                             break;
                         case k.CURVE:
                             // to be implemented
-                            let t = 4;
-                            let t0 = (t - 1) / 4;
-                            let t1 = (1 - t) / 4; // just -t0, might change
-                            let curveMatrix = new DMatrix([
-                                [0, 1, 0, 0],
-                                [t0, 1, t1, 0],
-                                [0, t1, 1, t0],
-                                [0, 0, 0, 0]
-                            ]);
-                            let pos = new DMatrix([
-                                [d.vertexCache[index].x, d.vertexCache[index].y],
-                                [d.vertexCache[index + 1].x, d.vertexCache[index + 1].y],
-                                [d.vertexCache[index - 1].x, d.vertexCache[index - 1].y],
-                                [d.vertexCache[index + 2].x, d.vertexCache[index + 2].y]
-                            ]);
-                            let cubic = DMatrix.mult(curveMatrix, pos);
-                            d.ctx.bezierCurveTo(
-                                cubic.get(0, 0), cubic.get(1, 0),
-                                cubic.get(0, 1), cubic.get(1, 1),
-                                cubic.get(0, 2), cubic.get(1, 2)
-                            );
+                            let t = 3;
+
+                            // Catmull-Rom points
+                            let p0_ = d.vertexCache[latest];
+                            let p1_ = d.vertexCache[latest + 1];
+                            let p2_ = d.vertexCache[latest + 2];
+                            let p3_ = d.vertexCache[latest + 3];
+
+                            // Bezier points
+                            let p0 = p1_;
+                            let p1 = DVector.add(p1_, DVector.div(DVector.sub(p2_, p0_), 6 * t));
+                            let p2 = DVector.add(p2_, DVector.div(DVector.sub(p3_, p1_), 6 * t));
+                            let p3 = p2_;
+
+                            d.ctx.moveTo(p0.x, p0.y);
+                            d.ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
                             break;
                         case k.BEZIER:
                             let pts = vert.points;
@@ -645,6 +646,7 @@ var Dark = function() {
                             // to be implemented
                             break;
                     }
+                    latest += vert.points.length;
                 }
             });
             if(type == k.CLOSE) d.ctx.closePath();
@@ -664,8 +666,7 @@ var Dark = function() {
                 ]
             };
 
-            d.vertices.push(vert);
-            d.vertexCache = d.vertexCache.concat(vert.points);
+            cacheVert(vert);
         },
 
         curveVertex: function(cx, cy) {
@@ -679,8 +680,7 @@ var Dark = function() {
                 ]
             };
 
-            d.vertices.push(vert);
-            d.vertexCache = d.vertexCache.concat(vert.points);
+            cacheVert(vert);
         },
 
         smoothVertex: function(sx, sy) {
@@ -694,8 +694,7 @@ var Dark = function() {
                 ]
             };
 
-            d.vertices.push(vert);
-            d.vertexCache = d.vertexCache.concat(vert.points);
+            cacheVert(vert);
         },
 
         bezierVertex: function(x1, y1, x2, y2, x3, y3) {
@@ -715,8 +714,7 @@ var Dark = function() {
                 ]
             };
 
-            d.vertices.push(vert);
-            d.vertexCache = d.vertexCache.concat(vert.points);
+            cacheVert(vert);
         },
 
         bezier: function(x1, y1, cx1, cy1, cx2, cy2, x2, y2) {
@@ -729,6 +727,7 @@ var Dark = function() {
         reloadFont: function() {
             d.ctx.font = d.settings.font.toString();
             d.settings.genericTextMeasure = d.ctx.measureText("0");
+            d.settings.textHeight = d.settings.genericTextMeasure.fontBoundingBoxAscent + d.settings.genericTextMeasure.fontBoundingBoxDescent;
         },
 
         // Text
@@ -783,9 +782,17 @@ var Dark = function() {
             return d.settings.genericTextMeasure.fontBoundingBoxDescent;
         },
 
+        textLeading: function(amount) {
+            d.settings.lineGap = amount;
+        },
+
         text: function(text, x, y) {
-            d.ctx.fillText(text, x, y);
-            d.ctx.strokeText(text, x, y);
+            let lines = text.split("\n");
+            lines.forEach((line, index) => {
+                let inc = index * (d.settings.textHeight + d.settings.lineGap);
+                d.ctx.fillText(line, x, y + inc);
+                d.ctx.strokeText(line, x, y + inc);
+            });
         },
 
         // Images
@@ -956,6 +963,7 @@ var Dark = function() {
     d.stroke(0);
     d.strokeWeight(1);
     d.textFont("12px Arial");
+    d.textLeading(5);
 
     // Load event listeners for document
     loadEvents();
@@ -1058,8 +1066,10 @@ Dark.mouseMap = [
     "forward"
 ];
 
+Dark.changeable = {};
+
 // Constants, but not quite (can be edited)
-Dark.errorCount = 0;
+Dark.changeable.errorCount = 0; // Since object values inside frozen object can be edited
 Dark.maxErrorCount = 50;
 Dark.maxTransforms = 1000;
 
@@ -1092,12 +1102,12 @@ Dark.format = function(obj) {
 };
 
 Dark.doError = function(type, err) {
-    if(Dark.errorCount == Dark.maxErrorCount) {
+    if(Dark.changeable.errorCount == Dark.maxErrorCount) {
         console.warn("Too many warnings and errors have been made, the rest will not display.");
-    } else if(Dark.errorCount < Dark.maxErrorCount) {
+    } else if(Dark.changeable.errorCount < Dark.maxErrorCount) {
         console[type](err);
     }
-    Dark.errorCount++;
+    Dark.changeable.errorCount++;
 };
 
 Dark.warn = function(warning) {
@@ -1189,17 +1199,31 @@ Dark.objects = (function() {
     };
     DVector.add = function(v1, v2) {
         if(v2 instanceof DVector) {
-            return new DVector(
-                v1.x + v2.x,
-                v1.y + v2.y,
-                v1.z + v2.z
-            );
+            if(v1.is2D) {
+                return new DVector(
+                    v1.x + v2.x,
+                    v1.y + v2.y
+                );
+            } else {
+                return new DVector(
+                    v1.x + v2.x,
+                    v1.y + v2.y,
+                    v1.z + v2.z
+                );
+            }
         } else {
-            return new DVector(
-                v1.x + v2,
-                v1.y + v2,
-                v1.z + v2
-            );
+            if(v1.is2D) {
+                return new DVector(
+                    v1.x + v2,
+                    v1.y + v2
+                );
+            } else {
+                return new DVector(
+                    v1.x + v2,
+                    v1.y + v2,
+                    v1.z + v2
+                );
+            }
         }
     };
     DVector.prototype.add = function(v) {
@@ -1215,17 +1239,31 @@ Dark.objects = (function() {
     };
     DVector.sub = function(v1, v2) {
         if(v2 instanceof DVector) {
-            return new DVector(
-                v1.x - v2.x,
-                v1.y - v2.y,
-                v1.z - v2.z
-            );
+            if(v1.is2D) {
+                return new DVector(
+                    v1.x - v2.x,
+                    v1.y - v2.y
+                );
+            } else {
+                return new DVector(
+                    v1.x - v2.x,
+                    v1.y - v2.y,
+                    v1.z - v2.z
+                );
+            }
         } else {
-            return new DVector(
-                v1.x - v2,
-                v1.y - v2,
-                v1.z - v2
-            );
+            if(v1.is2D) {
+                return new DVector(
+                    v1.x - v2,
+                    v1.y - v2
+                );
+            } else {
+                return new DVector(
+                    v1.x - v2,
+                    v1.y - v2,
+                    v1.z - v2
+                );
+            }
         }
     };
     DVector.prototype.sub = function(v) {
@@ -1241,17 +1279,31 @@ Dark.objects = (function() {
     };
     DVector.mult = function(v1, v2) {
         if(v2 instanceof DVector) {
-            return new DVector(
-                v1.x * v2.x,
-                v1.y * v2.y,
-                v1.z * v2.z
-            );
+            if(v1.is2D) {
+                return new DVector(
+                    v1.x * v2.x,
+                    v1.y * v2.y
+                );
+            } else {
+                return new DVector(
+                    v1.x * v2.x,
+                    v1.y * v2.y,
+                    v1.z * v2.z
+                );
+            }
         } else {
-            return new DVector(
-                v1.x * v2,
-                v1.y * v2,
-                v1.z * v2
-            );
+            if(v1.is2D) {
+                return new DVector(
+                    v1.x * v2,
+                    v1.y * v2
+                );
+            } else {
+                return new DVector(
+                    v1.x * v2,
+                    v1.y * v2,
+                    v1.z * v2
+                );
+            }
         }
     };
     DVector.prototype.mult = function(v) {
@@ -1267,17 +1319,31 @@ Dark.objects = (function() {
     };
     DVector.div = function(v1, v2) {
         if(v2 instanceof DVector) {
-            return new DVector(
-                v1.x / v2.x,
-                v1.y / v2.y,
-                v1.z / v2.z
-            );
+            if(v1.is2D) {
+                return new DVector(
+                    v1.x / v2.x,
+                    v1.y / v2.y
+                );
+            } else {
+                return new DVector(
+                    v1.x / v2.x,
+                    v1.y / v2.y,
+                    v1.z / v2.z
+                );
+            }
         } else {
-            return new DVector(
-                v1.x / v2,
-                v1.y / v2,
-                v1.z / v2
-            );
+            if(v1.is2D) {
+                return new DVector(
+                    v1.x / v2,
+                    v1.y / v2
+                );
+            } else {
+                return new DVector(
+                    v1.x / v2,
+                    v1.y / v2,
+                    v1.z / v2
+                );
+            }
         }
     };
     DVector.prototype.div = function(v) {
@@ -1633,7 +1699,15 @@ Dark.objects = (function() {
         }
     };
     DMatrix.add = function(mat1, mat2) {
-        if(mat1.width == mat2.width && mat1.height == mat2.height) {
+        if(typeof mat2 == "number") {
+            let mat = new DMatrix(mat1.width, mat1.height);
+            for(let y = 0; y < mat.height; y++) {
+                for(let x = 0; x < mat.width; x++) {
+                    mat.set(y, x, mat1.get(x, y) + mat2);
+                }
+            }
+            return mat;
+        } else if(mat1.width == mat2.width && mat1.height == mat2.height) {
             let mat = new DMatrix(mat1.width, mat1.height);
             for(let y = 0; y < mat.height; y++) {
                 for(let x = 0; x < mat.width; x++) {
@@ -1649,7 +1723,15 @@ Dark.objects = (function() {
         this.set(DMatrix.add(this, matrix));
     };
     DMatrix.sub = function(mat1, mat2) {
-        if(mat1.width == mat2.width && mat1.height == mat2.height) {
+        if(typeof mat2 == "number") {
+            let mat = new DMatrix(mat1.width, mat1.height);
+            for(let y = 0; y < mat.height; y++) {
+                for(let x = 0; x < mat.width; x++) {
+                    mat.set(y, x, mat1.get(x, y) - mat2);
+                }
+            }
+            return mat;
+        } else if(mat1.width == mat2.width && mat1.height == mat2.height) {
             let mat = new DMatrix(mat1.width, mat1.height);
             for(let y = 0; y < mat.height; y++) {
                 for(let x = 0; x < mat.width; x++) {
@@ -1665,7 +1747,15 @@ Dark.objects = (function() {
         this.set(DMatrix.sub(this, matrix));
     };
     DMatrix.mult = function(mat1, mat2) {
-        if(mat1.width == mat2.height) {
+        if(typeof mat2 == "number") {
+            let mat = new DMatrix(mat1.width, mat1.height);
+            for(let y = 0; y < mat.height; y++) {
+                for(let x = 0; x < mat.width; x++) {
+                    mat.set(y, x, mat1.get(x, y) * mat2);
+                }
+            }
+            return mat;
+        } else if(mat1.width == mat2.height) {
             let mat = new DMatrix(mat2.width, mat1.height);
             for(let y = 0; y < mat.height; y++) {
                 for(let x = 0; x < mat.width; x++) {
