@@ -34,6 +34,9 @@ To add:
 • trim()
 • contours
 • push() and pop()
+• setTitle
+• noCursor
+• use of requestFullscreen() in some way, for canvas and page
 
 Possibly to add:
 • Transformations from point for ease of use 
