@@ -3,10 +3,9 @@ To add:
 • Colorspaces
 • Blendcolor
 • Noise (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
-• Filters
+• Filters (Using WebGL, gross)
 • Errors for 2 beginShapes in a row
 • Clear vertices after endShape
-• Cursor lock function — lock()
 • Easier key use
 • Allow negatives for arcs
 • Bezier point & tangent
@@ -22,11 +21,15 @@ To add:
 • Add rounded rectangles
 • textAlign
 • DMatrix.inverse
-• strokeJoin
 • OffscreenCanvas instead of normal canvas for default
 • Fix curveVertex
 • Clean up curveVertex code
 • Have a Dark instance in main object for ease of use functions
+• Newlines on text
+• textAscent, textDescent & textWidth
+• textLeading
+• mouseScrolled event
+• Add back Dark.special, accidentally deleted it
 
 Possibly to add:
 • Transformations from point for ease of use 
@@ -35,6 +38,7 @@ Possibly to add:
 • Font library for Google Fonts (Like https://www.khanacademy.org/computer-programming/i/6162502356762624)
 • Audio
 • Local storage, cookies, etc easy support
+• Cursor lock function — lock()
 
 Bugs:
 • Key typed not working
