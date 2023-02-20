@@ -10,20 +10,22 @@ To add:
 • Allow negatives for arcs
 • Bezier point & tangent
 • Curve point & tangent
-• Hermite curves (maybe smoothCurve)
 • Add copy function in DMatrix
 • Convert canvas matrix to and from DMatrix
 • Add key constants like LEFT, RIGHT, UP, DOWN, CONTROL, SHIFT, etc
 • Apply matrix transformations to DVectors (DOMMatrix)
 • Make sure no default canvas gets the same ID
 • Add rounded rectangles
-• textAlign
+• curve() function
+• DMatrix.cofactor(x, y)
+• DMatrix.adjoint
 • DMatrix.inverse
 • OffscreenCanvas instead of normal canvas for default
 • Fix curveVertex
 • Clean up curveVertex code
 • Have a Dark instance in main object for ease of use functions
 • Add back Dark.special, accidentally deleted it
+• Replace object (() => {})() with !() => {}
 
 Possibly to add:
 • Transformations from point for ease of use 
