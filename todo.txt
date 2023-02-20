@@ -23,10 +23,7 @@ To add:
 • Fix curveVertex
 • Clean up curveVertex code
 • Have a Dark instance in main object for ease of use functions
-• Newlines on text
-• textLeading
 • Add back Dark.special, accidentally deleted it
-• Vertex Cache helper function
 
 Possibly to add:
 • Transformations from point for ease of use 
