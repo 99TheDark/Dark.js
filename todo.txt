@@ -26,6 +26,7 @@ To add:
 • OffscreenCanvas instead of normal canvas for default
 • Fix curveVertex
 • Clean up curveVertex code
+• pageResized event 
 
 Possibly to add:
 • Transformations from point for ease of use 
@@ -37,3 +38,4 @@ Possibly to add:
 
 Bugs:
 • Key typed not working
+• Fix stroke not taking in color
