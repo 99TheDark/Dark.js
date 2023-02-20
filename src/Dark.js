@@ -3,6 +3,7 @@ var Dark = function() {
     // private variables & functions
     let lastFrame = performance.now();
     let lastTime = performance.now();
+    let lastHidden = -1;
 
     // Shorter = faster to type
     let d = this;
@@ -875,16 +876,30 @@ var Dark = function() {
 
     });
 
+    document.addEventListener("visibilitychange", function() {
+        if(document.visibilityState == "hidden") lastHidden = performance.now();
+    });
+
     // Draw function (raf = request animation frame)
     d.raf = function(time) {
-        const deltaFrame = time - lastFrame;
-        const deltaTime = time - lastTime;
+        let deltaFrame, deltaTime, forceRun = false;
+
+        // If the user left the page and just entered, make fix deltas
+        if(lastHidden < performance.now() && lastHidden > lastTime) {
+            deltaTime = lastHidden - lastTime;
+            deltaFrame = deltaTime;
+            forceRun = true;
+        } else {
+            deltaFrame = time - lastFrame;
+            deltaTime = time - lastTime;
+        }
+
         if(d.isMain) {
             Dark.globallyUpdateVariables(d);
         }
-        if(deltaFrame > d.settings.frameStep - deltaTime / 2 && d.settings.looping && Dark.pageVisible) {
+        if((deltaFrame > d.settings.frameStep - deltaTime / 2 && d.settings.looping) || forceRun) {
             d.dt = deltaFrame / 1000;
-            d.fps = 1000 / deltaTime;
+            d.fps = 1000 / deltaFrame;
             d.frameCount = ++d.frameCount;
             d.draw();
             lastFrame = performance.now();
@@ -1065,10 +1080,6 @@ Dark.colorParse = {
     blue: color => color & 255,
     alpha: color => (color >> 24) & 255
 };
-
-Dark.pageVisible = true;
-
-document.addEventListener("visibilitychange", () => Dark.pageVisible = (document.visibilityState == "visible"));
 
 // Important function: sets the Dark object that has global access
 Dark.setMain = function(dark) {
