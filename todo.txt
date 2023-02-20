@@ -28,6 +28,12 @@ To add:
 • Image masking
 • Dark.observe(object, GET/SET, function) (using Proxy)
 • preventDefault() and allowDefault()
+• add 'dummy' flag to Dark instances for if it should run event listeners & draw loops
+• pushStyle and popStyle
+• Dark.cursors
+• trim()
+• contours
+• push() and pop()
 
 Possibly to add:
 • Transformations from point for ease of use 
