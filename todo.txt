@@ -16,7 +16,6 @@ To add:
 • Option to use numbers in DMatrix's add, sub, mult, etc functions
 • Add key constants like LEFT, RIGHT, UP, DOWN, CONTROL, SHIFT, etc
 • Apply matrix transformations to DVectors (DOMMatrix)
-• Add reset function
 • Make sure no default canvas gets the same ID
 • Add rounded rectangles
 • textAlign
@@ -26,9 +25,7 @@ To add:
 • Clean up curveVertex code
 • Have a Dark instance in main object for ease of use functions
 • Newlines on text
-• textAscent, textDescent & textWidth
 • textLeading
-• mouseScrolled event
 • Add back Dark.special, accidentally deleted it
 
 Possibly to add:
