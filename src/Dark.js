@@ -85,6 +85,11 @@ var Dark = function() {
             d.keyTyped();
         });
 
+        window.addEventListener("resize", function(e) {
+            e.preventDefault();
+            d.pageResized();
+        });
+
     };
 
     var reloadEvents = function() {
@@ -298,7 +303,13 @@ var Dark = function() {
 
         // Color
         color: function(r, g, b, a) {
-            if(arguments.length == 1) b = g = r;
+            if(arguments.length == 1) {
+                if(r <= 255 && r >= 0) {
+                    b = g = r;
+                } else {
+                    return r;
+                }
+            }
             if(arguments.length == 2) a = g, g = r, b = r;
             if(!a) a = 255;
             r = d.constrain(r, 0, 255);
@@ -813,6 +824,8 @@ var Dark = function() {
         mag: (a, b) => Math.sqrt(a * a + b * b),
         norm: (num, min, max) => (num - min) / (max - min),
         constrain: (num, min, max) => Math.min(Math.max(num, min), max),
+        between: (num, min, max) => num <= max && num >= min,
+        exceeds: (num, min, max) => num > max || num < min,
         lerp: (val1, val2, percent) => (val2 - val1) * percent + val1,
         map: (num, min1, max1, min2, max2) => min2 + (max2 - min2) / (max1 - min1) * (value - min1),
         sq: num => num * num,
@@ -950,7 +963,8 @@ Dark.empties = [
     "mouseMoved",
     "mouseIn",
     "mouseOut",
-    "mouseDoubleClicked"
+    "mouseDoubleClicked",
+    "pageResized"
 ];
 
 // Constants
