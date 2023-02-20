@@ -353,7 +353,10 @@ var Dark = function() {
         },
 
         clear: function() {
+            d.ctx.save();
+            d.dtx.resetTransform();
             d.ctx.clearRect(0, 0, d.width, d.height);
+            d.restore();
         },
 
         // Drawing modes
@@ -879,7 +882,7 @@ var Dark = function() {
         if(d.isMain) {
             Dark.globallyUpdateVariables(d);
         }
-        if(deltaFrame > d.settings.frameStep - deltaTime / 2 && d.settings.looping) {
+        if(deltaFrame > d.settings.frameStep - deltaTime / 2 && d.settings.looping && Dark.pageVisible) {
             d.dt = deltaFrame / 1000;
             d.fps = 1000 / deltaTime;
             d.frameCount = ++d.frameCount;
@@ -1062,6 +1065,10 @@ Dark.colorParse = {
     blue: color => color & 255,
     alpha: color => (color >> 24) & 255
 };
+
+Dark.pageVisible = true;
+
+document.addEventListener("visibilitychange", () => Dark.pageVisible = (document.visibilityState == "visible"));
 
 // Important function: sets the Dark object that has global access
 Dark.setMain = function(dark) {
@@ -1655,4 +1662,4 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Freeze objects
-// Object.freeze(Dark);
+Object.freeze(Dark);
