@@ -11,9 +11,8 @@ To add:
 • Bezier point & tangent
 • Curve point & tangent
 • Hermite curves (maybe smoothCurve)
-• Add copy function to DMatrix
+• Add copy function in DMatrix
 • Convert canvas matrix to and from DMatrix
-• Option to use numbers in DMatrix's add, sub, mult, etc functions
 • Add key constants like LEFT, RIGHT, UP, DOWN, CONTROL, SHIFT, etc
 • Apply matrix transformations to DVectors (DOMMatrix)
 • Make sure no default canvas gets the same ID
@@ -27,6 +26,7 @@ To add:
 • Newlines on text
 • textLeading
 • Add back Dark.special, accidentally deleted it
+• Vertex Cache helper function
 
 Possibly to add:
 • Transformations from point for ease of use 
