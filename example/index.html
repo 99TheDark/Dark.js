@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DarkJS Example</title>
     <link rel="stylesheet" href="style.css">
-    <script src="../src/Dark-min.js"></script>
+    <script src="../src/Dark.js"></script>
     <link rel="icon" type="image/x-icon" href="../images/favicons/favicon.ico?v=2">
 </head>
 
@@ -60,7 +60,7 @@
             fill(0);
             noStroke();
             textSize(30);
-            text("Dark.js", 300, 50);
+            text("Dark.js\nHi there!", 800, 50);
 
             pushMatrix();
             skew(-50);
@@ -70,15 +70,19 @@
             rect(100, 100, 100, 50);
             popMatrix();
 
-            fill(255, 0, 0);
+            // From https://www.khanacademy.org/computer-programming/i/6499542019080192
+            pushMatrix();
+            translate(500, 200);
+            fill(255, 149, 0);
             beginShape();
-            vertex(184, 291);
+            curveVertex(184, 291);
             curveVertex(184, 291);
             curveVertex(168, 119);
             curveVertex(121, 117);
-            vertex(132, 295);
-            vertex(132, 200);
+            curveVertex(132, 295);
+            curveVertex(132, 200);
             endShape();
+            popMatrix();
 
             stroke(0);
             strokeWeight(15);
