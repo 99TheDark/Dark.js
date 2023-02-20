@@ -330,6 +330,10 @@ var Dark = function() {
             return (a << 24) + (r << 16) + (g << 8) + (b);
         },
 
+        randomColor: function() {
+            return color(Math.random() * 255, Math.random() * 255, Math.random() * 255);
+        },
+
         // Splitting color into parts
         red: color => (color >> 16) & 255,
         green: color => (color >> 8) & 255,
@@ -607,8 +611,7 @@ var Dark = function() {
 
         // https://www.cs.umd.edu/~reastman/slides/L19P01ParametricCurves.pdf
         endShape: function(type = k.OPEN) {
-            if(d.vertices.length < 2 || d.vertices[0].type != k.VERTEX) return;
-            let latest = 0;
+            if(d.vertices.length < 2 || d.vertices[0].type == k.BEZIER) return;
             d.ctx.beginPath();
             d.vertices.forEach(function(vert, index) {
                 if(index == 0) {
@@ -620,23 +623,31 @@ var Dark = function() {
                             d.ctx.lineTo(pt.x, pt.y);
                             break;
                         case k.CURVE:
-                            // to be implemented
-                            let t = 3;
+                            let t = (d.settings.curveTightness - 1) / 6;
 
-                            // Catmull-Rom points
-                            let p0_ = d.vertexCache[latest];
-                            let p1_ = d.vertexCache[latest + 1];
-                            let p2_ = d.vertexCache[latest + 2];
-                            let p3_ = d.vertexCache[latest + 3];
+                            let p0 = d.vertexCache[index - 3];
+                            let p1 = d.vertexCache[index - 2];
+                            let p2 = d.vertexCache[index - 1];
+                            let p3 = d.vertexCache[index];
 
-                            // Bezier points
-                            let p0 = p1_;
-                            let p1 = DVector.add(p1_, DVector.div(DVector.sub(p2_, p0_), 6 * t));
-                            let p2 = DVector.add(p2_, DVector.div(DVector.sub(p3_, p1_), 6 * t));
-                            let p3 = p2_;
+                            if(index == 0) {
+                                d.ctx.moveTo(p3.x, p3.y);
+                            } else if(index < 3) {
+                                d.ctx.lineTo(p3.x, p3.y);
+                            } else {
+                                if(index == 3) d.ctx.lineTo(p1.x, p1.y);
 
-                            d.ctx.moveTo(p0.x, p0.y);
-                            d.ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+                                // See http://jsfiddle.net/soulwire/FsEVR/
+
+                                d.ctx.bezierCurveTo(
+                                    p2.x * t + p1.x - p0.x * t,
+                                    p2.y * t + p1.y - p0.y * t,
+                                    p3.x * -t + p2.x + p1.x * t,
+                                    p3.y * -t + p2.y + p1.y * t,
+                                    p2.x,
+                                    p2.y
+                                );
+                            }
                             break;
                         case k.BEZIER:
                             let pts = vert.points;
@@ -646,7 +657,6 @@ var Dark = function() {
                             // to be implemented
                             break;
                     }
-                    latest += vert.points.length;
                 }
             });
             if(type == k.CLOSE) d.ctx.closePath();
@@ -676,20 +686,6 @@ var Dark = function() {
                     {
                         x: cx,
                         y: cy
-                    }
-                ]
-            };
-
-            cacheVert(vert);
-        },
-
-        smoothVertex: function(sx, sy) {
-            let vert = {
-                type: k.SMOOTH,
-                points: [
-                    {
-                        x: sx,
-                        y: sy
                     }
                 ]
             };
@@ -735,6 +731,47 @@ var Dark = function() {
             d.settings.textSize = size;
             d.settings.font.size = size;
             d.reloadFont();
+        },
+
+        textAlign: function(alignX = k.LEFT, alignY = k.BASELINE) {
+            switch(alignX) {
+                default:
+                    Dark.error("Invalid x alignment type");
+                    break;
+                case k.LEFT:
+                    d.ctx.textAlign = "left";
+                    d.settings.alignX = k.LEFT;
+                    break;
+                case k.RIGHT:
+                    d.ctx.textAlign = "right";
+                    d.settings.alignX = k.RIGHT;
+                    break;
+                case k.CENTER:
+                    d.ctx.textAlign = "center";
+                    d.settings.alignX = k.CENTER;
+                    break;
+            }
+            switch(alignY) {
+                default:
+                    Dark.error("Invalid y alignment type");
+                    break;
+                case k.BASELINE:
+                    d.ctx.textBaseline = "alphabetic";
+                    d.settings.alignY = k.BASELINE;
+                    break;
+                case k.TOP:
+                    d.ctx.textBaseline = "top";
+                    d.settings.alignY = k.TOP;
+                    break;
+                case k.BOTTOM:
+                    d.ctx.textBaseline = "bottom";
+                    d.settings.alignY = k.BOTTOM;
+                    break;
+                case k.CENTER:
+                    d.ctx.textBaseline = "middle";
+                    d.settings.alignY = k.CENTER;
+                    break;
+            }
         },
 
         textFont: function(font) {
@@ -959,6 +996,8 @@ var Dark = function() {
     d.angleMode(k.DEGREES);
     d.strokeCap(k.FLAT);
     d.strokeJoin(k.MITER);
+    d.textAlign(k.LEFT, k.BASELINE);
+    d.curveTightness(2);
     d.fill(255);
     d.stroke(0);
     d.strokeWeight(1);
@@ -1010,7 +1049,7 @@ Dark.constants = {
     "RADIANS": 3,
     "VERTEX": 4,
     "CURVE": 5,
-    "SMOOTH": 6,
+    "SMOOTH": 6, // currently unused, to be renamed
     "BEZIER": 7,
     "CLOSE": 8,
     "OPEN": 9,
@@ -1022,6 +1061,11 @@ Dark.constants = {
     "BEVEL": 15,
     "MITER": 16,
     "SQUARE": 17,
+    "LEFT": 18,
+    "RIGHT": 19,
+    "BASELINE": 20,
+    "TOP": 21,
+    "BOTTOM": 22
 };
 
 // Variables to be private
@@ -1772,6 +1816,12 @@ Dark.objects = (function() {
         this.width = mat.width;
         this.height = mat.height;
         this.mat = mat.mat;
+    };
+    DMatrix.prototype.copy = function() {
+        return new DMatrix([...this.mat]);
+    };
+    DMatrix.prototype.toArray = function() {
+        return [...this.mat];
     };
     DMatrix.prototype.toString = function() {
         let str = "";
