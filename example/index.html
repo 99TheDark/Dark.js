@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DarkJS Example</title>
     <link rel="stylesheet" href="style.css">
-    <script src="../src/Dark.js"></script>
+    <script src="../src/Dark-min.js"></script>
     <link rel="icon" type="image/x-icon" href="../images/favicons/favicon.ico?v=2">
 </head>
 
@@ -57,9 +57,11 @@
             bezierVertex(350, 350, 350, 200, 250, 150);
             endShape();
 
-            fill(0);
-            noStroke();
+            fill(100);
+            strokeWeight(2);
+            stroke(0);
             textSize(30);
+            textStyle(BOLD);
             text("Dark.js\nHi there!", 800, 50);
 
             pushMatrix();
@@ -86,7 +88,7 @@
 
             stroke(0);
             strokeWeight(15);
-            point(width / 2, height / 2);
+            point(width / 2, height / 2 + 50);
 
             stroke(0);
             strokeWeight(2);
