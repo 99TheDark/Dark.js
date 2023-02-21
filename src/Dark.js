@@ -1276,7 +1276,7 @@ Dark.observe = function(object, type, callback) {
         }
     });
 };
-    
+
 var a = {
     b: 3
 };
@@ -1287,7 +1287,7 @@ Dark.observe(a, Dark.constants.SET, function() {
 
 a.b = 5;
 
-Dark.observe(a, );
+Dark.observe(a,);
 
 // Important function: sets the Dark object that has global access
 Dark.setMain = function(dark) {
@@ -1660,10 +1660,16 @@ Dark.objects = (function() {
     DVector.prototype.get = function() {
         return new DVector(this.x, this.y, this.z);
     };
+    DVector.set = function(v1, v2) {
+        [v1.x, v1.y, v1.z] = [v2.x, v2.y, v2.z];
+    };
     DVector.prototype.set = function(v) {
         [this.x, this.y, this.z] = [v.x, v.y, v.z];
     };
-    DVector.prototype.array = function() {
+    DVector.toArray = function(vector) {
+        return vector.toArray();
+    };
+    DVector.prototype.toArray = function() {
         if(this.is2D) {
             return [
                 this.x,
@@ -1675,6 +1681,25 @@ Dark.objects = (function() {
                 this.y,
                 this.z
             ];
+        }
+    };
+    DVector.fromArray = function(arr) {
+        return DVector.create.apply(null, arr);
+    };
+    DVector.prototype.fromArray = function(arr) {
+        switch(arr.length) {
+            default:
+                Dark.error(new Error("DVector.fromArray takes in an array of length 2 or 3, not " + arr.length));
+                break;
+            case 2:
+                [this.x, this.y] = arr;
+                this.z = undefined;
+                this.is2D = true;
+                break;
+            case 3:
+                [this.x, this.y, this.z] = arr;
+                this.is2D = false;
+                break;
         }
     };
     DVector.prototype.toString = function() {
@@ -1749,6 +1774,9 @@ Dark.objects = (function() {
         this.ctx = this.canvas.getContext("2d", Dark.defaultContextSettings);
         this.ctx.putImageData(imgData, 0, 0);
     };
+    DImage.get = function(img, ...args) {
+        return img.get.apply(null, args);
+    };
     DImage.prototype.get = function(...args) {
         if(args.length == 0) {
             return this.copy();
@@ -1761,12 +1789,18 @@ Dark.objects = (function() {
             Dark.error(new Error("DImage.get requires 0 or 4 parameters, not " + args.length));
         }
     };
+    DImage.set = function(img, ...args) {
+        img.set.apply(null, args);
+    };
     DImage.prototype.set = function(x, y, col) {
-        let index = x + y * this.width;
+        let index = (x + y * this.width) * 4;
         this.imageData.data[index] = Dark.utils.red(col);
         this.imageData.data[index + 1] = Dark.utils.green(col);
         this.imageData.data[index + 2] = Dark.utils.blue(col);
         this.imageData.data[index + 3] = Dark.utils.alpha(col);
+    };
+    DImage.copy = function(img) {
+        return img.copy();
     };
     DImage.prototype.copy = function() {
         return new DImage(
