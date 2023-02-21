@@ -1,11 +1,10 @@
 To add:
 • Gradient fill & stroke
 • Colorspaces
-• Blendcolor
+• blendColor
 • Noise (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
 • Filters (Using WebGL, gross)
 • Errors for 2 beginShapes in a row
-• Clear vertices after endShape
 • Easier key use
 • Allow negatives for arcs
 • Curve point & tangent
@@ -26,6 +25,8 @@ To add:
 • Contours
 • Use of requestFullscreen() in some way, for canvas and page
 • Make push & pop reset the settings as well
+• Make DVector rotations work in 3D
+• Load original matrix on resetMatrix
 
 Possibly to add:
 • Transformations from point for ease of use 
