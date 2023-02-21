@@ -15,7 +15,6 @@ To add:
 • DMatrix.adjoint
 • DMatrix.inverse
 • OffscreenCanvas instead of normal canvas for default
-• Clean up curveVertex code
 • Have a Dark instance in main object for ease of use functions
 • Image masking
 • preventDefault() and allowDefault()
