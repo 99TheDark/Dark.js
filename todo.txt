@@ -11,7 +11,6 @@ To add:
 • Convert canvas matrix to and from DMatrix
 • Apply matrix transformations to DVectors (DOMMatrix)
 • Make sure no default canvas gets the same ID
-• Add rounded rectangles
 • DMatrix.cofactor(x, y)
 • DMatrix.adjoint
 • DMatrix.inverse
