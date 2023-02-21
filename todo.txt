@@ -39,3 +39,4 @@ Possibly to add:
 Bugs:
 • Key typed not working
 • Accuracy of dt is very low in the first few frames
+• Weird line in curveVertex
