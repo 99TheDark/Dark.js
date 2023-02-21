@@ -16,6 +16,11 @@ var Dark = function(dummy = false) {
     d.vertices = [];
     d.vertexCache = [];
     d.objects = Dark.objects;
+
+    // copy over
+    d.copy = Dark.copy;
+    d.format = Dark.format;
+
     k = d.constants = Dark.constants;
 
     // Is a dummy instance?
@@ -162,20 +167,6 @@ var Dark = function(dummy = false) {
 
     bulkAdd({
 
-        // Very handy function to copy objects
-        copy: function(e) {
-            if(typeof e == "object") {
-                let obj = {};
-                for(const key in e) {
-                    obj[key] = e[key];
-                }
-                return obj;
-            } else {
-                Dark.warn("\"" + e + "\" is not an object!");
-                return e;
-            }
-        },
-
         // Setup functions & getters
         size: function(w = innerWidth, h = innerHeight) {
             if(typeof w == "number" && typeof h == "number" && w > 0 && h > 0) {
@@ -317,15 +308,6 @@ var Dark = function(dummy = false) {
         disableContextMenu: function() {
             d.settings.contextMenu = false;
             d.canvas.oncontextmenu = false;
-        },
-
-        // Debugging
-        format: function(obj) {
-            if(typeof obj == "object" && obj !== null) {
-                return JSON.stringify(copy(obj), null, "    ");
-            } else {
-                return obj + "";
-            }
         },
 
         // Color
@@ -549,12 +531,26 @@ var Dark = function(dummy = false) {
         },
 
         // Shapes
-        rect: function(x, y, width, height) {
+        rect: function(x, y, width, height, r1, r2, r3, r4) {
             width = Math.abs(width), height = Math.abs(height);
             d.ctx.beginPath();
             d.ctx.save();
             if(d.settings.rectMode == k.CENTER) d.ctx.translate(- width / 2, - height / 2);
-            d.ctx.rect(x, y, width, height);
+            // for speed, rounded rect is so much slower
+            switch(arguments.length) {
+                default:
+                    Dark.error("rect takes in 4, 5 or 8 parameters, not " + arguments.length);
+                    break;
+                case 4:
+                    d.ctx.rect(x, y, width, height);
+                    break;
+                case 5:
+                    d.ctx.roundRect(x, y, width, height, r1);
+                    break;
+                case 6:
+                    d.ctx.roundRect(x, y, width, height, [r1, r2, r3, r4]);
+                    break;
+            }
             d.ctx.fill();
             d.ctx.stroke();
             d.ctx.restore();
@@ -1220,7 +1216,7 @@ Dark.defaultContextSettings = {
     willReadFrequently: true
 };
 
-// Debugging
+// Debugging, very handy function
 Dark.copy = function(e) {
     if(typeof e == "object" || typeof e == "function") {
         let obj = {};
@@ -1567,6 +1563,33 @@ Dark.objects = (function() {
             return this.x * this.x + this.y * this.y + this.z * this.z;
         }
     };
+    DVector.setMag = function(v, mag) {
+        v.normalize();
+        v.mult(mag);
+    };
+    DVector.prototype.setMag = function(mag) {
+        this.normalize();
+        this.mult(mag);
+    };
+    DVector.rotation = function(v) {
+        return atan2(v.y, v.x);
+    };
+    DVector.prototype.rotation = function() {
+        return atan2(this.y, this.x);
+    };
+    DVector.setRotation = function(v, ang) {
+        v.setRotation(ang);
+    };
+    DVector.prototype.setRotation = function(ang) {
+        let m = this.mag();
+        [this.x, this.y] = [m * cos(ang), m * sin(ang)];
+    };
+    DVector.rotate = function(v, ang) {
+        v.setRotation(v.rotation() + ang);
+    };
+    DVector.prototype.rotate = function(ang) {
+        this.setRotation(this.rotation() + ang);
+    };
     DVector.normalize = function(v) {
         const mag = v.mag();
 
@@ -1661,10 +1684,15 @@ Dark.objects = (function() {
         return new DVector(this.x, this.y, this.z);
     };
     DVector.set = function(v1, v2) {
-        [v1.x, v1.y, v1.z] = [v2.x, v2.y, v2.z];
+        v1.set(v2);
     };
     DVector.prototype.set = function(v) {
-        [this.x, this.y, this.z] = [v.x, v.y, v.z];
+        if(Array.isArray(v)) {
+            [this.x, this.y, this.z] = v;
+        } else {
+            [this.x, this.y, this.z] = [v.x, v.y, v.z];
+        }
+        if(this.is2D) this.z = undefined;
     };
     DVector.toArray = function(vector) {
         return vector.toArray();
