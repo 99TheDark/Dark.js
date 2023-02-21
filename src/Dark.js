@@ -1,4 +1,4 @@
-var Dark = function() {
+var Dark = function(dummy = false) {
 
     // private variables & functions
     let lastFrame = performance.now();
@@ -17,6 +17,9 @@ var Dark = function() {
     d.vertexCache = [];
     d.objects = Dark.objects;
     k = d.constants = Dark.constants;
+
+    // Is a dummy instance?
+    d.dummy = dummy;
 
     // Load in variables to their default values
     for(const key in Dark.variables) {
@@ -93,6 +96,10 @@ var Dark = function() {
         window.addEventListener("resize", function(e) {
             e.preventDefault();
             d.pageResized();
+        });
+
+        document.addEventListener("visibilitychange", function() {
+            if(document.visibilityState == "hidden") lastHidden = performance.now();
         });
 
     };
@@ -719,6 +726,26 @@ var Dark = function() {
             bezierVertex(cx1, cy1, cx2, cy2, x2, y2);
             endShape();
         },
+        
+        curve: function(x1, y1, x2, y2, x3, y3, x4, y4) {
+            beginShape();
+            vertex(x1, y1);
+            vertex(x2, y2);
+            vertex(x3, y3);
+            curveVertex(x4, y4);
+            endShape();
+        },
+
+        // https://en.wikipedia.org/wiki/B%C3%A9zier_curve
+        bezierPoint: function(a, b, c, d, t) {
+            let i = 1 - t;
+            return i * i * i * a + 3 * i * i * t * b + 3 * i * t * t * c + t * t * t * d;
+        },
+
+        bezierTangent: function(a, b, c, d, t) {
+            let i = 1 - t;
+            return 3 * i * i * (b - a) + 6 * i * t * (c - b) + 3 * t * t * (d - c);
+        },
 
         reloadFont: function() {
             d.ctx.font = d.settings.font.toString();
@@ -952,10 +979,6 @@ var Dark = function() {
 
     });
 
-    document.addEventListener("visibilitychange", function() {
-        if(document.visibilityState == "hidden") lastHidden = performance.now();
-    });
-
     // Draw function (raf = request animation frame)
     d.raf = function(time) {
         let deltaFrame, deltaTime, forceRun = false;
@@ -984,34 +1007,36 @@ var Dark = function() {
         requestAnimationFrame(d.raf);
     };
 
-    // Start draw function
-    requestAnimationFrame(d.raf);
+    if(!d.dummy) {
+        // Start draw function
+        requestAnimationFrame(d.raf);
 
-    // Set defaults
-    d.frameRate(60);
-    d.smooth();
-    d.ellipseMode(k.CENTER);
-    d.rectMode(k.CORNER);
-    d.imageMode(k.CORNER);
-    d.angleMode(k.DEGREES);
-    d.strokeCap(k.FLAT);
-    d.strokeJoin(k.MITER);
-    d.textAlign(k.LEFT, k.BASELINE);
-    d.curveTightness(2);
-    d.fill(255);
-    d.stroke(0);
-    d.strokeWeight(1);
-    d.textFont("12px Arial");
-    d.textLeading(5);
+        // Set defaults
+        d.frameRate(60);
+        d.smooth();
+        d.ellipseMode(k.CENTER);
+        d.rectMode(k.CORNER);
+        d.imageMode(k.CORNER);
+        d.angleMode(k.DEGREES);
+        d.strokeCap(k.FLAT);
+        d.strokeJoin(k.MITER);
+        d.textAlign(k.LEFT, k.BASELINE);
+        d.curveTightness(2);
+        d.fill(255);
+        d.stroke(0);
+        d.strokeWeight(1);
+        d.textFont("12px Arial");
+        d.textLeading(5);
 
-    // Load event listeners for document
-    loadEvents();
+        // Load event listeners for document
+        loadEvents();
 
-    // Setup later options
-    d.mouse = d.objects.DVector.zero2D();
-    d.pmouse = d.objects.DVector.zero2D();
-    d.settings.cursor = "auto";
-    d.settings.looping = true;
+        // Setup later options
+        d.mouse = d.objects.DVector.zero2D();
+        d.pmouse = d.objects.DVector.zero2D();
+        d.settings.cursor = "auto";
+        d.settings.looping = true;
+    }
 
 };
 
@@ -1160,13 +1185,6 @@ Dark.warn = function(warning) {
 
 Dark.error = function(error) {
     Dark.doError("error", error);
-};
-
-Dark.colorParse = {
-    red: color => (color >> 16) & 255,
-    green: color => (color >> 8) & 255,
-    blue: color => color & 255,
-    alpha: color => (color >> 24) & 255
 };
 
 // Important function: sets the Dark object that has global access
@@ -1509,9 +1527,9 @@ Dark.objects = (function() {
     };
     DVector.lerp = function(v1, v2, percent) {
         return new DVector(
-            Dark.main.lerp(v1.x, v2.x, percent),
-            Dark.main.lerp(v1.y, v2.y, percent),
-            Dark.main.lerp(v1.z, v2.z, percent)
+            Dark.utils.lerp(v1.x, v2.x, percent),
+            Dark.utils.lerp(v1.y, v2.y, percent),
+            Dark.utils.lerp(v1.z, v2.z, percent)
         );
     };
     DVector.prototype.lerp = function(v, percent) {
@@ -1643,10 +1661,10 @@ Dark.objects = (function() {
     };
     DImage.prototype.set = function(x, y, col) {
         let index = x + y * this.width;
-        this.imageData.data[index] = Dark.colorParse.red(col);
-        this.imageData.data[index + 1] = Dark.colorParse.green(col);
-        this.imageData.data[index + 2] = Dark.colorParse.blue(col);
-        this.imageData.data[index + 3] = Dark.colorParse.alpha(col);
+        this.imageData.data[index] = Dark.utils.red(col);
+        this.imageData.data[index + 1] = Dark.utils.green(col);
+        this.imageData.data[index + 2] = Dark.utils.blue(col);
+        this.imageData.data[index + 3] = Dark.utils.alpha(col);
     };
     DImage.prototype.copy = function() {
         return new DImage(
@@ -1843,6 +1861,7 @@ Dark.objects = (function() {
 
 })();
 
+Dark.utils = new Dark(true); // Dummy instance for utils
 Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
