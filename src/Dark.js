@@ -226,6 +226,10 @@ var Dark = function(dummy = false) {
             return d.ctx;
         },
 
+        setTitle: function(title) {
+            document.title = title;
+        },
+
         // Math-y
         dist: function(...args) {
             let dx, dy, dz = 0;
@@ -286,6 +290,11 @@ var Dark = function(dummy = false) {
         cursor: function(type = "auto") {
             d.settings.cursor = type;
             d.canvas.style.cursor = type;
+        },
+
+        noCursor: function() {
+            d.settings.cursor = "none";
+            d.canvas.style.cursor = "none";
         },
 
         loop: function() {
@@ -500,6 +509,20 @@ var Dark = function(dummy = false) {
 
         resetMatrix: function() {
             d.transforms.length = 0;
+        },
+
+        // pushStyle & popStyle will go here eventually
+
+        push: function() {
+            d.ctx.save();
+        },
+
+        pop: function() {
+            d.ctx.restore();
+        },
+
+        reset: function() {
+            d.ctx.reset();
         },
 
         translate: function(x, y) {
@@ -726,7 +749,7 @@ var Dark = function(dummy = false) {
             bezierVertex(cx1, cy1, cx2, cy2, x2, y2);
             endShape();
         },
-        
+
         curve: function(x1, y1, x2, y2, x3, y3, x4, y4) {
             beginShape();
             vertex(x1, y1);
@@ -975,7 +998,8 @@ var Dark = function(dummy = false) {
         asech: ang => Math.acosh(1 / angle(ang)),
         acoth: ang => Math.atanh(1 / angle(ang)),
         now: () => performance.now(),
-        reciprocal: num => 1 / num
+        reciprocal: num => 1 / num,
+        trim: str => str.trim()
 
     });
 
@@ -1090,7 +1114,57 @@ Dark.constants = {
     "RIGHT": 19,
     "BASELINE": 20,
     "TOP": 21,
-    "BOTTOM": 22
+    "BOTTOM": 22,
+    "GET": 23,
+    "SET": 24
+};
+
+// Special keys map
+Dark.special = {
+    16: "shift",
+    10: "enter",
+    8: "delete",
+    32: "space",
+    18: "option",
+    17: "control",
+    157: "command",
+    38: "up",
+    40: "down",
+    37: "left",
+    39: "right",
+    112: "f1",
+    113: "f2",
+    114: "f3",
+    115: "f4",
+    116: "f5",
+    117: "f6",
+    118: "f7",
+    119: "f8",
+    120: "f9",
+    121: "f10",
+    122: "f11",
+    123: "f12",
+    20: "capslock",
+    190: "period",
+    188: "comma",
+    191: "slash",
+    220: "backslash",
+    48: "zero",
+    49: "one",
+    50: "two",
+    51: "three",
+    52: "four",
+    53: "five",
+    54: "six",
+    55: "seven",
+    56: "eight",
+    57: "nine",
+    189: "minus",
+    187: "equals",
+    219: "left_bracket",
+    221: "right_bracket",
+    222: "single_quote",
+    186: "semicolon"
 };
 
 // Variables to be private
@@ -1186,6 +1260,34 @@ Dark.warn = function(warning) {
 Dark.error = function(error) {
     Dark.doError("error", error);
 };
+
+Dark.observe = function(object, type, callback) {
+    if(arguments.length == 3 && type != Dark.constants.GET && type != Dark.constants.SET) {
+        Dark.error(new Error("Invalid type, must be either GET or SET"));
+    }
+    object = new Proxy(object, {
+        get: function(target, prop) { // also reciever
+            if(type == Dark.constants.GET) callback(prop);
+            return target[prop];
+        },
+        set: function(target, prop, value) {
+            if(type == Dark.constants.SET) callback(prop, value);
+            target[prop] = value;
+        }
+    });
+};
+    
+var a = {
+    b: 3
+};
+
+Dark.observe(a, Dark.constants.SET, function() {
+
+});
+
+a.b = 5;
+
+Dark.observe(a, );
 
 // Important function: sets the Dark object that has global access
 Dark.setMain = function(dark) {
