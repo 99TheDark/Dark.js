@@ -78,7 +78,6 @@
             fill(255, 149, 0);
             beginShape();
             curveVertex(184, 291);
-            curveVertex(184, 291);
             curveVertex(168, 119);
             curveVertex(121, 117);
             curveVertex(132, 295);
@@ -100,6 +99,8 @@
             noStroke();
             rect(798, 458, 154, 94);
             image(img, 800, 460, 150, 90);
+
+            if(mouseIsPressed) filter(INVERT);
         };
     </script>
 </body>
