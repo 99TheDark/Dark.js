@@ -4,7 +4,6 @@ To add:
 • blendColor
 • Noise (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
 • DImage.noise(), use WebGL to fill the imageWidth. Might even create 4 with the RGBA
-• Filters (Using WebGL, gross)
 • Errors for 2 beginShapes in a row
 • Easier key use
 • Allow negatives for arcs
