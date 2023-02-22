@@ -38,6 +38,7 @@ var Dark = function(dummy = false) {
     // Create temp canvas (default)
     let temp = document.createElement("canvas");
     temp.id = "DarkJS-default-canvas-" + randomID;
+
     temp.style.position = "absolute";
     temp.style.inset = "0px";
     // fallback
@@ -177,9 +178,13 @@ var Dark = function(dummy = false) {
                 d.width = d.canvas.width = w;
                 d.height = d.canvas.height = h;
 
+                let ignore = [
+                    "canvas", "width", "height"
+                ];
+
                 for(const key in d.ctx) {
                     const value = old[key];
-                    if(key !== "canvas" && typeof value !== "function") {
+                    if(typeof value !== "function" && !ignore.includes(key)) {
                         d.ctx[key] = value;
                     }
                 }
@@ -278,7 +283,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        cursor: function(type = "auto") {
+        cursor: function(type = "default") {
             d.settings.cursor = type;
             d.canvas.style.cursor = type;
         },
@@ -379,9 +384,9 @@ var Dark = function(dummy = false) {
 
         clear: function() {
             d.ctx.save();
-            d.dtx.resetTransform();
+            d.ctx.resetTransform();
             d.ctx.clearRect(0, 0, d.width, d.height);
-            d.restore();
+            d.ctx.restore();
         },
 
         // Drawing modes
@@ -491,6 +496,7 @@ var Dark = function(dummy = false) {
 
         resetMatrix: function() {
             d.transforms.length = 0;
+            d.ctx.resetTransform();
         },
 
         // pushStyle & popStyle will go here eventually
@@ -649,12 +655,15 @@ var Dark = function(dummy = false) {
                             d.ctx.lineTo(pt.x, pt.y);
                             break;
                         case k.CURVE:
+                            // maybe update only on curveTightness for speed
                             let t = (d.settings.curveTightness - 1) / 6;
 
                             let p0 = d.vertexCache[index - 3];
                             let p1 = d.vertexCache[index - 2];
                             let p2 = d.vertexCache[index - 1];
                             let p3 = d.vertexCache[index];
+
+                            if(index == 2) break; // temp fix
 
                             if(index == 0) {
                                 d.ctx.moveTo(p3.x, p3.y);
@@ -759,6 +768,16 @@ var Dark = function(dummy = false) {
         bezierPoint: function(a, b, c, d, t) {
             let i = 1 - t;
             return i * i * i * a + 3 * i * i * t * b + 3 * i * t * t * c + t * t * t * d;
+        },
+
+        // https://www.mvps.org/directx/articles/catmull/
+        curvePoint: function(a, b, c, d, t) {
+            return 0.5 * ((2 * b) + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (3 * b - 3 * c + d - a) * t * t * t);
+        },
+
+        // Copied from ProcessingJS
+        curveTangent: function(a, b, c, d, t) {
+            return 0.5 * ((c - a) + 2 * (2 * a - 5 * b + 4 * c - d) * t + 3 * (3 * b - 3 * c + d - a) * t * t);
         },
 
         bezierTangent: function(a, b, c, d, t) {
@@ -882,7 +901,7 @@ var Dark = function(dummy = false) {
         get: function(...args) {
             if(args.length == 0) {
                 return new DImage(
-                    d.ctx.getImageData(0, 0, width, height),
+                    d.ctx.getImageData(0, 0, d.width, d.height),
                     d.canvas
                 );
             } else if(args.length == 4) {
@@ -920,6 +939,13 @@ var Dark = function(dummy = false) {
                     break;
             }
             d.ctx.restore();
+        },
+
+        filter: function(filter, value) {
+            let screen = new DImage(d.ctx.getImageData(0, 0, d.width, d.height), d);
+            screen.filter(filter, value);
+            d.ctx.putImageData(screen.imageData, 0, 0);
+            screen.dispose();
         },
 
         // Quick & Mathy functions
@@ -1001,6 +1027,7 @@ var Dark = function(dummy = false) {
 
     // Draw function (raf = request animation frame)
     d.raf = function(time) {
+        time = performance.now();
         let deltaFrame, deltaTime, forceRun = false;
 
         // If the user left the page and just entered, make fix deltas
@@ -1081,39 +1108,56 @@ Dark.empties = [
 
 // Constants
 Dark.constants = {
-    "DAYS": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-    "PI": Math.PI,
-    "HALF_PI": Math.PI / 2,
-    "QUARTER_PI": Math.PI / 4,
-    "E": Math.E,
-    "PHI": Math.PHI,
-    "TAU": Math.PI * 2,
-    "ROUND": 0,
-    "FLAT": 1,
-    "DEGREES": 2,
-    "RADIANS": 3,
-    "VERTEX": 4,
-    "CURVE": 5,
-    "SMOOTH": 6, // currently unused, to be renamed
-    "BEZIER": 7,
-    "CLOSE": 8,
-    "OPEN": 9,
-    "CENTER": 10,
-    "CORNER": 11,
-    "BOLD": 12,
-    "ITALIC": 13,
-    "NORMAL": 14,
-    "BEVEL": 15,
-    "MITER": 16,
-    "SQUARE": 17,
-    "LEFT": 18,
-    "RIGHT": 19,
-    "BASELINE": 20,
-    "TOP": 21,
-    "BOTTOM": 22,
-    "GET": 23,
-    "SET": 24
+    DAYS: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    PI: Math.PI,
+    HALF_PI: Math.PI / 2,
+    QUARTER_PI: Math.PI / 4,
+    E: Math.E,
+    PHI: Math.PHI,
+    TAU: Math.PI * 2,
+    ROUND: 0,
+    FLAT: 1,
+    DEGREES: 2,
+    RADIANS: 3,
+    VERTEX: 4,
+    CURVE: 5,
+    SMOOTH: 6, // unused
+    BEZIER: 7,
+    CLOSE: 8,
+    OPEN: 9,
+    CENTER: 10,
+    CORNER: 11,
+    BOLD: 12,
+    ITALIC: 13,
+    NORMAL: 14,
+    BEVEL: 15,
+    MITER: 16,
+    SQUARE: 17,
+    LEFT: 18,
+    RIGHT: 19,
+    BASELINE: 20,
+    TOP: 21,
+    BOTTOM: 22,
+    GET: 23,
+    SET: 24,
+    PERLIN: 25, // unused
+    SIMPLEX: 26, // unused
+    WORLEY: 27, // unused
+    VALUE: 28, // unused
+    RANDOM: 29, // unused
+    INVERT: 30,
+    OPAQUE: 31,
+    GRAY: 32, // unused
+    ERODE: 33, // unused
+    DILATE: 34, // unused
+    THRESHOLD: 35, // unused
+    POSTERIZE: 36, // unused
+    BLUR: 37 // unused
 };
+
+Dark.filters = [
+    Dark.constants.INVERT
+];
 
 // Special keys map
 Dark.special = {
@@ -1162,6 +1206,46 @@ Dark.special = {
     222: "single_quote",
     186: "semicolon"
 };
+
+// Grabbed from https://developer.mozilla.org/en-US/docs/Web/CSS/cursor
+Dark.cursors = [
+    "auto",
+    "default",
+    "none",
+    "context-menu",
+    "help",
+    "pointer",
+    "progress", // duplicate of wait
+    "wait",
+    "cell", // duplicate of crosshair
+    "crosshair",
+    "text",
+    "vertical-text",
+    "alias",
+    "copy",
+    "move",
+    "no-drop", // duplicate of not-allowed
+    "not-allowed",
+    "grab",
+    "grabbing",
+    "all-scroll",
+    "col-resize",
+    "row-resize",
+    "n-resize",
+    "e-resize",
+    "s-resize",
+    "w-resize",
+    "ne-resize",
+    "nw-resize",
+    "se-resize",
+    "sw-resize",
+    "ew-resize",
+    "ns-resize",
+    "nesw-resize",
+    "nwse-resize",
+    "zoom-in",
+    "zoom-out"
+];
 
 // Variables to be private
 Dark.ignoreGlobal = [
@@ -1272,18 +1356,6 @@ Dark.observe = function(object, type, callback) {
         }
     });
 };
-
-var a = {
-    b: 3
-};
-
-Dark.observe(a, Dark.constants.SET, function() {
-
-});
-
-a.b = 5;
-
-Dark.observe(a,);
 
 // Important function: sets the Dark object that has global access
 Dark.setMain = function(dark) {
@@ -1800,7 +1872,9 @@ Dark.objects = (function() {
         this.source = source;
         this.canvas = new OffscreenCanvas(this.width, this.height);
         this.ctx = this.canvas.getContext("2d", Dark.defaultContextSettings);
-        this.ctx.putImageData(imgData, 0, 0);
+        this.filters = {};
+
+        this.loadPixels();
     };
     DImage.get = function(img, ...args) {
         return img.get.apply(null, args);
@@ -1835,6 +1909,163 @@ Dark.objects = (function() {
             this.imageData,
             this.source
         );
+    };
+    DImage.prototype.loadPixels = function() {
+        this.ctx.putImageData(this.imageData, 0, 0);
+    };
+    DImage.prototype.updatePixels = function() {
+        this.imageData.data.set(this.ctx.getImageData(0, 0, this.width, this.height).data);
+    };
+    DImage.prototype.filter = function(type) {
+        if(Dark.filters.includes(type)) {
+            const filter = DImage.filterShaders[type];
+            let f = this.filters;
+
+            f.gl_canvas = new OffscreenCanvas(this.width, this.height);
+            f.gl = f.gl_canvas.getContext("webgl2");
+
+            if(!f.gl) {
+                Dark.warn("Your browser does not support WebGL2.");
+            }
+
+            f.vertexSource = filter.vert;
+            f.fragmentSource = filter.frag;
+
+            f.vertexShader = f.gl.createShader(f.gl.VERTEX_SHADER);
+            f.fragmentShader = f.gl.createShader(f.gl.FRAGMENT_SHADER);
+
+            f.gl.shaderSource(f.vertexShader, f.vertexSource);
+            f.gl.shaderSource(f.fragmentShader, f.fragmentSource);
+
+            f.gl.compileShader(f.vertexShader);
+            f.gl.compileShader(f.fragmentShader);
+
+            // Check for compiler errors, very nice for debugging
+            if(!f.gl.getShaderParameter(f.vertexShader, f.gl.COMPILE_STATUS)) {
+                Dark.error(new Error("Error compiling vertex shader.\n\n" + f.gl.getShaderInfoLog(f.vertexShader)));
+            }
+            if(!f.gl.getShaderParameter(f.fragmentShader, f.gl.COMPILE_STATUS)) {
+                Dark.error(new Error("Error compiling fragment shader.\n\n" + f.gl.getShaderInfoLog(f.fragmentShader)));
+            }
+
+            f.program = f.gl.createProgram();
+
+            f.gl.attachShader(f.program, f.vertexShader);
+            f.gl.attachShader(f.program, f.fragmentShader);
+
+            f.gl.linkProgram(f.program);
+
+            // Check for more errors
+            if(!f.gl.getProgramParameter(f.program, f.gl.LINK_STATUS)) {
+                Dark.error(new Error("Error linking program.\n\n" + f.gl.getProgramInfoLog(f.program)));
+            }
+            f.gl.validateProgram(f.program);
+            if(!f.gl.getProgramParameter(f.program, f.gl.VALIDATE_STATUS)) {
+                Dark.error(new Error("Error validating program.\n\n" + f.gl.getProgramInfoLog(f.program)));
+            }
+
+            f.gl.useProgram(f.program);
+
+            f.tris = f.gl.createBuffer();
+            f.gl.bindBuffer(f.gl.ARRAY_BUFFER, f.tris);
+            f.gl.bufferData(f.gl.ARRAY_BUFFER, DImage.texUV, f.gl.STATIC_DRAW);
+
+            f.fs = Float32Array.BYTES_PER_ELEMENT;
+
+            f.posAttribLocation = f.gl.getAttribLocation(f.program, "pos");
+
+            f.inputs = 2;
+
+            f.gl.vertexAttribPointer(
+                f.posAttribLocation, // location
+                2, // parameter count (vec2)
+                f.gl.FLOAT, // type
+                f.gl.FALSE, // normalized?
+                f.inputs * f.fs, // byte input size
+                0 // byte offset
+            );
+
+            f.gl.enableVertexAttribArray(f.posAttribLocation);
+
+            f.texture = f.gl.createTexture();
+
+            // ST instead of UV coords
+            f.gl.bindTexture(f.gl.TEXTURE_2D, f.texture);
+            f.gl.texParameteri(f.gl.TEXTURE_2D, f.gl.TEXTURE_WRAP_S, f.gl.CLAMP_TO_EDGE);
+            f.gl.texParameteri(f.gl.TEXTURE_2D, f.gl.TEXTURE_WRAP_T, f.gl.CLAMP_TO_EDGE);
+            f.gl.texParameteri(f.gl.TEXTURE_2D, f.gl.TEXTURE_MIN_FILTER, f.gl.LINEAR);
+            f.gl.texParameteri(f.gl.TEXTURE_2D, f.gl.TEXTURE_MAG_FILTER, f.gl.LINEAR);
+            f.gl.texImage2D(f.gl.TEXTURE_2D, 0, f.gl.RGBA, f.gl.RGBA, f.gl.UNSIGNED_BYTE, this.imageData);
+            f.gl.bindTexture(f.gl.TEXTURE_2D, null);
+
+            // Clear background (is this necessary?)
+            f.gl.clearColor(1.0, 1.0, 1.0, 1.0);
+            f.gl.clear(f.gl.COLOR_BUFFER_BIT | f.gl.DEPTH_BUFFER_BIT);
+
+            // Bind texture
+            f.gl.bindTexture(f.gl.TEXTURE_2D, f.texture);
+            f.gl.activeTexture(f.gl.TEXTURE0);
+
+            f.gl.drawArrays(
+                f.gl.TRIANGLES, // type
+                0, // offset
+                6 // point count
+            );
+
+            let result = new Uint8ClampedArray(this.width * this.height * 4);
+            f.gl.bindFramebuffer(f.gl.FRAMEBUFFER, null);
+            f.gl.readPixels(0, 0, this.width, this.height, f.gl.RGBA, f.gl.UNSIGNED_BYTE, result);
+
+            this.imageData.data.set(result);
+
+            this.ctx.putImageData(this.imageData, 0, 0);
+
+        } else {
+            Dark.error(new Error("Invalid filter type"));
+        }
+    };
+    DImage.prototype.dispose = function() {
+        this.gl_canvas = undefined;
+        this.gl = undefined;
+    };
+    DImage.texUV = new Float32Array([ // rectangle = 2 triangles, UV mapped
+        // Triangle #1
+        -1, -1,
+        1, -1,
+        -1, 1,
+        // Triangle #2
+        1, 1,
+        1, -1,
+        -1, 1
+    ]);
+    DImage.filterShaders = [];
+
+    // I wonder if I can use GLSL files and load them
+    DImage.filterShaders[Dark.constants.INVERT] = {
+        vert: `# version 300 es
+
+        precision lowp float;
+        
+        in vec2 pos;
+        out vec2 uv;
+        
+        void main() {
+            uv = (pos + 1.0) * 0.5; // Vertex position = -1 to 1, UV = 0 to 1
+            gl_Position = vec4(pos, 0.0, 1.0);
+        }`,
+        frag: `# version 300 es
+
+        precision lowp float;
+        
+        uniform sampler2D sampler;
+        
+        in vec2 uv;
+        out vec4 color;
+        
+        void main() {
+            vec4 tex = texture(sampler, uv);
+            color = vec4(1.0 - tex.r, 1.0 - tex.g, 1.0 - tex.b, tex.a);
+        }`
     };
 
     // Matrices
