@@ -3,28 +3,25 @@ To add:
 • Colorspaces
 • blendColor
 • Noise (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
+• DImage.noise(), use WebGL to fill the imageWidth. Might even create 4 with the RGBA
 • Filters (Using WebGL, gross)
 • Errors for 2 beginShapes in a row
 • Easier key use
 • Allow negatives for arcs
-• Curve point & tangent
 • Convert canvas matrix to and from DMatrix
 • Apply matrix transformations to DVectors (DOMMatrix)
-• Make sure no default canvas gets the same ID
+• Make sure no default canvas gets the same ID (maybe just add numbers)
 • DMatrix.cofactor(x, y)
 • DMatrix.adjoint
 • DMatrix.inverse
-• OffscreenCanvas instead of normal canvas for default
-• Have a Dark instance in main object for ease of use functions
 • Image masking
-• preventDefault() and allowDefault()
+• preventDefault(listener) and allowDefault(listener)
 • pushStyle and popStyle
-• Dark.cursors — list of all cursors
 • Contours
 • Use of requestFullscreen() in some way, for canvas and page
 • Make push & pop reset the settings as well
 • Make DVector rotations work in 3D
-• Load original matrix on resetMatrix
+• Make centered text with new lines work (textHeight + lineHeight) * lineCount * 0.5
 
 Possibly to add:
 • Transformations from point for ease of use 
@@ -34,8 +31,9 @@ Possibly to add:
 • Audio
 • Local storage, cookies, etc easy support
 • Cursor lock function — lock()
+• Custom cursors
 
 Bugs:
 • Key typed not working
-• Accuracy of dt is very low in the first few frames
-• Weird line in curveVertex
+• Width & Height not being set instantly
+• Get the frameRate to be more constant
