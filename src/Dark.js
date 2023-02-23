@@ -188,6 +188,7 @@ var Dark = function(dummy = false) {
                         d.ctx[key] = value;
                     }
                 }
+                Dark.globallyUpdateVariables(d);
             }
         },
 
@@ -479,7 +480,7 @@ var Dark = function(dummy = false) {
         // Transformations
         pushMatrix: function() {
             if(d.transforms.length > d.maxTransforms) {
-                Dark.error("Maximum matrix stack size reached, pushMatrix() called " + d.maxTransforms + " times.");
+                Dark.error(new Error("Maximum matrix stack size reached, pushMatrix() called " + d.maxTransforms + " times."));
             } else {
                 d.transforms.push(d.ctx.getTransform());
             }
@@ -545,7 +546,7 @@ var Dark = function(dummy = false) {
             // for speed, rounded rect is so much slower
             switch(arguments.length) {
                 default:
-                    Dark.error("rect takes in 4, 5 or 8 parameters, not " + arguments.length);
+                    Dark.error(new Error("rect takes in 4, 5 or 8 parameters, not " + arguments.length));
                     break;
                 case 4:
                     d.ctx.rect(x, y, width, height);
@@ -798,10 +799,12 @@ var Dark = function(dummy = false) {
             d.reloadFont();
         },
 
-        textAlign: function(alignX = k.LEFT, alignY = k.BASELINE) {
+        textAlign: function(alignX, alignY) {
+            if(arguments.length == 0) alignX = k.LEFT, alignY = k.BASELINE;
+            if(arguments.length == 1 && alignX == k.CENTER) alignY = k.CENTER;
             switch(alignX) {
                 default:
-                    Dark.error("Invalid x alignment type");
+                    Dark.error(new Error("Invalid x alignment type"));
                     break;
                 case k.LEFT:
                     d.ctx.textAlign = "left";
@@ -818,7 +821,7 @@ var Dark = function(dummy = false) {
             }
             switch(alignY) {
                 default:
-                    Dark.error("Invalid y alignment type");
+                    Dark.error(new Error("Invalid y alignment type"));
                     break;
                 case k.BASELINE:
                     d.ctx.textBaseline = "alphabetic";
@@ -890,8 +893,9 @@ var Dark = function(dummy = false) {
 
         text: function(text, x, y) {
             let lines = text.split("\n");
+            let off = (d.settings.alignY == k.CENTER) ? (d.settings.textHeight + d.settings.lineGap) * lines.length / 2 : 0;
             lines.forEach((line, index) => {
-                let inc = index * (d.settings.textHeight + d.settings.lineGap);
+                let inc = index * (d.settings.textHeight + d.settings.lineGap) - off;
                 d.ctx.fillText(line, x, y + inc);
                 d.ctx.strokeText(line, x, y + inc);
             });
@@ -945,7 +949,6 @@ var Dark = function(dummy = false) {
             let screen = new DImage(d.ctx.getImageData(0, 0, d.width, d.height), d);
             screen.filter(filter, value);
             d.ctx.putImageData(screen.imageData, 0, 0);
-            screen.dispose();
         },
 
         // Quick & Mathy functions
@@ -1156,7 +1159,9 @@ Dark.constants = {
 };
 
 Dark.filters = [
-    Dark.constants.INVERT
+    Dark.constants.INVERT,
+    Dark.constants.OPAQUE,
+    Dark.constants.GRAY
 ];
 
 // Special keys map
@@ -1370,6 +1375,18 @@ Dark.setMain = function(dark) {
 
 Dark.getMain = function() {
     return Dark.main;
+};
+
+// https://stackoverflow.com/questions/36921947/read-a-server-side-file-using-javascript
+Dark.loadFile = function(loc) {
+    var result = null;
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.open("GET", loc, false);
+    xmlhttp.send();
+    if(xmlhttp.status == 200) {
+        result = xmlhttp.responseText;
+    }
+    return result;
 };
 
 // Update variables to window for main instance
@@ -1928,7 +1945,7 @@ Dark.objects = (function() {
                 Dark.warn("Your browser does not support WebGL2.");
             }
 
-            f.vertexSource = filter.vert;
+            f.vertexSource = DImage.globalVertexShader;
             f.fragmentSource = filter.frag;
 
             f.vertexShader = f.gl.createShader(f.gl.VERTEX_SHADER);
@@ -2024,10 +2041,6 @@ Dark.objects = (function() {
             Dark.error(new Error("Invalid filter type"));
         }
     };
-    DImage.prototype.dispose = function() {
-        this.gl_canvas = undefined;
-        this.gl = undefined;
-    };
     DImage.texUV = new Float32Array([ // rectangle = 2 triangles, UV mapped
         // Triangle #1
         -1, -1,
@@ -2038,35 +2051,28 @@ Dark.objects = (function() {
         1, -1,
         -1, 1
     ]);
+    DImage.globalVertexShader = Dark.loadFile("../filters/global.vert");
     DImage.filterShaders = [];
-
-    // I wonder if I can use GLSL files and load them
-    DImage.filterShaders[Dark.constants.INVERT] = {
-        vert: `# version 300 es
-
-        precision lowp float;
-        
-        in vec2 pos;
-        out vec2 uv;
-        
-        void main() {
-            uv = (pos + 1.0) * 0.5; // Vertex position = -1 to 1, UV = 0 to 1
-            gl_Position = vec4(pos, 0.0, 1.0);
-        }`,
-        frag: `# version 300 es
-
-        precision lowp float;
-        
-        uniform sampler2D sampler;
-        
-        in vec2 uv;
-        out vec4 color;
-        
-        void main() {
-            vec4 tex = texture(sampler, uv);
-            color = vec4(1.0 - tex.r, 1.0 - tex.g, 1.0 - tex.b, tex.a);
-        }`
+    DImage.initializeShaders = function(arr) {
+        arr.forEach(function(obj) {
+            DImage.filterShaders[obj.key] = {
+                frag: Dark.loadFile("../filters/" + obj.shader)
+            }
+        });
     };
+
+    DImage.initializeShaders([
+        {
+            key: Dark.constants.INVERT,
+            shader: "invert.frag"
+        }, {
+            key: Dark.constants.OPAQUE,
+            shader: "opaque.frag"
+        }, {
+            key: Dark.constants.GRAY,
+            shader: "grayscale.frag"
+        }
+    ]);
 
     // Matrices
     let DMatrix = function(width, height, val = 0) {
