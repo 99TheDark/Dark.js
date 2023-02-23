@@ -20,7 +20,9 @@ To add:
 • Use of requestFullscreen() in some way, for canvas and page
 • Make push & pop reset the settings as well
 • Make DVector rotations work in 3D
-• Make centered text with new lines work (textHeight + lineHeight) * lineCount * 0.5
+• Using ImageData for Image()
+• Image cache for speed
+• Use 1 canvas & 1 context for WebGL filters
 
 Possibly to add:
 • Transformations from point for ease of use 
@@ -34,5 +36,4 @@ Possibly to add:
 
 Bugs:
 • Key typed not working
-• Width & Height not being set instantly
 • Get the frameRate to be more constant
