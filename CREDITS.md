@@ -7,6 +7,7 @@
 
 ## [ski.js](https://github.com/thelegendski/ski.js/):
 - Snippets of vertex system
+- Using Promises for loading external files
 
 ## [Soulwire](http://jsfiddle.net/user/soulwire/fiddles/):
 - Catmull-Rom spline to Cubic Bézier
@@ -16,3 +17,6 @@
 
 ## [Indigo Code](https://www.youtube.com/@IndigoCode):
 - WebGL tutorials
+
+## [Dave Burton](https://stackoverflow.com/users/562862/dave-burton):
+- Loading Files
