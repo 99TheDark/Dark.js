@@ -10,6 +10,8 @@
 ## WebGL Filters:
 - [Indigo Code](https://www.youtube.com/@IndigoCode)
 - [End to End Machine Learning](https://e2eml.school/convert_rgb_to_grayscale.html)
+- [WebGL2 Fundamentals](https://webgl2fundamentals.org/webgl/lessons/webgl-fundamentals.html)
+- [Mozilla](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/uniform)
 
 ## Loading Files:
 - [StackOverflow](https://stackoverflow.com/questions/36921947/read-a-server-side-file-using-javascript)
