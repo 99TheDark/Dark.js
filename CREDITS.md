@@ -7,7 +7,6 @@
 
 ## [ski.js](https://github.com/thelegendski/ski.js/):
 - Snippets of vertex system
-- Using Promises for loading external files
 
 ## [Soulwire](http://jsfiddle.net/user/soulwire/fiddles/):
 - Catmull-Rom spline to Cubic Bézier
