@@ -175,10 +175,9 @@ var Dark = function(dummy = false) {
                 // It took me ~8 hours to figure this out. D:<
                 let old = d.copy(d.ctx);
 
-                d.width = d.canvas.width = w;
-                d.height = d.canvas.height = h;
+                [d.width, d.height] = [d.canvas.width, d.canvas.height] = [w, h];
 
-                let ignore = [
+                let ignore = [ // TODO: Move somewhere else
                     "canvas", "width", "height"
                 ];
 
@@ -928,6 +927,7 @@ var Dark = function(dummy = false) {
         image: function(img, x, y, width, height) {
             d.ctx.save();
             if(d.settings.imageMode == k.CENTER) d.ctx.translate(- width / 2, - height / 2);
+            if(img instanceof ImageData) img = new DImage(img);
             switch(arguments.length) {
                 default:
                     Dark.error(new Error("image requires 3 to 5 parameters, not " + arguments.length));
@@ -949,6 +949,20 @@ var Dark = function(dummy = false) {
             let screen = new DImage(d.ctx.getImageData(0, 0, d.width, d.height), d);
             screen.filter(filter, value);
             d.ctx.putImageData(screen.imageData, 0, 0);
+        },
+
+        loadImage: function(url) {
+            let result = new DImage();
+
+            let img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = url;
+            img.onload = function() {
+                img.width = 10;
+            };
+
+            result.source = img;
+            return result;
         },
 
         // Quick & Mathy functions
@@ -1150,18 +1164,34 @@ Dark.constants = {
     RANDOM: 29, // unused
     INVERT: 30,
     OPAQUE: 31,
-    GRAY: 32, // unused
+    GRAY: 32,
     ERODE: 33, // unused
     DILATE: 34, // unused
-    THRESHOLD: 35, // unused
-    POSTERIZE: 36, // unused
-    BLUR: 37 // unused
+    THRESHOLD: 35,
+    POSTERIZE: 36,
+    BLUR: 37, // unused
+    SHARPEN: 38, // unused
+    SEPIA: 39, // unused
+    OUTLINE: 40, // unused
+    EMBOSS: 41, // unused
+    EDGE: 42, // unused
+    COTRAST: 43, // unused
+    VIGNETTE: 44,
+    BRIGHTNESS: 45, // unused
+    BLACK: 46,
+    WHITE: 47,
+    MEDIAN: 48 // unused
 };
 
 Dark.filters = [
     Dark.constants.INVERT,
     Dark.constants.OPAQUE,
-    Dark.constants.GRAY
+    Dark.constants.GRAY,
+    Dark.constants.THRESHOLD,
+    Dark.constants.POSTERIZE,
+    Dark.constants.VIGNETTE,
+    Dark.constants.BLACK,
+    Dark.constants.WHITE
 ];
 
 // Special keys map
@@ -1378,13 +1408,13 @@ Dark.getMain = function() {
 };
 
 // https://stackoverflow.com/questions/36921947/read-a-server-side-file-using-javascript
-Dark.loadFile = function(loc) {
-    var result = null;
-    var xmlhttp = new XMLHttpRequest();
-    xmlhttp.open("GET", loc, false);
-    xmlhttp.send();
-    if(xmlhttp.status == 200) {
-        result = xmlhttp.responseText;
+Dark.loadFile = function(loc, type) {
+    let result = null;
+    let xhr = new XMLHttpRequest();
+    xhr.open("GET", loc, false);
+    xhr.send();
+    if(xhr.status == 200) {
+        result = xhr.responseText;
     }
     return result;
 };
@@ -1883,15 +1913,22 @@ Dark.objects = (function() {
 
     // Images
     let DImage = function(imgData, source) {
-        this.width = imgData.width;
-        this.height = imgData.height;
-        this.imageData = imgData;
-        this.source = source;
-        this.canvas = new OffscreenCanvas(this.width, this.height);
-        this.ctx = this.canvas.getContext("2d", Dark.defaultContextSettings);
         this.filters = {};
 
-        this.loadPixels();
+        if(imgData instanceof ImageData) {
+            this.imageData = imgData;
+            this.source = source;
+            this.width = imgData.width;
+            this.height = imgData.height;
+            this.canvas = new OffscreenCanvas(this.width, this.height);
+            this.ctx = this.canvas.getContext("2d", Dark.defaultContextSettings);
+            this.loadPixels();
+        } else {
+            this.imageData = null;
+            this.source = source;
+            this.width = 0;
+            this.height = 0;
+        }
     };
     DImage.get = function(img, ...args) {
         return img.get.apply(null, args);
@@ -1933,7 +1970,7 @@ Dark.objects = (function() {
     DImage.prototype.updatePixels = function() {
         this.imageData.data.set(this.ctx.getImageData(0, 0, this.width, this.height).data);
     };
-    DImage.prototype.filter = function(type) {
+    DImage.prototype.filter = function(type, value) {
         if(Dark.filters.includes(type)) {
             const filter = DImage.filterShaders[type];
             let f = this.filters;
@@ -1942,11 +1979,11 @@ Dark.objects = (function() {
             f.gl = f.gl_canvas.getContext("webgl2");
 
             if(!f.gl) {
-                Dark.warn("Your browser does not support WebGL2.");
+                return Dark.warn("Your browser does not support WebGL2.");
             }
 
             f.vertexSource = DImage.globalVertexShader;
-            f.fragmentSource = filter.frag;
+            f.fragmentSource = filter.shader;
 
             f.vertexShader = f.gl.createShader(f.gl.VERTEX_SHADER);
             f.fragmentShader = f.gl.createShader(f.gl.FRAGMENT_SHADER);
@@ -1959,10 +1996,10 @@ Dark.objects = (function() {
 
             // Check for compiler errors, very nice for debugging
             if(!f.gl.getShaderParameter(f.vertexShader, f.gl.COMPILE_STATUS)) {
-                Dark.error(new Error("Error compiling vertex shader.\n\n" + f.gl.getShaderInfoLog(f.vertexShader)));
+                return Dark.error(new Error("Error compiling vertex shader.\n\n" + f.gl.getShaderInfoLog(f.vertexShader)));
             }
             if(!f.gl.getShaderParameter(f.fragmentShader, f.gl.COMPILE_STATUS)) {
-                Dark.error(new Error("Error compiling fragment shader.\n\n" + f.gl.getShaderInfoLog(f.fragmentShader)));
+                return Dark.error(new Error("Error compiling fragment shader.\n\n" + f.gl.getShaderInfoLog(f.fragmentShader)));
             }
 
             f.program = f.gl.createProgram();
@@ -1974,11 +2011,11 @@ Dark.objects = (function() {
 
             // Check for more errors
             if(!f.gl.getProgramParameter(f.program, f.gl.LINK_STATUS)) {
-                Dark.error(new Error("Error linking program.\n\n" + f.gl.getProgramInfoLog(f.program)));
+                return Dark.error(new Error("Error linking program.\n\n" + f.gl.getProgramInfoLog(f.program)));
             }
             f.gl.validateProgram(f.program);
             if(!f.gl.getProgramParameter(f.program, f.gl.VALIDATE_STATUS)) {
-                Dark.error(new Error("Error validating program.\n\n" + f.gl.getProgramInfoLog(f.program)));
+                return Dark.error(new Error("Error validating program.\n\n" + f.gl.getProgramInfoLog(f.program)));
             }
 
             f.gl.useProgram(f.program);
@@ -1990,19 +2027,27 @@ Dark.objects = (function() {
             f.fs = Float32Array.BYTES_PER_ELEMENT;
 
             f.posAttribLocation = f.gl.getAttribLocation(f.program, "pos");
-
-            f.inputs = 2;
-
             f.gl.vertexAttribPointer(
                 f.posAttribLocation, // location
                 2, // parameter count (vec2)
                 f.gl.FLOAT, // type
                 f.gl.FALSE, // normalized?
-                f.inputs * f.fs, // byte input size
+                2 * f.fs, // byte input size
                 0 // byte offset
             );
-
             f.gl.enableVertexAttribArray(f.posAttribLocation);
+
+            // If the filter has a parameter
+            if(filter.param) {
+                // Constrain between min and max, otherwise set to default if not defined
+                if(value) {
+                    value = Dark.utils.constrain(value, filter.param.min, filter.param.max);
+                } else {
+                    value = filter.param.default;
+                }
+                f.paramUniformLocation = f.gl.getUniformLocation(f.program, "param");
+                f.gl.uniform1f(f.paramUniformLocation, value);
+            }
 
             f.texture = f.gl.createTexture();
 
@@ -2038,7 +2083,7 @@ Dark.objects = (function() {
             this.ctx.putImageData(this.imageData, 0, 0);
 
         } else {
-            Dark.error(new Error("Invalid filter type"));
+            return Dark.error(new Error("Invalid filter type"));
         }
     };
     DImage.texUV = new Float32Array([ // rectangle = 2 triangles, UV mapped
@@ -2056,7 +2101,8 @@ Dark.objects = (function() {
     DImage.initializeShaders = function(arr) {
         arr.forEach(function(obj) {
             DImage.filterShaders[obj.key] = {
-                frag: Dark.loadFile("../filters/" + obj.shader)
+                shader: Dark.loadFile("../filters/" + obj.shader),
+                param: obj.param
             }
         });
     };
@@ -2071,6 +2117,46 @@ Dark.objects = (function() {
         }, {
             key: Dark.constants.GRAY,
             shader: "grayscale.frag"
+        }, {
+            key: Dark.constants.THRESHOLD,
+            shader: "threshold.frag",
+            param: {
+                min: 0,
+                max: 1,
+                default: 0.5
+            }
+        }, {
+            key: Dark.constants.POSTERIZE,
+            shader: "posterize.frag",
+            param: {
+                min: 2,
+                max: 255,
+                default: 255
+            }
+        }, {
+            key: Dark.constants.BLACK,
+            shader: "black.frag",
+            param: {
+                min: 0,
+                max: 1,
+                default: 0
+            }
+        }, {
+            key: Dark.constants.WHITE,
+            shader: "white.frag",
+            param: {
+                min: 0,
+                max: 1,
+                default: 1
+            }
+        }, {
+            key: Dark.constants.VIGNETTE,
+            shader: "vignette.frag",
+            param: {
+                min: 0,
+                max: 1,
+                default: 0
+            }
         }
     ]);
 
