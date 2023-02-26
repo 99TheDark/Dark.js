@@ -20,9 +20,15 @@ To add:
 • Use of requestFullscreen() in some way, for canvas and page
 • Make push & pop reset the settings as well
 • Make DVector rotations work in 3D
-• Using ImageData for Image()
+• Using ImageData for DImage & image()
 • Image cache for speed
 • Use 1 canvas & 1 context for WebGL filters
+• Global Dark.canvas & Dark.ctx for ease of use
+• Make mouse click, key press and such reset when leaving the tab
+• Get the frameRate to be more constant
+• DImage.resize
+• DVector.abs
+• Speed up those filters (Is there any way to preload the contexts & programs with <16 contexts?)
 
 Possibly to add:
 • Transformations from point for ease of use 
@@ -33,7 +39,8 @@ Possibly to add:
 • Local storage, cookies, etc easy support
 • Cursor lock function — lock()
 • Custom cursors
+• Proxy-ify functions with the current setting
+• Chaining DVector & DMatrix operations like DVector.mult(a, b, c, d, e)
 
 Bugs:
 • Key typed not working
-• Get the frameRate to be more constant
