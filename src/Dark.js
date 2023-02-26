@@ -1045,29 +1045,31 @@ var Dark = function(dummy = false) {
     // Draw function (raf = request animation frame)
     d.raf = function(time) {
         time = performance.now();
-        let deltaFrame, deltaTime, forceRun = false;
+
+        let deltaFrame = time - lastFrame;
+        let deltaTime = time - lastTime;
+        lastTime = performance.now();
+
+        let run = (deltaFrame > d.settings.frameStep - deltaTime / 2 && d.settings.looping)
 
         // If the user left the page and just entered, make fix deltas
-        if(lastHidden < performance.now() && lastHidden > lastTime) {
-            deltaTime = lastHidden - lastTime;
+        if(lastHidden < time && lastHidden > lastTime) {
+            deltaTime = time - lastHidden;
             deltaFrame = deltaTime;
-            forceRun = true;
-        } else {
-            deltaFrame = time - lastFrame;
-            deltaTime = time - lastTime;
+        } 
+
+        if(run) {
+            lastFrame = time;
+            d.draw();
+            d.dt = deltaFrame / 1000;
+            d.fps = 1000 / deltaFrame;
+            d.frameCount = ++d.frameCount;
         }
 
         if(d.isMain) {
             Dark.globallyUpdateVariables(d);
         }
-        if((deltaFrame > d.settings.frameStep - deltaTime / 2 && d.settings.looping) || forceRun) {
-            d.dt = deltaFrame / 1000;
-            d.fps = 1000 / deltaFrame;
-            d.frameCount = ++d.frameCount;
-            d.draw();
-            lastFrame = performance.now();
-        }
-        lastTime = performance.now();
+
         requestAnimationFrame(d.raf);
     };
 
@@ -1180,7 +1182,9 @@ Dark.constants = {
     BRIGHTNESS: 45, // unused
     BLACK: 46,
     WHITE: 47,
-    MEDIAN: 48 // unused
+    MEDIAN: 48, // unused
+    BOX: 49,
+    OPACITY: 50 // unused
 };
 
 Dark.filters = [
@@ -1191,7 +1195,8 @@ Dark.filters = [
     Dark.constants.POSTERIZE,
     Dark.constants.VIGNETTE,
     Dark.constants.BLACK,
-    Dark.constants.WHITE
+    Dark.constants.WHITE,
+    Dark.constants.BOX
 ];
 
 // Special keys map
@@ -1335,6 +1340,9 @@ Dark.defaultContextSettings = {
     willReadFrequently: true
 };
 
+// The current url
+Dark.url = new URL(location.href);
+
 // Debugging, very handy function
 Dark.copy = function(e) {
     if(typeof e == "object" || typeof e == "function") {
@@ -1408,7 +1416,8 @@ Dark.getMain = function() {
 };
 
 // https://stackoverflow.com/questions/36921947/read-a-server-side-file-using-javascript
-Dark.loadFile = function(loc, type) {
+Dark.loadFile = function(loc) {
+    if(Dark.url.host != "127.0.0.1:5500") loc = "https://cdn.jsdelivr.net/gh/99TheDark/Dark.js@main" + loc;
     let result = null;
     let xhr = new XMLHttpRequest();
     xhr.open("GET", loc, false);
@@ -1714,6 +1723,8 @@ Dark.objects = (function() {
 
         if(mag != 0) {
             return DVector.div(v, mag);
+        } else {
+            return v.get();
         }
     };
     DVector.prototype.normalize = function() {
@@ -1975,8 +1986,11 @@ Dark.objects = (function() {
             const filter = DImage.filterShaders[type];
             let f = this.filters;
 
-            f.gl_canvas = new OffscreenCanvas(this.width, this.height);
-            f.gl = f.gl_canvas.getContext("webgl2");
+            f.gl_canvas = DImage.gl_canvas;
+            f.gl = DImage.gl;
+
+            [f.gl_canvas.width, f.gl_canvas.height] = [this.width, this.height];
+            f.gl.viewport(0, 0, this.width, this.height);
 
             if(!f.gl) {
                 return Dark.warn("Your browser does not support WebGL2.");
@@ -2037,10 +2051,14 @@ Dark.objects = (function() {
             );
             f.gl.enableVertexAttribArray(f.posAttribLocation);
 
+            // Size of image, width by height.
+            f.sizeUniformLocation = f.gl.getUniformLocation(f.program, "size");
+            f.gl.uniform2f(f.sizeUniformLocation, this.width, this.height); // floats bc then I don't have to convert
+
             // If the filter has a parameter
             if(filter.param) {
                 // Constrain between min and max, otherwise set to default if not defined
-                if(value) {
+                if(value != undefined) {
                     value = Dark.utils.constrain(value, filter.param.min, filter.param.max);
                 } else {
                     value = filter.param.default;
@@ -2059,11 +2077,7 @@ Dark.objects = (function() {
             f.gl.texParameteri(f.gl.TEXTURE_2D, f.gl.TEXTURE_MAG_FILTER, f.gl.LINEAR);
             f.gl.texImage2D(f.gl.TEXTURE_2D, 0, f.gl.RGBA, f.gl.RGBA, f.gl.UNSIGNED_BYTE, this.imageData);
             f.gl.bindTexture(f.gl.TEXTURE_2D, null);
-
-            // Clear background (is this necessary?)
-            f.gl.clearColor(1.0, 1.0, 1.0, 1.0);
-            f.gl.clear(f.gl.COLOR_BUFFER_BIT | f.gl.DEPTH_BUFFER_BIT);
-
+            
             // Bind texture
             f.gl.bindTexture(f.gl.TEXTURE_2D, f.texture);
             f.gl.activeTexture(f.gl.TEXTURE0);
@@ -2096,12 +2110,12 @@ Dark.objects = (function() {
         1, -1,
         -1, 1
     ]);
-    DImage.globalVertexShader = Dark.loadFile("../filters/global.vert");
+    DImage.globalVertexShader = Dark.loadFile("/filters/global.vert");
     DImage.filterShaders = [];
     DImage.initializeShaders = function(arr) {
         arr.forEach(function(obj) {
             DImage.filterShaders[obj.key] = {
-                shader: Dark.loadFile("../filters/" + obj.shader),
+                shader: Dark.loadFile("/filters/" + obj.shader + ".frag"),
                 param: obj.param
             }
         });
@@ -2110,16 +2124,16 @@ Dark.objects = (function() {
     DImage.initializeShaders([
         {
             key: Dark.constants.INVERT,
-            shader: "invert.frag"
+            shader: "invert"
         }, {
             key: Dark.constants.OPAQUE,
-            shader: "opaque.frag"
+            shader: "opaque"
         }, {
             key: Dark.constants.GRAY,
-            shader: "grayscale.frag"
+            shader: "grayscale"
         }, {
             key: Dark.constants.THRESHOLD,
-            shader: "threshold.frag",
+            shader: "threshold",
             param: {
                 min: 0,
                 max: 1,
@@ -2127,7 +2141,7 @@ Dark.objects = (function() {
             }
         }, {
             key: Dark.constants.POSTERIZE,
-            shader: "posterize.frag",
+            shader: "posterize",
             param: {
                 min: 2,
                 max: 255,
@@ -2135,7 +2149,7 @@ Dark.objects = (function() {
             }
         }, {
             key: Dark.constants.BLACK,
-            shader: "black.frag",
+            shader: "black",
             param: {
                 min: 0,
                 max: 1,
@@ -2143,7 +2157,7 @@ Dark.objects = (function() {
             }
         }, {
             key: Dark.constants.WHITE,
-            shader: "white.frag",
+            shader: "white",
             param: {
                 min: 0,
                 max: 1,
@@ -2151,14 +2165,24 @@ Dark.objects = (function() {
             }
         }, {
             key: Dark.constants.VIGNETTE,
-            shader: "vignette.frag",
+            shader: "vignette",
             param: {
                 min: 0,
                 max: 1,
                 default: 0
             }
+        }, {
+            key: Dark.constants.BOX,
+            shader: "box",
+            param: {
+                min: 0,
+                max: 30,
+                default: 0
+            }
         }
     ]);
+    DImage.gl_canvas = new OffscreenCanvas(100, 60);
+    DImage.gl = DImage.gl_canvas.getContext("webgl2");
 
     // Matrices
     let DMatrix = function(width, height, val = 0) {
