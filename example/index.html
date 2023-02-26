@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DarkJS Example</title>
     <link rel="stylesheet" href="style.css">
-    <script src="../src/Dark-min.js"></script>
+    <script src="../src/Dark.js"></script>
     <link rel="icon" type="image/x-icon" href="../images/favicons/favicon.ico?v=2">
 </head>
 
@@ -17,6 +17,11 @@
         setCanvas(document.getElementById("canvas"));
 
         size(1000, 600);
+
+        // https://www.1800flowers.com/blog/wp-content/uploads/2021/05/Birthday-Flowers-Colors.jpg
+        let imgFile = loadImage("../images/icon.png");
+
+        frameRate(Infinity);
 
         // Demo code
         draw = function() {
@@ -109,9 +114,15 @@
             rect(798, 458, 154, 94);
             image(img, 800, 460, 150, 90);
 
+            // filter(BOX, 6);
+            filter(VIGNETTE, 0.3);
             if(mouseIsPressed) filter(INVERT);
 
-            filter(VIGNETTE, 0.4);
+            fill(255);
+            textStyle(BOLD);
+            textSize(40);
+            textAlign(LEFT, TOP);
+            text(fps.toFixed(), 35, 35);
         };
     </script>
 </body>
