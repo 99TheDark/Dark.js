@@ -10,9 +10,11 @@ out vec4 color;
 
 void main() {
     vec4 tex = texture(sampler, uv);
+    float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale
 
-    vec2 pos = (uv * 2.0 - 1.0) * param;
-    float dist = 1.0 - sqrt(pos.x * pos.x + pos.y * pos.y);
-
-    color = vec4(tex.rgb * dist, tex.a);
+    if(luminance >= param) {
+        color = vec4(vec3(1.0), tex.a);
+    } else {
+        color = tex;
+    }
 }
