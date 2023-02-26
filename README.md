@@ -1,4 +1,4 @@
-# Dark.js ![CodeFactor](https://www.codefactor.io/repository/github/99thedark/dark.js/badge)
+# Dark.js ![https://github.com/99TheDark/Dark.js/releases](https://img.shields.io/github/package-json/v/99thedark/Dark.js) ![https://github.com/99TheDark/Dark.js/blob/main/LICENSE](https://img.shields.io/github/license/99thedark/Dark.js) ![CodeFactor](https://www.codefactor.io/repository/github/99thedark/dark.js/badge)
 
 Closesly modeled after both [Processing.js](https://github.com/processing-js/processing-js) and [ski.js](https://github.com/thelegendski/ski.js/).
 Dark.js hopes to fix a few technicaly issues with ski.js, be much faster than ProcessingJS, but also add new features that make using Dark.js worth it.
