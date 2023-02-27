@@ -1056,7 +1056,7 @@ var Dark = function(dummy = false) {
         if(lastHidden < time && lastHidden > lastTime) {
             deltaTime = time - lastHidden;
             deltaFrame = deltaTime;
-        } 
+        }
 
         if(run) {
             lastFrame = time;
@@ -1179,12 +1179,12 @@ Dark.constants = {
     EDGE: 42, // unused
     COTRAST: 43, // unused
     VIGNETTE: 44,
-    BRIGHTNESS: 45, // unused
+    BRIGHTNESS: 45,
     BLACK: 46,
     WHITE: 47,
     MEDIAN: 48, // unused
     BOX: 49,
-    OPACITY: 50 // unused
+    OPACITY: 50
 };
 
 Dark.filters = [
@@ -1194,9 +1194,11 @@ Dark.filters = [
     Dark.constants.THRESHOLD,
     Dark.constants.POSTERIZE,
     Dark.constants.VIGNETTE,
+    Dark.constants.BRIGHTNESS,
     Dark.constants.BLACK,
     Dark.constants.WHITE,
-    Dark.constants.BOX
+    Dark.constants.BOX,
+    Dark.constants.OPACITY
 ];
 
 // Special keys map
@@ -1415,17 +1417,52 @@ Dark.getMain = function() {
     return Dark.main;
 };
 
+Dark.fileCacheKA = {
+    "/filters/global.vert": "# version 300 es precision lowp float; in vec2 pos; out vec2 uv; void main() { uv = (pos + 1.0) * 0.5; // Vertex position = -1 to 1, UV = 0 to 1 gl_Position = vec4(pos, 0.0, 1.0); }",
+    "/filters/invert.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); color = vec4(1.0 - tex.r, 1.0 - tex.g, 1.0 - tex.b, tex.a); }",
+    "/filters/opaque.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); color = vec4(tex.rgb, 1.0); }",
+    "/filters/grayscale.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Based on how human eyes precieve color = vec4(vec3(luminance), tex.a); }",
+    "/filters/threshold.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale if(luminance > param) { color = vec4(vec3(1.0), 1.0); } else { color = vec4(vec3(0.0), 1.0); } }",
+    "/filters/posterize.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; float posterize(float val) { return floor(val * param + 0.5) / param; } void main() { vec4 tex = texture(sampler, uv); float red = posterize(tex.r); float green = posterize(tex.g); float blue = posterize(tex.b); color = vec4(red, green, blue, 1.0); }",
+    "/filters/black.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale if(luminance <= param) { color = vec4(vec3(0.0), tex.a); } else { color = tex; } }",
+    "/filters/white.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale if(luminance >= param) { color = vec4(vec3(1.0), tex.a); } else { color = tex; } }",
+    "/filters/vignette.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); vec2 pos = (uv * 2.0 - 1.0) * param; float dist = 1.0 - sqrt(pos.x * pos.x + pos.y * pos.y); color = vec4(tex.rgb * dist, tex.a); }",
+    "/filters/box.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform vec2 size; uniform float param; in vec2 uv; out vec4 color; #define len (param * 2.0 + 1.0) #define count (len * len) void main() { vec4 tex = texture(sampler, uv); vec4 total = vec4(0.0); for(float y = -param; y <= param; y++) { for(float x = -param; x <= param; x++) { total += texture(sampler, uv + vec2(x, y) / size); } } color = vec4(total / count); }",
+    "/filters/brightness.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); color = vec4(tex.rgb + param, tex.a); }",
+    "/filters/opacity.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); color = vec4(tex.rgb, tex.a + param); }"
+};
+
+Dark.compileListKA = [];
+
 // https://stackoverflow.com/questions/36921947/read-a-server-side-file-using-javascript
 Dark.loadFile = function(loc) {
-    if(Dark.url.host != "127.0.0.1:5500") loc = "https://cdn.jsdelivr.net/gh/99TheDark/Dark.js@main" + loc;
-    let result = null;
-    let xhr = new XMLHttpRequest();
-    xhr.open("GET", loc, false);
-    xhr.send();
-    if(xhr.status == 200) {
-        result = xhr.responseText;
+    if(Dark.url.host == "khanacademy.org") {
+        return Dark.fileCacheKA[loc];
+    } else {
+        if(Dark.url.host != "127.0.0.1:5500") loc = "https://cdn.jsdelivr.net/gh/99TheDark/Dark.js@latest" + loc;
+        let result = null;
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", loc, false);
+        xhr.send();
+        if(xhr.status == 200) {
+            result = xhr.responseText;
+        }
+        if(Dark.url.host == "127.0.0.1:5500") {
+            // https://stackoverflow.com/questions/1981349/regex-to-replace-multiple-spaces-with-a-single-space
+            Dark.compileListKA.push({
+                location: loc,
+                contents: result.replaceAll("\n", " ").replace(/\s\s+/g, " ")
+            });
+        }
+        return result;
     }
-    return result;
+};
+
+Dark.compileKA = function() {
+    if(Dark.url.host == "127.0.0.1:5500") {
+        Dark.compileListKA.forEach(file => Dark.fileCacheKA[file.location] = file.contents);
+        console.log(Dark.format(Dark.fileCacheKA));
+    }
 };
 
 // Update variables to window for main instance
@@ -2077,7 +2114,7 @@ Dark.objects = (function() {
             f.gl.texParameteri(f.gl.TEXTURE_2D, f.gl.TEXTURE_MAG_FILTER, f.gl.LINEAR);
             f.gl.texImage2D(f.gl.TEXTURE_2D, 0, f.gl.RGBA, f.gl.RGBA, f.gl.UNSIGNED_BYTE, this.imageData);
             f.gl.bindTexture(f.gl.TEXTURE_2D, null);
-            
+
             // Bind texture
             f.gl.bindTexture(f.gl.TEXTURE_2D, f.texture);
             f.gl.activeTexture(f.gl.TEXTURE0);
@@ -2148,6 +2185,14 @@ Dark.objects = (function() {
                 default: 255
             }
         }, {
+            key: Dark.constants.BRIGHTNESS,
+            shader: "brightness",
+            param: {
+                min: -1,
+                max: 1,
+                default: 0
+            }
+        }, {
             key: Dark.constants.BLACK,
             shader: "black",
             param: {
@@ -2177,6 +2222,14 @@ Dark.objects = (function() {
             param: {
                 min: 0,
                 max: 30,
+                default: 0
+            }
+        }, {
+            key: Dark.constants.OPACITY,
+            shader: "opacity",
+            param: {
+                min: 0,
+                max: 1,
                 default: 0
             }
         }
@@ -2371,6 +2424,9 @@ Dark.objects = (function() {
     };
 
 })();
+
+// Compile for Khan Academy since all files are blocked :(
+Dark.compileKA();
 
 Dark.utils = new Dark(true); // Dummy instance for utils
 Dark.setMain(new Dark()); // Default main
