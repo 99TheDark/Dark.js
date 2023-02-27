@@ -105,7 +105,17 @@ var Dark = function(dummy = false) {
         });
 
         document.addEventListener("visibilitychange", function() {
-            if(document.visibilityState == "hidden") lastHidden = performance.now();
+            if(document.visibilityState == "hidden") {
+                // Reset
+                d.keyIsPressed = false;
+                d.key = undefined;
+                d.keyCode = undefined;
+                d.mouseIsPressed = false;
+                d.mouseButton = undefined;
+                d.mouseIsInside = false;
+                
+                lastHidden = performance.now();
+            }
         });
 
     };
@@ -236,8 +246,8 @@ var Dark = function(dummy = false) {
             } else if(args.length == 4) {
                 // x1, y1, z1, x2, y2, z2
                 dx = args[3] - args[0];
-                let dy = args[4] - args[1];
-                let dz = args[5] - args[2];
+                dy = args[4] - args[1];
+                dz = args[5] - args[2];
             } else {
                 Dark.error(new Error("dist requires 4 or 6 parameters, not " + args.length));
             }
@@ -274,10 +284,8 @@ var Dark = function(dummy = false) {
             switch(args.length) {
                 default:
                     return Math.random() * (args[1] - args[0]) + args[0];
-                    break;
                 case 0:
                     return Math.random();
-                    break;
                 case 1:
                     return Math.random() * args[0];
             }
@@ -1827,6 +1835,23 @@ Dark.objects = (function() {
     DVector.prototype.lerp = function(v, percent) {
         return DVector.lerp(this, v, percent);
     };
+    DVector.abs = function(v) {
+        if(v.is2D) {
+            return new DVector(
+                Math.abs(v.x),
+                Math.abs(v.y)
+            );
+        } else {
+            return new DVector(
+                Math.abs(v.x),
+                Math.abs(v.y),
+                Math.abs(v.z)
+            );
+        }
+    };
+    DVector.prototype.abs = function() {
+        [this.x, this.y, this.z] = [Math.abs(this.x), Math.abs(this.y), Math.abs(this.z)];
+    };
     DVector.dist = function(v1, v2) {
         let dx, dy, dz = 0;
         if(v1.is2D && v2.is2D) {
@@ -2214,15 +2239,15 @@ Dark.objects = (function() {
             param: {
                 min: 0,
                 max: 1,
-                default: 0
+                default: 0.5
             }
         }, {
             key: Dark.constants.BOX,
             shader: "box",
             param: {
                 min: 0,
-                max: 30,
-                default: 0
+                max: 25,
+                default: 1
             }
         }, {
             key: Dark.constants.OPACITY,
@@ -2433,7 +2458,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.4.1";
+Dark.version = "0.5.4.4";
 
 // Freeze objects
 Object.freeze(Dark);
