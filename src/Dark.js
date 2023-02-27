@@ -1418,18 +1418,18 @@ Dark.getMain = function() {
 };
 
 Dark.fileCacheKA = {
-    "/filters/global.vert": "# version 300 es precision lowp float; in vec2 pos; out vec2 uv; void main() { uv = (pos + 1.0) * 0.5; // Vertex position = -1 to 1, UV = 0 to 1 gl_Position = vec4(pos, 0.0, 1.0); }",
-    "/filters/invert.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); color = vec4(1.0 - tex.r, 1.0 - tex.g, 1.0 - tex.b, tex.a); }",
-    "/filters/opaque.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); color = vec4(tex.rgb, 1.0); }",
-    "/filters/grayscale.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Based on how human eyes precieve color = vec4(vec3(luminance), tex.a); }",
-    "/filters/threshold.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale if(luminance > param) { color = vec4(vec3(1.0), 1.0); } else { color = vec4(vec3(0.0), 1.0); } }",
-    "/filters/posterize.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; float posterize(float val) { return floor(val * param + 0.5) / param; } void main() { vec4 tex = texture(sampler, uv); float red = posterize(tex.r); float green = posterize(tex.g); float blue = posterize(tex.b); color = vec4(red, green, blue, 1.0); }",
-    "/filters/black.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale if(luminance <= param) { color = vec4(vec3(0.0), tex.a); } else { color = tex; } }",
-    "/filters/white.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale if(luminance >= param) { color = vec4(vec3(1.0), tex.a); } else { color = tex; } }",
-    "/filters/vignette.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); vec2 pos = (uv * 2.0 - 1.0) * param; float dist = 1.0 - sqrt(pos.x * pos.x + pos.y * pos.y); color = vec4(tex.rgb * dist, tex.a); }",
-    "/filters/box.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform vec2 size; uniform float param; in vec2 uv; out vec4 color; #define len (param * 2.0 + 1.0) #define count (len * len) void main() { vec4 tex = texture(sampler, uv); vec4 total = vec4(0.0); for(float y = -param; y <= param; y++) { for(float x = -param; x <= param; x++) { total += texture(sampler, uv + vec2(x, y) / size); } } color = vec4(total / count); }",
-    "/filters/brightness.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); color = vec4(tex.rgb + param, tex.a); }",
-    "/filters/opacity.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; uniform float param; in vec2 uv; out vec4 color; void main() { vec4 tex = texture(sampler, uv); color = vec4(tex.rgb, tex.a + param); }"
+    "/filters/global.vert": "# version 300 es precision lowp float; in vec2 pos;\nout vec2 uv; void main() { uv = (pos + 1.0) * 0.5; // Vertex position = -1 to 1, UV = 0 to 1 gl_Position = vec4(pos, 0.0, 1.0);\n}",
+    "/filters/invert.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; in vec2 uv;\nout vec4 color; void main() { vec4 tex = texture(sampler, uv); color = vec4(1.0 - tex.rgb, tex.a);\n}",
+    "/filters/opaque.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; in vec2 uv;\nout vec4 color; void main() { vec4 tex = texture(sampler, uv); color = vec4(tex.rgb, 1.0);\n}",
+    "/filters/grayscale.frag": "# version 300 es precision lowp float; uniform sampler2D sampler; in vec2 uv;\nout vec4 color; void main() { vec4 tex = texture(sampler, uv); float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Based on how human eyes precieve color = vec4(vec3(luminance), tex.a);\n}",
+    "/filters/threshold.frag": "# version 300 es precision lowp float; uniform sampler2D sampler;\nuniform float param; in vec2 uv;\nout vec4 color; void main() { vec4 tex = texture(sampler, uv); float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale if(luminance > param) { color = vec4(vec3(1.0), 1.0); } else { color = vec4(vec3(0.0), 1.0); }\n}",
+    "/filters/posterize.frag": "# version 300 es precision lowp float; uniform sampler2D sampler;\nuniform float param; in vec2 uv;\nout vec4 color; float posterize(float val) { return floor(val * param + 0.5) / param;\n} void main() { vec4 tex = texture(sampler, uv); float red = posterize(tex.r); float green = posterize(tex.g); float blue = posterize(tex.b); color = vec4(red, green, blue, 1.0);\n}",
+    "/filters/black.frag": "# version 300 es precision lowp float; uniform sampler2D sampler;\nuniform float param; in vec2 uv;\nout vec4 color; void main() { vec4 tex = texture(sampler, uv); float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale if(luminance <= param) { color = vec4(vec3(0.0), tex.a); } else { color = tex; }\n}",
+    "/filters/white.frag": "# version 300 es precision lowp float; uniform sampler2D sampler;\nuniform float param; in vec2 uv;\nout vec4 color; void main() { vec4 tex = texture(sampler, uv); float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale if(luminance >= param) { color = vec4(vec3(1.0), tex.a); } else { color = tex; }\n}",
+    "/filters/vignette.frag": "# version 300 es precision lowp float; uniform sampler2D sampler;\nuniform float param; in vec2 uv;\nout vec4 color; void main() { vec4 tex = texture(sampler, uv); vec2 pos = (uv * 2.0 - 1.0) * param; float dist = 1.0 - sqrt(pos.x * pos.x + pos.y * pos.y); color = vec4(tex.rgb * dist, tex.a);\n}",
+    "/filters/box.frag": "# version 300 es precision lowp float; uniform sampler2D sampler;\nuniform vec2 size;\nuniform float param; in vec2 uv;\nout vec4 color; #define len (param * 2.0 + 1.0)\n#define count (len * len) void main() { vec4 tex = texture(sampler, uv); vec4 total = vec4(0.0); for(float y = -param; y <= param; y++) { for(float x = -param; x <= param; x++) { total += texture(sampler, uv + vec2(x, y) / size); } } color = vec4(total / count);\n}",
+    "/filters/brightness.frag": "# version 300 es precision lowp float; uniform sampler2D sampler;\nuniform float param; in vec2 uv;\nout vec4 color; void main() { vec4 tex = texture(sampler, uv); color = vec4(tex.rgb + param, tex.a);\n}",
+    "/filters/opacity.frag": "# version 300 es precision lowp float; uniform sampler2D sampler;\nuniform float param; in vec2 uv;\nout vec4 color; void main() { vec4 tex = texture(sampler, uv); color = vec4(tex.rgb, tex.a + param);\n}"
 };
 
 Dark.compileListKA = [];
@@ -1451,7 +1451,7 @@ Dark.loadFile = function(loc) {
             // https://stackoverflow.com/questions/1981349/regex-to-replace-multiple-spaces-with-a-single-space
             Dark.compileListKA.push({
                 location: loc,
-                contents: result.replaceAll("\n", " ").replace(/\s\s+/g, " ")
+                contents: result.replace(/\s\s+/g, " ")
             });
         }
         return result;
@@ -2431,6 +2431,9 @@ Dark.compileKA();
 Dark.utils = new Dark(true); // Dummy instance for utils
 Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
+
+// Current version
+Dark.version = "0.5.4.1";
 
 // Freeze objects
 Object.freeze(Dark);
