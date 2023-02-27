@@ -1436,7 +1436,7 @@ Dark.compileListKA = [];
 
 // https://stackoverflow.com/questions/36921947/read-a-server-side-file-using-javascript
 Dark.loadFile = function(loc) {
-    if(Dark.url.host == "khanacademy.org") {
+    if(Dark.url.host == "www.kasandbox.org") {
         return Dark.fileCacheKA[loc];
     } else {
         if(Dark.url.host != "127.0.0.1:5500") loc = "https://cdn.jsdelivr.net/gh/99TheDark/Dark.js@latest" + loc;
