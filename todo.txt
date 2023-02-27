@@ -29,6 +29,8 @@ To add:
 • DImage.resize
 • DVector.abs
 • Speed up those filters (Is there any way to preload the contexts & programs with <16 contexts?)
+• mouseScroll variable
+• Simplify invert filter by just doing vec4(1 - tex.rgb, tex.a)
 
 Possibly to add:
 • Transformations from point for ease of use 
