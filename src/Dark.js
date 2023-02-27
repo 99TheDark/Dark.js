@@ -1192,7 +1192,7 @@ Dark.constants = {
     WHITE: 47,
     MEDIAN: 48, // unused
     BOX: 49,
-    OPACITY: 50
+    TRANSPARENCY: 50
 };
 
 Dark.filters = [
@@ -1206,7 +1206,7 @@ Dark.filters = [
     Dark.constants.BLACK,
     Dark.constants.WHITE,
     Dark.constants.BOX,
-    Dark.constants.OPACITY
+    Dark.constants.TRANSPARENCY
 ];
 
 // Special keys map
@@ -1437,7 +1437,8 @@ Dark.fileCacheKA = {
     "/filters/vignette.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n\n vec2 pos = (uv * 2.0 - 1.0) * param;\n float dist = 1.0 - sqrt(pos.x * pos.x + pos.y * pos.y);\n\n color = vec4(tex.rgb * dist, tex.a);\n}",
     "/filters/box.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform vec2 size;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\n#define len (param * 2.0 + 1.0)\n#define count (len * len)\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n vec4 total = vec4(0.0);\n for(float y = -param; y <= param; y++) {\n for(float x = -param; x <= param; x++) {\n total += texture(sampler, uv + vec2(x, y) / size);\n }\n }\n\n color = vec4(total / count);\n}",
     "/filters/brightness.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb + param, tex.a);\n}",
-    "/filters/opacity.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb, tex.a - param);\n}"
+    "/filters/TRANSPARENCY.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb, tex.a - param);\n}",
+    "/filters/transparency.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb, tex.a - param);\n}"
 };
 
 Dark.compileListKA = [];
@@ -2250,8 +2251,8 @@ Dark.objects = (function() {
                 default: 1
             }
         }, {
-            key: Dark.constants.OPACITY,
-            shader: "opacity",
+            key: Dark.constants.TRANSPARENCY,
+            shader: "transparency",
             param: {
                 min: 0,
                 max: 1,
@@ -2458,7 +2459,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.4.4";
+Dark.version = "0.5.4.5";
 
 // Freeze objects
 Object.freeze(Dark);
