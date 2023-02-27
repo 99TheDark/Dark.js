@@ -1448,7 +1448,7 @@ Dark.loadFile = function(loc) {
     if(Dark.url.host == "www.kasandbox.org") {
         return Dark.fileCacheKA[loc];
     } else {
-        if(Dark.url.host != "127.0.0.1:5500") loc = "https://cdn.jsdelivr.net/gh/99TheDark/Dark.js@latest" + loc;
+        if(Dark.url.host != "127.0.0.1:4444") loc = "https://cdn.jsdelivr.net/gh/99TheDark/Dark.js@latest" + loc;
         let result = null;
         let xhr = new XMLHttpRequest();
         xhr.open("GET", loc, false);
@@ -1456,7 +1456,7 @@ Dark.loadFile = function(loc) {
         if(xhr.status == 200) {
             result = xhr.responseText;
         }
-        if(Dark.url.host == "127.0.0.1:5500") {
+        if(Dark.url.host == "127.0.0.1:4444") {
             // https://stackoverflow.com/questions/1981349/regex-to-replace-multiple-spaces-with-a-single-space
             Dark.compileListKA.push({
                 location: loc,
@@ -1468,7 +1468,7 @@ Dark.loadFile = function(loc) {
 };
 
 Dark.compileKA = function() {
-    if(Dark.url.host == "127.0.0.1:5500") {
+    if(Dark.url.host == "127.0.0.1:4444") {
         Dark.compileListKA.forEach(file => Dark.fileCacheKA[file.location] = file.contents);
         console.log(Dark.format(Dark.fileCacheKA));
     }
@@ -2459,7 +2459,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.4.5";
+Dark.version = "0.5.4.6";
 
 // Freeze objects
 Object.freeze(Dark);
