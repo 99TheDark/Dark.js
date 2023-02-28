@@ -1066,26 +1066,26 @@ var Dark = function(dummy = false) {
         requestAnimationFrame(d.raf);
     };
 
+    // Set defaults
+    d.frameRate(60);
+    d.smooth();
+    d.ellipseMode(k.CENTER);
+    d.rectMode(k.CORNER);
+    d.imageMode(k.CORNER);
+    d.angleMode(k.DEGREES);
+    d.strokeCap(k.FLAT);
+    d.strokeJoin(k.MITER);
+    d.textAlign(k.LEFT, k.BASELINE);
+    d.curveTightness(2);
+    d.fill(255);
+    d.stroke(0);
+    d.strokeWeight(1);
+    d.textFont("12px Arial");
+    d.textLeading(5);
+
     if(!d.dummy) {
         // Start draw function
         requestAnimationFrame(d.raf);
-
-        // Set defaults
-        d.frameRate(60);
-        d.smooth();
-        d.ellipseMode(k.CENTER);
-        d.rectMode(k.CORNER);
-        d.imageMode(k.CORNER);
-        d.angleMode(k.DEGREES);
-        d.strokeCap(k.FLAT);
-        d.strokeJoin(k.MITER);
-        d.textAlign(k.LEFT, k.BASELINE);
-        d.curveTightness(2);
-        d.fill(255);
-        d.stroke(0);
-        d.strokeWeight(1);
-        d.textFont("12px Arial");
-        d.textLeading(5);
 
         // Load event listeners for document
         loadEvents();
@@ -1483,7 +1483,7 @@ Dark.globallyUpdateVariables = function(m) {
 Dark.objects = (function() {
 
     // Vectors
-    let DVector = function(x, y, z) {
+    let DVector = function(x, y = 0, z) {
         if(arguments.length == 3) {
             this.x = x;
             this.y = y;
@@ -2455,7 +2455,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.4.9";
+Dark.version = "0.5.4.10";
 
 // Freeze objects
 Object.freeze(Dark);
