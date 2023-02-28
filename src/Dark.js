@@ -33,24 +33,8 @@ var Dark = function(dummy = false) {
 
     d.isMain = false;
 
-    let randomID = Math.floor(Math.random() * 1000000000).toString(36);
-
-    // Create temp canvas (default)
-    let temp = document.createElement("canvas");
-    temp.id = "DarkJS-default-canvas-" + randomID;
-
-    temp.style.position = "absolute";
-    temp.style.inset = "0px";
-    // fallback
-    temp.style.top = "0px";
-    temp.style.left = "0px";
-
-    temp.width = innerWidth;
-    temp.height = innerHeight;
-
     // Create canvas
-    d.defaultCanvas = temp;
-    d.canvas = temp;
+    d.canvas = new OffscreenCanvas(innerWidth, innerHeight);
     d.ctx = temp.getContext("2d", Dark.defaultContextSettings);
 
     // Add empties
@@ -386,6 +370,7 @@ var Dark = function(dummy = false) {
             d.ctx.resetTransform();
             let c = d.color.apply(null, args);
             d.ctx.fillStyle = colorString(c);
+            d.ctx.clearRect(0, 0, d.width, d.height);
             d.ctx.fillRect(0, 0, d.width, d.height);
             d.ctx.restore();
         },
@@ -1305,7 +1290,6 @@ Dark.ignoreGlobal = [
     "transforms",
     "settings",
     "isMain",
-    "defaultCanvas",
     "canvas",
     "ctx"
 ];
@@ -1717,6 +1701,18 @@ Dark.objects = (function() {
             this.z **= v;
         }
     };
+    DVector.angle = function(v) {
+        return Math.atan2(v.y, v.x);
+    };
+    DVector.prototype.angle = function() {
+        return Math.atan2(this.y, this.x);
+    };
+    DVector.angleBetween = function(v1, v2) {
+        return Math.atan2(v2.y - v1.y, v2.x - v1.x);
+    };
+    DVector.prototype.angleBetween = function(v) {
+        return DVector.angleBetween(this, v);
+    };
     DVector.mag = function(v) {
         return v.mag();
     };
@@ -1745,11 +1741,11 @@ Dark.objects = (function() {
         this.normalize();
         this.mult(mag);
     };
-    DVector.rotation = function(v) {
-        return atan2(v.y, v.x);
+    DVector.getRotation = function(v) {
+        return Math.atan2(v.y, v.x);
     };
-    DVector.prototype.rotation = function() {
-        return atan2(this.y, this.x);
+    DVector.prototype.getRotation = function() {
+        return Math.atan2(this.y, this.x);
     };
     DVector.setRotation = function(v, ang) {
         v.setRotation(ang);
@@ -2459,7 +2455,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.4.6";
+Dark.version = "0.5.4.7";
 
 // Freeze objects
 Object.freeze(Dark);
