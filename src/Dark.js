@@ -1483,7 +1483,7 @@ Dark.globallyUpdateVariables = function(m) {
 Dark.objects = (function() {
 
     // Vectors
-    let DVector = function(x, y = 0, z) {
+    let DVector = function(x, y, z) {
         if(arguments.length == 3) {
             this.x = x;
             this.y = y;
@@ -1748,17 +1748,21 @@ Dark.objects = (function() {
         return Dark.utils.atan2(this.y, this.x);
     };
     DVector.setRotation = function(v, ang) {
-        v.setRotation(ang);
+        let m = v.mag();
+        return new DVector(
+            m * cos(ang),
+            m * sin(ang)
+        );
     };
     DVector.prototype.setRotation = function(ang) {
         let m = this.mag();
         [this.x, this.y] = [m * cos(ang), m * sin(ang)];
     };
     DVector.rotate = function(v, ang) {
-        v.setRotation(v.rotation() + ang);
+        v.setRotation(v.getRotation() + ang);
     };
     DVector.prototype.rotate = function(ang) {
-        this.setRotation(this.rotation() + ang);
+        this.setRotation(this.getRotation() + ang);
     };
     DVector.normalize = function(v) {
         const mag = v.mag();
@@ -2455,7 +2459,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.4.10";
+Dark.version = "0.5.4.11";
 
 // Freeze objects
 Object.freeze(Dark);
