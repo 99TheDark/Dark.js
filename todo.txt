@@ -26,6 +26,9 @@ To add:
 • mouseScroll variable
 • Minify for KA even further
 • Make color be able to take in other colors for rgb, ie color(color(r, g, b), a)
+• mouseClicked function
+• Add logo to README
+• 1 parameter in DVector auto correct to y = 0
 
 Possibly to add:
 • Transformations from point for ease of use 
