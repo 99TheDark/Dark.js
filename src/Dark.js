@@ -14,6 +14,7 @@ var Dark = function(dummy = false) {
     d.settings = {};
     d.transforms = [];
     d.saves = [];
+    d.styles = [];
     d.vertices = [];
     d.vertexCache = [];
     d.objects = Dark.objects;
@@ -1857,7 +1858,9 @@ Dark.objects = (function() {
         );
     };
     DVector.prototype.lerp = function(v, percent) {
-        return DVector.lerp(this, v, percent);
+        this.x = Dark.utils.lerp(this.x, v.x, percent);
+        this.y = Dark.utils.lerp(this.y, v.y, percent);
+        this.z = Dark.utils.lerp(this.z, v.z, percent);
     };
     DVector.abs = function(v) {
         if(v.is2D) {
@@ -2486,7 +2489,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.5";
+Dark.version = "0.5.5.1";
 
 // Freeze objects
 Object.freeze(Dark);
