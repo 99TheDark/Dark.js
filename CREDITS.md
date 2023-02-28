@@ -19,3 +19,6 @@
 
 ## [Dave Burton](https://stackoverflow.com/users/562862/dave-burton):
 - Loading Files
+
+## [Toptal](https://www.toptal.com/developers/javascript-minifier):
+- Minifier
