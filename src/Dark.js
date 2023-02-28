@@ -13,6 +13,7 @@ var Dark = function(dummy = false) {
 
     d.settings = {};
     d.transforms = [];
+    d.saves = [];
     d.vertices = [];
     d.vertexCache = [];
     d.objects = Dark.objects;
@@ -97,7 +98,7 @@ var Dark = function(dummy = false) {
                 d.mouseIsPressed = false;
                 d.mouseButton = undefined;
                 d.mouseIsInside = false;
-                
+
                 lastHidden = performance.now();
             }
         });
@@ -105,6 +106,11 @@ var Dark = function(dummy = false) {
     };
 
     var reloadEvents = function() {
+
+        d.canvas.addEventListener("click", function(e) {
+            e.preventDefault();
+            d.mouseClicked();
+        });
 
         d.canvas.addEventListener("mousedown", function(e) {
             e.preventDefault();
@@ -145,7 +151,7 @@ var Dark = function(dummy = false) {
 
         d.canvas.addEventListener("wheel", function(e) {
             e.preventDefault();
-            // has deltaX, deltaY and deltaZ <- the weird one
+            d.mouseScroll = new DVector(e.deltaX, e.deltaY, e.deltaZ);
             d.mouseScrolled();
         });
 
@@ -309,14 +315,19 @@ var Dark = function(dummy = false) {
 
         // Color
         color: function(r, g, b, a) {
-            if(arguments.length == 1) {
+            let l = arguments.length;
+            if(l == 0) return -1;
+            if(l == 1 || l == 2) {
                 if(r <= 255 && r >= 0) {
-                    b = g = r;
+                    if(l == 1) {
+                        b = g = r;
+                    } else {
+                        a = g, g = r, b = r;
+                    }
                 } else {
                     return r;
                 }
             }
-            if(arguments.length == 2) a = g, g = r, b = r;
             if(!a) a = 255;
             r = d.constrain(r, 0, 255);
             g = d.constrain(g, 0, 255);
@@ -481,7 +492,7 @@ var Dark = function(dummy = false) {
         popMatrix: function() {
             let transform = d.transforms.pop();
             if(!transform) {
-                Dark.error(new Error("No more transforms to restore in popMatrix"));
+                Dark.error(new Error("No more transforms to restore in popMatrix()"));
             } else {
                 d.ctx.setTransform(transform);
             }
@@ -495,14 +506,27 @@ var Dark = function(dummy = false) {
         // pushStyle & popStyle will go here eventually
 
         push: function() {
-            d.ctx.save();
+            if(d.transforms.length > d.maxTransforms) {
+                Dark.error(new Error("Maximum matrix stack size reached, push() called " + d.maxTransforms + " times."));
+            } else {
+                d.ctx.save();
+                d.saves.push(Object.assign({}, d.settings));
+            }
         },
 
         pop: function() {
-            d.ctx.restore();
+            let save = d.saves.pop();
+            if(!save) {
+                Dark.error(new Error("No more saves to restore in pop()"));
+            } else {
+                d.ctx.restore();
+                Object.assign(d.settings, save);
+            }
         },
 
         reset: function() {
+            d.saves.length = 0;
+            d.settings = Object.assign({}, d.defaultSettings);
             d.ctx.reset();
         },
 
@@ -926,12 +950,15 @@ var Dark = function(dummy = false) {
                     Dark.error(new Error("image requires 3 to 5 parameters, not " + arguments.length));
                     break;
                 case 3:
+                    if(!Dark.rectRect(x, y, img.width, img.height, 0, 0, d.width, d.height)) break;
                     d.ctx.drawImage(img.canvas, x, y);
                     break;
                 case 4:
+                    if(!Dark.rectRect(x, y, width, width, 0, 0, d.width, d.height)) break;
                     d.ctx.drawImage(img.canvas, x, y, width, width);
                     break;
                 case 5:
+                    if(!Dark.rectRect(x, y, width, height, 0, 0, d.width, d.height)) break;
                     d.ctx.drawImage(img.canvas, x, y, width, height);
                     break;
             }
@@ -942,20 +969,6 @@ var Dark = function(dummy = false) {
             let screen = new DImage(d.ctx.getImageData(0, 0, d.width, d.height), d);
             screen.filter(filter, value);
             d.ctx.putImageData(screen.imageData, 0, 0);
-        },
-
-        loadImage: function(url) {
-            let result = new DImage();
-
-            let img = new Image();
-            img.crossOrigin = "anonymous";
-            img.src = url;
-            img.onload = function() {
-                img.width = 10;
-            };
-
-            result.source = img;
-            return result;
         },
 
         // Quick & Mathy functions
@@ -1073,7 +1086,7 @@ var Dark = function(dummy = false) {
     d.rectMode(k.CORNER);
     d.imageMode(k.CORNER);
     d.angleMode(k.DEGREES);
-    d.strokeCap(k.FLAT);
+    d.strokeCap(k.ROUND);
     d.strokeJoin(k.MITER);
     d.textAlign(k.LEFT, k.BASELINE);
     d.curveTightness(2);
@@ -1082,6 +1095,8 @@ var Dark = function(dummy = false) {
     d.strokeWeight(1);
     d.textFont("12px Arial");
     d.textLeading(5);
+
+    d.defaultSettings = Object.assign({}, d.settings);
 
     if(!d.dummy) {
         // Start draw function
@@ -1108,6 +1123,7 @@ Dark.empties = [
     "keyPressed",
     "keyReleased",
     "keyTyped",
+    "mouseClicked",
     "mousePressed",
     "mouseReleased",
     "mouseMoved",
@@ -1289,6 +1305,7 @@ Dark.ignoreGlobal = [
     "vertices",
     "transforms",
     "settings",
+    "defaultSettings",
     "isMain",
     "canvas",
     "ctx"
@@ -1361,6 +1378,10 @@ Dark.format = function(obj) {
     }
 };
 
+Dark.rectRect = function(x1, y1, width1, height1, x2, y2, width2, height2) {
+    return x1 + width1 > x2 && x1 < x2 + width2 && y1 + height1 > y2 && y1 < y2 + height2;
+};
+
 Dark.doError = function(type, err) {
     if(Dark.changeable.errorCount == Dark.maxErrorCount) {
         console.warn("Too many warnings and errors have been made, the rest will not display.");
@@ -1410,19 +1431,19 @@ Dark.getMain = function() {
 };
 
 Dark.fileCacheKA = {
-    "/filters/global.vert": "# version 300 es\n\nprecision lowp float;\n\nin vec2 pos;\nout vec2 uv;\n\nvoid main() {\n uv = (pos + 1.0) * 0.5; // Vertex position = -1 to 1, UV = 0 to 1\n gl_Position = vec4(pos, 0.0, 1.0);\n}",
-    "/filters/invert.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(1.0 - tex.rgb, tex.a);\n}",
-    "/filters/opaque.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(tex.rgb, 1.0);\n}",
-    "/filters/grayscale.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Based on how human eyes precieve\n color = vec4(vec3(luminance), tex.a);\n}",
-    "/filters/threshold.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale\n\n if(luminance > param) {\n color = vec4(vec3(1.0), 1.0);\n } else {\n color = vec4(vec3(0.0), 1.0);\n }\n}",
-    "/filters/posterize.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nfloat posterize(float val) {\n return floor(val * param + 0.5) / param;\n}\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n\n float red = posterize(tex.r);\n float green = posterize(tex.g);\n float blue = posterize(tex.b);\n \n color = vec4(red, green, blue, 1.0);\n}",
-    "/filters/black.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale\n\n if(luminance <= param) {\n color = vec4(vec3(0.0), tex.a);\n } else {\n color = tex;\n }\n}",
-    "/filters/white.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale\n\n if(luminance >= param) {\n color = vec4(vec3(1.0), tex.a);\n } else {\n color = tex;\n }\n}",
-    "/filters/vignette.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n\n vec2 pos = (uv * 2.0 - 1.0) * param;\n float dist = 1.0 - sqrt(pos.x * pos.x + pos.y * pos.y);\n\n color = vec4(tex.rgb * dist, tex.a);\n}",
-    "/filters/box.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform vec2 size;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\n#define len (param * 2.0 + 1.0)\n#define count (len * len)\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n vec4 total = vec4(0.0);\n for(float y = -param; y <= param; y++) {\n for(float x = -param; x <= param; x++) {\n total += texture(sampler, uv + vec2(x, y) / size);\n }\n }\n\n color = vec4(total / count);\n}",
-    "/filters/brightness.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb + param, tex.a);\n}",
+    "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 pos;\nout vec2 uv;\nvoid main() {\n uv = (pos + 1.0) * 0.5; // Vertex position = -1 to 1, UV = 0 to 1\n gl_Position = vec4(pos, 0.0, 1.0);\n}",
+    "/filters/invert.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(1.0 - tex.rgb, tex.a);\n}",
+    "/filters/opaque.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(tex.rgb, 1.0);\n}",
+    "/filters/grayscale.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Based on how human eyes precieve\n color = vec4(vec3(luminance), tex.a);\n}",
+    "/filters/threshold.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale\n if(luminance > param) {\n color = vec4(vec3(1.0), 1.0);\n } else {\n color = vec4(vec3(0.0), 1.0);\n }\n}",
+    "/filters/posterize.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nfloat posterize(float val) {\n return floor(val * param + 0.5) / param;\n}\nvoid main() {\n vec4 tex = texture(sampler, uv);\n float red = posterize(tex.r);\n float green = posterize(tex.g);\n float blue = posterize(tex.b);\n \n color = vec4(red, green, blue, 1.0);\n}",
+    "/filters/black.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale\n if(luminance <= param) {\n color = vec4(vec3(0.0), tex.a);\n } else {\n color = tex;\n }\n}",
+    "/filters/white.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Same as grayscale\n if(luminance >= param) {\n color = vec4(vec3(1.0), tex.a);\n } else {\n color = tex;\n }\n}",
+    "/filters/vignette.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n vec2 pos = (uv * 2.0 - 1.0) * param;\n float dist = 1.0 - sqrt(pos.x * pos.x + pos.y * pos.y);\n color = vec4(tex.rgb * dist, tex.a);\n}",
+    "/filters/box.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nuniform float param;\nin vec2 uv;\nout vec4 color;\n#define len (param * 2.0 + 1.0)\n#define count (len * len)\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n vec4 total = vec4(0.0);\n for(float y = -param; y <= param; y++) {\n for(float x = -param; x <= param; x++) {\n total += texture(sampler, uv + vec2(x, y) / size);\n }\n }\n color = vec4(total / count);\n}",
+    "/filters/brightness.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb + param, tex.a);\n}",
     "/filters/TRANSPARENCY.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb, tex.a - param);\n}",
-    "/filters/transparency.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb, tex.a - param);\n}"
+    "/filters/transparency.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb, tex.a - param);\n}"
 };
 
 Dark.compileListKA = [];
@@ -1444,7 +1465,7 @@ Dark.loadFile = function(loc) {
             // https://stackoverflow.com/questions/1981349/regex-to-replace-multiple-spaces-with-a-single-space
             Dark.compileListKA.push({
                 location: loc,
-                contents: result.replace(/  +/g, " ")
+                contents: result.replace(/\n\n+/g, "\n").replace(/  +/g, " ")
             });
         }
         return result;
@@ -1511,6 +1532,8 @@ Dark.objects = (function() {
     };
     DVector.zero3D = function() {
         return new DVector(0, 0, 0);
+
+        this.is2D = false;
     };
     DVector.prototype.zero3D = function() {
         [this.x, this.y, this.z] = [0, 0, 0];
@@ -2463,7 +2486,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.4.12";
+Dark.version = "0.5.5";
 
 // Freeze objects
 Object.freeze(Dark);
