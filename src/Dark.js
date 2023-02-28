@@ -1,4 +1,5 @@
 var Dark = function(dummy = false) {
+    this.darkObject = true;
 
     // private variables & functions
     let lastFrame = performance.now();
@@ -152,7 +153,7 @@ var Dark = function(dummy = false) {
 
         d.canvas.addEventListener("wheel", function(e) {
             e.preventDefault();
-            d.mouseScroll = new DVector(e.deltaX, e.deltaY, e.deltaZ);
+            d.mouseScroll = d.objects.DVector.create(e.deltaX, e.deltaY, e.deltaZ);
             d.mouseScrolled();
         });
 
@@ -1342,6 +1343,7 @@ Dark.mouseMap = [
 ];
 
 Dark.changeable = {};
+Dark.darkObject = true;
 
 // Constants, but not quite (can be edited)
 Dark.changeable.errorCount = 0; // Since object values inside frozen object can be edited
@@ -1492,7 +1494,7 @@ Dark.globallyUpdateVariables = function(m) {
         if(Dark.ignoreGlobal.includes(mainKey)) continue;
         if(Dark.empties.includes(mainKey)) continue;
         // Else set
-        if(typeof m[mainKey] == "object") {
+        if(typeof m[mainKey] == "object" && !m[mainKey].darkObject) {
             for(const key in m[mainKey]) {
                 window[key] = m[mainKey][key];
             }
@@ -1506,17 +1508,23 @@ Dark.objects = (function() {
 
     // Vectors
     let DVector = function(x, y, z) {
-        if(arguments.length == 3) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-            this.is2D = false;
-        } else if(arguments.length == 2) {
-            this.x = x;
-            this.y = y;
-            this.is2D = true;
-        } else {
-            Dark.error(new Error("DVector requires 2 or 3 parameters, not " + arguments.length));
+        this.darkObject = true;
+
+        switch(arguments.length) {
+            default:
+                Dark.error(new Error("DVector requires 2 or 3 parameters, not " + arguments.length));
+                break;
+            case 3:
+                this.x = x;
+                this.y = y;
+                this.z = z;
+                this.is2D = false;
+                break;
+            case 2:
+                this.x = x;
+                this.y = y;
+                this.is2D = true;
+                break;
         }
     };
     DVector.create = function(x, y, z) {
@@ -1960,6 +1968,8 @@ Dark.objects = (function() {
 
     // Fonts
     let DFont = function(str) {
+        this.darkObject = true;
+
         this.style = "normal";
         this.variant = "normal";
         this.weight = "normal";
@@ -2017,8 +2027,9 @@ Dark.objects = (function() {
 
     // Images
     let DImage = function(imgData, source) {
-        this.filters = {};
+        this.darkObject = true;
 
+        this.filters = {};
         if(imgData instanceof ImageData) {
             this.imageData = imgData;
             this.source = source;
@@ -2213,7 +2224,6 @@ Dark.objects = (function() {
             }
         });
     };
-
     DImage.initializeShaders([
         {
             key: Dark.constants.INVERT,
@@ -2295,8 +2305,9 @@ Dark.objects = (function() {
 
     // Matrices
     let DMatrix = function(width, height, val = 0) {
-        // https://stackoverflow.com/questions/53992415/how-to-fill-multidimensional-array-in-javascript
+        this.darkObject = true;
 
+        // https://stackoverflow.com/questions/53992415/how-to-fill-multidimensional-array-in-javascript
         if(width instanceof DMatrix) {
             this.width = width.width;
             this.height = width.height;
@@ -2489,7 +2500,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.5.1";
+Dark.version = "0.5.5.2";
 
 // Freeze objects
 Object.freeze(Dark);
