@@ -1702,13 +1702,13 @@ Dark.objects = (function() {
         }
     };
     DVector.angle = function(v) {
-        return Math.atan2(v.y, v.x);
+        return Dark.utils.atan2(v.y, v.x);
     };
     DVector.prototype.angle = function() {
-        return Math.atan2(this.y, this.x);
+        return Dark.utils.atan2(this.y, this.x);
     };
     DVector.angleBetween = function(v1, v2) {
-        return Math.atan2(v2.y - v1.y, v2.x - v1.x);
+        return Dark.utils.atan2(v2.y - v1.y, v2.x - v1.x);
     };
     DVector.prototype.angleBetween = function(v) {
         return DVector.angleBetween(this, v);
@@ -1742,10 +1742,10 @@ Dark.objects = (function() {
         this.mult(mag);
     };
     DVector.getRotation = function(v) {
-        return Math.atan2(v.y, v.x);
+        return Dark.utils.atan2(v.y, v.x);
     };
     DVector.prototype.getRotation = function() {
-        return Math.atan2(this.y, this.x);
+        return Dark.utils.atan2(this.y, this.x);
     };
     DVector.setRotation = function(v, ang) {
         v.setRotation(ang);
@@ -2455,7 +2455,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.4.8";
+Dark.version = "0.5.4.9";
 
 // Freeze objects
 Object.freeze(Dark);
