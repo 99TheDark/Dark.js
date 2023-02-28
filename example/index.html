@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DarkJS Example</title>
     <link rel="stylesheet" href="style.css">
-    <script src="../src/Dark.js"></script>
+    <script src="../src/Dark-min.js"></script>
     <link rel="icon" type="image/x-icon" href="../images/favicons/favicon.ico?v=2">
 </head>
 
@@ -18,8 +18,8 @@
 
         size(1000, 600);
 
+        // Image to load eventually:
         // https://www.1800flowers.com/blog/wp-content/uploads/2021/05/Birthday-Flowers-Colors.jpg
-        let imgFile = loadImage("../images/icon.png");
 
         frameRate(Infinity);
 
@@ -80,7 +80,7 @@
             popMatrix();
 
             // From https://www.khanacademy.org/computer-programming/i/6499542019080192
-            pushMatrix();
+            push();
             translate(500, 200);
             fill(255, 149, 0);
             beginShape();
@@ -90,7 +90,7 @@
             curveVertex(132, 295);
             curveVertex(132, 200);
             endShape();
-            popMatrix();
+            pop();
 
             stroke(0);
             strokeWeight(15);
@@ -114,7 +114,6 @@
             rect(798, 458, 154, 94);
             image(img, 800, 460, 150, 90);
 
-            // filter(BOX, 6);
             filter(VIGNETTE, 0.3);
             if(mouseIsPressed) filter(INVERT);
 
@@ -123,6 +122,7 @@
             textSize(40);
             textAlign(LEFT, TOP);
             text(fps.toFixed(), 35, 35);
+            noLoop();
         };
     </script>
 </body>
