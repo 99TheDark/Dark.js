@@ -16,18 +16,15 @@ To add:
 • preventDefault(listener) and allowDefault(listener)
 • pushStyle and popStyle
 • Use of requestFullscreen() in some way, for canvas and page
-• Make push & pop reset the settings as well
 • Make DVector rotations work in 3D
 • Using ImageData for DImage & image()
 • Image cache for speed
 • Get the frameRate to be more constant
 • DImage.resize
 • Speed up those filters (Is there any way to preload the contexts & programs with <16 contexts?)
-• mouseScroll variable
 • Minify for KA even further
-• Make color be able to take in other colors for rgb, ie color(color(r, g, b), a)
-• mouseClicked function
 • Add logo to README
+• Better copy function with Object.assign
 
 Possibly to add:
 • Transformations from point for ease of use 
