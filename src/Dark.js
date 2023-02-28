@@ -35,7 +35,7 @@ var Dark = function(dummy = false) {
 
     // Create canvas
     d.canvas = new OffscreenCanvas(innerWidth, innerHeight);
-    d.ctx = temp.getContext("2d", Dark.defaultContextSettings);
+    d.ctx = d.canvas.getContext("2d", Dark.defaultContextSettings);
 
     // Add empties
     Dark.empties.forEach(emp => d[emp] = () => {});
@@ -2455,7 +2455,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.4.7";
+Dark.version = "0.5.4.8";
 
 // Freeze objects
 Object.freeze(Dark);
