@@ -2502,7 +2502,7 @@ if(!window.Dark) { // Fix KA stuff
     Dark.globallyUpdateVariables(Dark.main);
 
     // Current version
-    Dark.version = "0.5.5.2.1";
+    Dark.version = "0.5.5.3";
 
     // Freeze objects
     Object.freeze(Dark);
