@@ -17,11 +17,10 @@ To add:
 • Image cache for speed
 • Get the frameRate to be more constant
 • DImage.resize
-• Speed up those filters (Is there any way to preload the programs with <16 contexts?)
-• Add logo to README
 • Better copy function with Object.assign
 • Make everything readonly using Object.defineProperty
 • randomSeed and updated random
+• Move more things into the initialization for filters
 
 Possibly to add:
 • DShape
