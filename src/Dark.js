@@ -1,4 +1,4 @@
-if(window.Dark) throw "There are more than one Dark.js imports"; // Fix KA stuff
+if(window.Dark) throw "There is more than one Dark.js import"; // Fix KA stuff
 
 var Dark = function(dummy = false) {
     this.darkObject = true;
@@ -2503,7 +2503,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.5.3";
+Dark.version = "0.5.6";
 
 // Freeze objects
 Object.freeze(Dark);
