@@ -9,25 +9,23 @@ To add:
 • Allow negatives for arcs
 • Convert canvas matrix to and from DMatrix
 • Apply matrix transformations to DVectors (DOMMatrix)
-• DMatrix.cofactor(x, y)
-• DMatrix.adjoint
-• DMatrix.inverse
 • Image masking
 • preventDefault(listener) and allowDefault(listener)
 • pushStyle and popStyle
-• Use of requestFullscreen() in some way, for canvas and page
 • Make DVector rotations work in 3D
 • Using ImageData for DImage & image()
 • Image cache for speed
 • Get the frameRate to be more constant
 • DImage.resize
-• Speed up those filters (Is there any way to preload the contexts & programs with <16 contexts?)
-• Minify for KA even further
+• Speed up those filters (Is there any way to preload the programs with <16 contexts?)
 • Add logo to README
 • Better copy function with Object.assign
+• Make everything readonly using Object.defineProperty
+• randomSeed and updated random
 
 Possibly to add:
-• Transformations from point for ease of use 
+• DShape
+• Transformations from point for ease of use (maybe to DShape)
 • Store shapes in variables, maybe DShape
 • println-like console
 • Font library for Google Fonts (Like https://www.khanacademy.org/computer-programming/i/6162502356762624)
@@ -38,6 +36,8 @@ Possibly to add:
 • Proxy-ify functions with the current setting
 • Chaining DVector & DMatrix operations like DVector.mult(a, b, c, d, e)
 • Contours
+• Use of requestFullscreen() in a function to fullscreen the canvas.
 
 Bugs:
 • Key typed not working
+• dt is broken again
