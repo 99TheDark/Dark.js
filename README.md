@@ -1,3 +1,5 @@
+<div align="center"><img src="https://github.com/99TheDark/Dark.js/blob/main/images/icon.png" alt="Dark.js Icon" width="160px"/></div>
+
 # Dark.js ![https://github.com/99TheDark/Dark.js/blob/main/LICENSE](https://img.shields.io/github/license/99thedark/Dark.js) ![CodeFactor](https://www.codefactor.io/repository/github/99thedark/dark.js/badge)
 
 Closesly modeled after both [Processing.js](https://github.com/processing-js/processing-js) and [ski.js](https://github.com/thelegendski/ski.js/).
