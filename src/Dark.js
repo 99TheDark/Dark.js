@@ -972,7 +972,7 @@ var Dark = function(dummy = false) {
         filter: function(filter, value) {
             let screen = new DImage(d.ctx.getImageData(0, 0, d.width, d.height), d);
             screen.filter(filter, value);
-            d.ctx.putImageData(screen.imageData, 0, 0);
+            d.ctx.drawImage(screen.canvas, 0, 0, d.width, d.height);
         },
 
         // Quick & Mathy functions
@@ -1187,7 +1187,7 @@ Dark.constants = {
     POSTERIZE: 36,
     BLUR: 37, // unused
     SHARPEN: 38, // unused
-    SEPIA: 39, // unused
+    SEPIA: 39,
     OUTLINE: 40, // unused
     EMBOSS: 41, // unused
     EDGE: 42, // unused
@@ -1207,6 +1207,7 @@ Dark.filters = [
     Dark.constants.GRAY,
     Dark.constants.THRESHOLD,
     Dark.constants.POSTERIZE,
+    Dark.constants.SEPIA,
     Dark.constants.VIGNETTE,
     Dark.constants.BRIGHTNESS,
     Dark.constants.BLACK,
@@ -1437,7 +1438,7 @@ Dark.getMain = function() {
 };
 
 Dark.fileCacheKA = {
-    "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 pos;\nout vec2 uv;\nvoid main() {\n uv = (pos + 1.0) * 0.5; // Vertex position = -1 to 1, UV = 0 to 1\n gl_Position = vec4(pos, 0.0, 1.0);\n}",
+    "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 pos;\nout vec2 uv;\nvoid main() {\n uv = (pos + 1.0) * 0.5; // Vertex position = -1 to 1, UV = 0 to 1\n gl_Position = vec4(pos.x, -pos.y, 0.0, 1.0);\n}",
     "/filters/invert.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(1.0 - tex.rgb, tex.a);\n}",
     "/filters/opaque.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(tex.rgb, 1.0);\n}",
     "/filters/grayscale.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Based on how human eyes precieve\n color = vec4(vec3(luminance), tex.a);\n}",
@@ -1449,7 +1450,8 @@ Dark.fileCacheKA = {
     "/filters/box.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nuniform float param;\nin vec2 uv;\nout vec4 color;\n#define len (param * 2.0 + 1.0)\n#define count (len * len)\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n vec4 total = vec4(0.0);\n for(float y = -param; y <= param; y++) {\n for(float x = -param; x <= param; x++) {\n total += texture(sampler, uv + vec2(x, y) / size);\n }\n }\n color = vec4(total / count);\n}",
     "/filters/brightness.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb + param, tex.a);\n}",
     "/filters/TRANSPARENCY.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb, tex.a - param);\n}",
-    "/filters/transparency.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb, tex.a - param);\n}"
+    "/filters/transparency.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb, tex.a - param);\n}",
+    "/filters/sepia.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(\n 0.393 * tex.r + 0.769 * tex.g + 0.189 * tex.b,\n 0.349 * tex.r + 0.686 * tex.g + 0.168 * tex.b,\n 0.272 * tex.r + 0.534 * tex.g + 0.131 * tex.b,\n tex.a\n );\n}"
 };
 
 Dark.compileListKA = [];
@@ -2095,47 +2097,11 @@ Dark.objects = (function() {
 
             f.gl_canvas = DImage.gl_canvas;
             f.gl = DImage.gl;
+            f.program = filter.program;
 
-            [f.gl_canvas.width, f.gl_canvas.height] = [this.width, this.height];
-
-            if(!f.gl) {
-                return Dark.warn("Your browser does not support WebGL2.");
-            }
-
-            f.vertexSource = DImage.globalVertexShader;
-            f.fragmentSource = filter.shader;
-
-            f.vertexShader = f.gl.createShader(f.gl.VERTEX_SHADER);
-            f.fragmentShader = f.gl.createShader(f.gl.FRAGMENT_SHADER);
-
-            f.gl.shaderSource(f.vertexShader, f.vertexSource);
-            f.gl.shaderSource(f.fragmentShader, f.fragmentSource);
-
-            f.gl.compileShader(f.vertexShader);
-            f.gl.compileShader(f.fragmentShader);
-
-            // Check for compiler errors, very nice for debugging
-            if(!f.gl.getShaderParameter(f.vertexShader, f.gl.COMPILE_STATUS)) {
-                return Dark.error(new Error("Error compiling vertex shader.\n\n" + f.gl.getShaderInfoLog(f.vertexShader)));
-            }
-            if(!f.gl.getShaderParameter(f.fragmentShader, f.gl.COMPILE_STATUS)) {
-                return Dark.error(new Error("Error compiling fragment shader.\n\n" + f.gl.getShaderInfoLog(f.fragmentShader)));
-            }
-
-            f.program = f.gl.createProgram();
-
-            f.gl.attachShader(f.program, f.vertexShader);
-            f.gl.attachShader(f.program, f.fragmentShader);
-
-            f.gl.linkProgram(f.program);
-
-            // Check for more errors
-            if(!f.gl.getProgramParameter(f.program, f.gl.LINK_STATUS)) {
-                return Dark.error(new Error("Error linking program.\n\n" + f.gl.getProgramInfoLog(f.program)));
-            }
-            f.gl.validateProgram(f.program);
-            if(!f.gl.getProgramParameter(f.program, f.gl.VALIDATE_STATUS)) {
-                return Dark.error(new Error("Error validating program.\n\n" + f.gl.getProgramInfoLog(f.program)));
+            if(f.gl_canvas.width != this.width || f.gl_canvas.height != this.height) {
+                [f.gl_canvas.width, f.gl_canvas.height] = [this.width, this.height];
+                f.gl.viewport(0, 0, this.width, this.height);
             }
 
             f.gl.useProgram(f.program);
@@ -2187,21 +2153,14 @@ Dark.objects = (function() {
             f.gl.bindTexture(f.gl.TEXTURE_2D, f.texture);
             f.gl.activeTexture(f.gl.TEXTURE0);
 
-            f.gl.viewport(0, 0, this.width, this.height);
-
             f.gl.drawArrays(
                 f.gl.TRIANGLES, // type
                 0, // offset
                 6 // point count
             );
 
-            let result = new Uint8ClampedArray(this.width * this.height * 4);
-            f.gl.bindFramebuffer(f.gl.FRAMEBUFFER, null);
-            f.gl.readPixels(0, 0, this.width, this.height, f.gl.RGBA, f.gl.UNSIGNED_BYTE, result);
-
-            this.imageData.data.set(result);
-
-            this.ctx.putImageData(this.imageData, 0, 0);
+            this.ctx.drawImage(f.gl_canvas, 0, 0, this.width, this.height);
+            this.imageData = this.ctx.getImageData(0, 0, this.width, this.height);
 
         } else {
             return Dark.error(new Error("Invalid filter type"));
@@ -2219,12 +2178,57 @@ Dark.objects = (function() {
     ]);
     DImage.globalVertexShader = Dark.loadFile("/filters/global.vert");
     DImage.filterShaders = [];
+    DImage.gl_canvas = new OffscreenCanvas(0, 0);
+    DImage.gl = DImage.gl_canvas.getContext("webgl2", {antialias: false});
     DImage.initializeShaders = function(arr) {
+        let gl = DImage.gl;
+
+        if(!gl) return Dark.warn("Your browser does not support WebGL2.");
+
         arr.forEach(function(obj) {
-            DImage.filterShaders[obj.key] = {
-                shader: Dark.loadFile("/filters/" + obj.shader + ".frag"),
-                param: obj.param
+            let shader = Dark.loadFile("/filters/" + obj.shader + ".frag");
+
+            vertexSource = DImage.globalVertexShader;
+            fragmentSource = shader;
+
+            vertexShader = gl.createShader(gl.VERTEX_SHADER);
+            fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+
+            gl.shaderSource(vertexShader, vertexSource);
+            gl.shaderSource(fragmentShader, fragmentSource);
+
+            gl.compileShader(vertexShader);
+            gl.compileShader(fragmentShader);
+
+            // Check for compiler errors, very nice for debugging
+            if(!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+                return Dark.error(new Error("Error compiling vertex shader.\n\n" + gl.getShaderInfoLog(vertexShader)));
             }
+            if(!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+                return Dark.error(new Error("Error compiling fragment shader.\n\n" + gl.getShaderInfoLog(fragmentShader)));
+            }
+
+            program = gl.createProgram();
+
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+
+            gl.linkProgram(program);
+
+            // Check for more errors
+            if(!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                return Dark.error(new Error("Error linking program.\n\n" + gl.getProgramInfoLog(program)));
+            }
+            gl.validateProgram(program);
+            if(!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
+                return Dark.error(new Error("Error validating program.\n\n" + gl.getProgramInfoLog(program)));
+            }
+
+            DImage.filterShaders[obj.key] = {
+                shader: shader,
+                param: obj.param,
+                program: program
+            };
         });
     };
     DImage.initializeShaders([
@@ -2254,6 +2258,17 @@ Dark.objects = (function() {
                 default: 255
             }
         }, {
+            key: Dark.constants.SEPIA,
+            shader: "sepia"
+        }, {
+            key: Dark.constants.VIGNETTE,
+            shader: "vignette",
+            param: {
+                min: 0,
+                max: 1,
+                default: 0.5
+            }
+        }, {
             key: Dark.constants.BRIGHTNESS,
             shader: "brightness",
             param: {
@@ -2278,14 +2293,6 @@ Dark.objects = (function() {
                 default: 1
             }
         }, {
-            key: Dark.constants.VIGNETTE,
-            shader: "vignette",
-            param: {
-                min: 0,
-                max: 1,
-                default: 0.5
-            }
-        }, {
             key: Dark.constants.BOX,
             shader: "box",
             param: {
@@ -2303,8 +2310,6 @@ Dark.objects = (function() {
             }
         }
     ]);
-    DImage.gl_canvas = new OffscreenCanvas(100, 60);
-    DImage.gl = DImage.gl_canvas.getContext("webgl2");
 
     // Matrices
     let DMatrix = function(width, height, val = 0) {
@@ -2503,7 +2508,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.6";
+Dark.version = "0.5.7";
 
 // Freeze objects
 Object.freeze(Dark);
