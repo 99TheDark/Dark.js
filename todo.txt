@@ -10,6 +10,7 @@ To add:
 • Convert canvas matrix to and from DMatrix
 • Apply matrix transformations to DVectors (DOMMatrix)
 • Image masking
+• DImage.crop
 • preventDefault(listener) and allowDefault(listener)
 • pushStyle and popStyle
 • Make DVector rotations work in 3D
@@ -21,9 +22,10 @@ To add:
 • Make everything readonly using Object.defineProperty
 • randomSeed and updated random
 • Move more things into the initialization for filters
-• preload function
-• setup function
 • Swap filter uv to a uniform
+• How to import section in README
+• Add getImage that gets a local image from host (For KA: https://cdn.kastatic.org/third_party/javascript-khansrc/live-editor/build/images/ + loc + .png)
+• Scissor/crop large images
 
 Possibly to add:
 • DShape
