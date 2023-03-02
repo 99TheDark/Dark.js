@@ -23,6 +23,7 @@ To add:
 • Move more things into the initialization for filters
 • preload function
 • setup function
+• Swap filter uv to a uniform
 
 Possibly to add:
 • DShape
