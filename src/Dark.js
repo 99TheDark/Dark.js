@@ -10,7 +10,7 @@ var Dark = function(dummy = false) {
 
     // Shorter = faster to typing time
     let d = this;
-    let k = d.constants = Dark.constants; 
+    let k = d.constants = Dark.constants;
 
     Dark.instances.push(d);
 
@@ -20,7 +20,8 @@ var Dark = function(dummy = false) {
     d.vertices = [];
     d.vertexCache = [];
     d.imageCache = {};
-    d.preloadImageCount = 0;
+    d.cachedImageCount = 0;
+    d.loaded = false;
     d.objects = Dark.objects;
 
     // copy over
@@ -951,41 +952,63 @@ var Dark = function(dummy = false) {
             if(img instanceof ImageData) img = new DImage(img);
             switch(arguments.length) {
                 default:
-                    Dark.error(new Error("image requires 3 to 5 parameters, not " + arguments.length));
+                    Dark.error(new Error("image requires 1, 3, 4 or 5 parameters, not " + arguments.length));
+                    break;
+                case 1:
+                    d.ctx.drawImage(img.canvas, 0, 0, d.width, d.height);
                     break;
                 case 3:
                     if(!Dark.rectRect(x, y, img.width, img.height, 0, 0, d.width, d.height)) break;
-                    d.ctx.drawImage(img.canvas, x, y);
+                    d.ctx.drawImage(img.image || img.canvas, x, y);
                     break;
                 case 4:
                     if(!Dark.rectRect(x, y, width, width, 0, 0, d.width, d.height)) break;
-                    d.ctx.drawImage(img.canvas, x, y, width, width);
+                    d.ctx.drawImage(img.image || img.canvas, x, y, width, width / img.width * img.height);
                     break;
                 case 5:
                     if(!Dark.rectRect(x, y, width, height, 0, 0, d.width, d.height)) break;
-                    d.ctx.drawImage(img.canvas, x, y, width, height);
+                    d.ctx.drawImage(img.image || img.canvas, x, y, width, height);
                     break;
             }
             d.ctx.restore();
         },
 
         loadImage: function(url) {
+            if(d.loaded) return Dark.error(new Error("loadImage cannot be run after the setup and draw function have begun"));
+
+            let result = new DImage(1, 1, d);
+            if(Object.keys(d.imageCache).includes(url)) return;
+            d.imageCache[url] = null;
             fetch(url)
                 .then(response => response.blob())
                 .then(blob => {
-                    let img = new Image();
-                    img.src = window.URL.createObjectURL(blob)
-                    img.onload = () => {
-                        d.ctx.drawImage(img, 0, 0, width, height);
-                        filter(POSTERIZE, 5);
-                        filter(VIGNETTE);
-                    };
+                    result.image = new Image();
+                    result.image.src = URL.createObjectURL(blob);
+                    result.image.onload = () => {
+                        createImageBitmap(blob)
+                            .then(bitmap => {
+                                let img = new DImage(bitmap.width, bitmap.height, d.canvas);
+
+                                img.ctx.drawImage(bitmap, 0, 0, img.width, img.height);
+                                img.updatePixels();
+
+                                d.imageCache[url] = img;
+                                d.cachedImageCount++;
+
+                                [result.canvas.width, result.canvas.height] = [result.width, result.height] = [img.width, img.height];
+                                result.imageData = img.imageData;
+                                result.loadPixels();
+
+                                if(d.cachedImageCount == Object.keys(d.imageCache).length) d.begin();
+                            });
+                    }
                 })
                 .catch(e => Dark.error(e));
+            return result;
         },
 
         filter: function(filter, value) {
-            let screen = new DImage(d.ctx.getImageData(0, 0, d.width, d.height), d);
+            let screen = new DImage(d.ctx.getImageData(0, 0, d.width, d.height), d.canvas);
             screen.filter(filter, value);
             d.ctx.putImageData(screen.imageData, 0, 0);
         },
@@ -1098,6 +1121,17 @@ var Dark = function(dummy = false) {
         requestAnimationFrame(d.raf);
     };
 
+    // Start draw & do setup
+    d.begin = function() {
+        d.loaded = true;
+
+        // Setup before draw loop
+        d.setup();
+
+        // Start draw function
+        requestAnimationFrame(d.raf);
+    };
+
     // Set defaults
     d.frameRate(60);
     d.smooth();
@@ -1127,8 +1161,11 @@ var Dark = function(dummy = false) {
         d.settings.cursor = "auto";
         d.settings.looping = true;
 
-        // Start draw function
-        requestAnimationFrame(d.raf);
+        window.addEventListener("load", () => {
+            Dark.globallyUpdateVariables(d);
+
+            if(Object.keys(d.imageCache).length == 0) d.begin();
+        });
     }
 };
 
@@ -1138,8 +1175,7 @@ Dark.instances = [];
 // Empty functions that can be changed by the user
 Dark.empties = [
     "draw",
-    "setup", // unused
-    "preload", // unused
+    "setup",
     "keyPressed",
     "keyReleased",
     "keyTyped",
@@ -1324,13 +1360,20 @@ Dark.cursors = [
 Dark.ignoreGlobal = [
     "empties",
     "raf",
+    "begin",
     "vertices",
     "transforms",
+    "vertexCache",
+    "saves",
+    "imageCache",
+    "cachedImageCount",
     "settings",
     "defaultSettings",
     "isMain",
     "canvas",
-    "ctx"
+    "ctx",
+    "dummy",
+    "loaded"
 ];
 
 Dark.variables = {
@@ -1454,7 +1497,7 @@ Dark.getMain = function() {
 };
 
 Dark.fileCacheKA = {
-    "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 pos;\nout vec2 uv;\nvoid main() {\n uv = (pos + 1.0) * 0.5; // Vertex position = -1 to 1, UV = 0 to 1\n gl_Position = vec4(pos.x, -pos.y, 0.0, 1.0);\n}",
+    "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 pos;\nout vec2 uv;\nvoid main() {\n uv = (pos + 1.0) * 0.5; // Vertex position = -1 to 1, UV = 0 to 1\n gl_Position = vec4(pos, 0.0, 1.0);\n}",
     "/filters/invert.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(1.0 - tex.rgb, tex.a);\n}",
     "/filters/opaque.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(tex.rgb, 1.0);\n}",
     "/filters/grayscale.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Based on how human eyes precieve\n color = vec4(vec3(luminance), tex.a);\n}",
@@ -2047,21 +2090,28 @@ Dark.objects = (function() {
     ];
 
     // Images
-    let DImage = function(imgData, source) {
+    let DImage = function(...args) {
         this.darkObject = true;
 
         this.filters = {};
-        if(imgData instanceof ImageData) {
-            this.imageData = imgData;
-            this.source = source;
-            this.width = imgData.width;
-            this.height = imgData.height;
+        if(args[0] instanceof ImageData) {
+            this.imageData = args[0];
+            this.source = args[1];
+            this.width = args[0].width;
+            this.height = args[0].height;
             this.canvas = new OffscreenCanvas(this.width, this.height);
             this.ctx = this.canvas.getContext("2d", Dark.defaultContextSettings);
             this.loadPixels();
+        } else if(typeof args[0] == "number" && typeof args[1] == "number") { // width & height
+            this.width = args[0];
+            this.height = args[1];
+            this.source = args[2];
+            this.imageData = new ImageData(this.width, this.height);
+            this.canvas = new OffscreenCanvas(this.width, this.height);
+            this.ctx = this.canvas.getContext("2d", Dark.defaultContextSettings);
         } else {
             this.imageData = null;
-            this.source = source;
+            this.source = args[0];
             this.width = 0;
             this.height = 0;
         }
@@ -2528,7 +2578,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.8";
+Dark.version = "0.6.0";
 
 // Freeze objects
 Object.freeze(Dark);
