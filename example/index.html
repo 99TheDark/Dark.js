@@ -17,15 +17,16 @@
         setCanvas(document.getElementById("canvas"));
 
         size(1000, 600);
-
-        // Image to load eventually:
-        // https://www.1800flowers.com/blog/wp-content/uploads/2021/05/Birthday-Flowers-Colors.jpg
+        
+        let img = loadImage("https://images.pexels.com/photos/206359/pexels-photo-206359.jpeg?cs=srgb&dl=pexels-pixabay-206359.jpg&fm=jpg");
 
         frameRate(Infinity);
 
         // Demo code
         draw = function() {
-            background(180, 220, 240);
+            image(img, 0, 0, width, height);
+            filter(POSTERIZE, 8);
+            filter(VIGNETTE);
 
             strokeWeight(2);
             stroke(0);
@@ -108,13 +109,12 @@
             mouseIsPressed ? fill(0, 0, 0, 100) & cursor("pointer") : noFill() & cursor();
             circle(mouseX, mouseY, 8);
 
-            let img = get();
+            let screen = get();
             fill(0);
             noStroke();
             rect(798, 458, 154, 94);
-            image(img, 800, 460, 150, 90);
+            image(screen, 800, 460, 150);
 
-            filter(VIGNETTE, 0.3);
             if(mouseIsPressed) filter(INVERT);
 
             fill(255);
@@ -122,7 +122,6 @@
             textSize(40);
             textAlign(LEFT, TOP);
             text(fps.toFixed(), 35, 35);
-            noLoop();
         };
     </script>
 </body>
