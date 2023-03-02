@@ -1,4 +1,4 @@
-if(window.Dark) throw "There is more than one Dark.js import"; // Fix KA stuff
+if(window.Dark) throw "There is more than one Dark.js import"; // Stop multiple imports
 
 var Dark = function(dummy = false) {
     this.darkObject = true;
@@ -8,9 +8,9 @@ var Dark = function(dummy = false) {
     let lastTime = performance.now();
     let lastHidden = -1;
 
-    // Shorter = faster to type
+    // Shorter = faster to typing time
     let d = this;
-    let k = Dark.constants; // Quicker typing
+    let k = d.constants = Dark.constants; 
 
     Dark.instances.push(d);
 
@@ -19,13 +19,13 @@ var Dark = function(dummy = false) {
     d.saves = [];
     d.vertices = [];
     d.vertexCache = [];
+    d.imageCache = {};
+    d.preloadImageCount = 0;
     d.objects = Dark.objects;
 
     // copy over
     d.copy = Dark.copy;
     d.format = Dark.format;
-
-    k = d.constants = Dark.constants;
 
     // Is a dummy instance?
     d.dummy = dummy;
@@ -969,10 +969,25 @@ var Dark = function(dummy = false) {
             d.ctx.restore();
         },
 
+        loadImage: function(url) {
+            fetch(url)
+                .then(response => response.blob())
+                .then(blob => {
+                    let img = new Image();
+                    img.src = window.URL.createObjectURL(blob)
+                    img.onload = () => {
+                        d.ctx.drawImage(img, 0, 0, width, height);
+                        filter(POSTERIZE, 5);
+                        filter(VIGNETTE);
+                    };
+                })
+                .catch(e => Dark.error(e));
+        },
+
         filter: function(filter, value) {
             let screen = new DImage(d.ctx.getImageData(0, 0, d.width, d.height), d);
             screen.filter(filter, value);
-            d.ctx.drawImage(screen.canvas, 0, 0, d.width, d.height);
+            d.ctx.putImageData(screen.imageData, 0, 0);
         },
 
         // Quick & Mathy functions
@@ -1103,9 +1118,6 @@ var Dark = function(dummy = false) {
     d.defaultSettings = Object.assign({}, d.settings);
 
     if(!d.dummy) {
-        // Start draw function
-        requestAnimationFrame(d.raf);
-
         // Load event listeners for document
         loadEvents();
 
@@ -1114,8 +1126,10 @@ var Dark = function(dummy = false) {
         d.pmouse = d.objects.DVector.zero2D();
         d.settings.cursor = "auto";
         d.settings.looping = true;
-    }
 
+        // Start draw function
+        requestAnimationFrame(d.raf);
+    }
 };
 
 // List of all instances
@@ -1124,6 +1138,8 @@ Dark.instances = [];
 // Empty functions that can be changed by the user
 Dark.empties = [
     "draw",
+    "setup", // unused
+    "preload", // unused
     "keyPressed",
     "keyReleased",
     "keyTyped",
@@ -2153,15 +2169,19 @@ Dark.objects = (function() {
             f.gl.bindTexture(f.gl.TEXTURE_2D, f.texture);
             f.gl.activeTexture(f.gl.TEXTURE0);
 
+            // f.gl.clear(f.gl.COLOR_BUFFER_BIT | f.gl.DEPTH_BUFFER_BIT);
+
             f.gl.drawArrays(
                 f.gl.TRIANGLES, // type
                 0, // offset
                 6 // point count
             );
 
-            this.ctx.drawImage(f.gl_canvas, 0, 0, this.width, this.height);
-            this.imageData = this.ctx.getImageData(0, 0, this.width, this.height);
+            let buffer = new Uint8ClampedArray(this.width * this.height * 4);
+            f.gl.readPixels(0, 0, this.width, this.height, f.gl.RGBA, f.gl.UNSIGNED_BYTE, buffer);
 
+            this.imageData.data.set(buffer);
+            this.canvas = f.gl_canvas;
         } else {
             return Dark.error(new Error("Invalid filter type"));
         }
