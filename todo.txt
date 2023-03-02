@@ -21,6 +21,8 @@ To add:
 • Make everything readonly using Object.defineProperty
 • randomSeed and updated random
 • Move more things into the initialization for filters
+• preload function
+• setup function
 
 Possibly to add:
 • DShape
