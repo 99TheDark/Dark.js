@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="https://github.com/99TheDark/Dark.js/blob/main/images/icon.png" alt="Dark.js Icon" height="175px" />
+    <img src="https://github.com/99TheDark/Dark.js/blob/main/images/icon.png" alt="Dark.js Icon" height="160px" />
 </div>
 
 # Dark.js&nbsp;&nbsp;&nbsp;![https://github.com/99TheDark/Dark.js/blob/main/LICENSE](https://img.shields.io/github/license/99thedark/Dark.js) ![CodeFactor](https://www.codefactor.io/repository/github/99thedark/dark.js/badge)
