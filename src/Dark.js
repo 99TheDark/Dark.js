@@ -2508,7 +2508,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.5.7";
+Dark.version = "0.5.8";
 
 // Freeze objects
 Object.freeze(Dark);
