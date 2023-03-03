@@ -1099,7 +1099,7 @@ var Dark = function(dummy = false) {
     // Draw function (raf = request animation frame)
     d.raf = function(time) {
         if(Dark.startTime > d.initializationTime) {
-            console.warn("Deleting old Dark.js instance: " + d);
+            Dark.warn("Deleting old Dark.js instance: " + d);
             // Dark.instances.splice(Dark.instances.indexOf(d), 1);
             // return;
         }
