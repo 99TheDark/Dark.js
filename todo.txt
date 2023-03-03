@@ -25,6 +25,7 @@ To add:
 • Swap filter uv to a uniform
 • How to import section in README
 • Scissor/crop large images
+• Pixelate filter
 
 Possibly to add:
 • DShape
