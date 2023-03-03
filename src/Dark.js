@@ -1013,6 +1013,14 @@ var Dark = function(dummy = false) {
             return result;
         },
 
+        getImage: function(loc) {
+            if(Dark.url.host == "www.kasandbox.org") {
+                return loadImage("https://cdn.kastatic.org/third_party/javascript-khansrc/live-editor/build/images/" + loc + ".png");
+            } else {
+                return loadImage(Dark.url.host + "/" + loc);
+            }
+        },
+
         filter: function(filter, value) {
             let screen = new DImage(d.ctx.getImageData(0, 0, d.width, d.height), d.canvas);
             screen.filter(filter, value);
@@ -1099,7 +1107,7 @@ var Dark = function(dummy = false) {
     // Draw function (raf = request animation frame)
     d.raf = function(time) {
         if(Dark.startTime > d.info.initializationTime) {
-            Dark.warn("Deleting old Dark.js instance: " + d);
+            Dark.warn("Deleting old Dark.js instance.");
             Dark.instances.splice(Dark.instances.indexOf(d), 1);
             return;
         }
@@ -2593,11 +2601,8 @@ Dark.utils = new Dark(true); // Dummy instance for utils
 Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
 
-// Remove KA annoyances
-// for(let i = requestAnimationFrame(() => 0); i--;) cancelAnimationFrame(i);
-
 // Current version
-Dark.version = "0.6.0.4";
+Dark.version = "0.6.1";
 
 // Freeze objects
 Object.freeze(Dark);
