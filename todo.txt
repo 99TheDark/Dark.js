@@ -24,7 +24,6 @@ To add:
 • Move more things into the initialization for filters
 • Swap filter uv to a uniform
 • How to import section in README
-• Add getImage that gets a local image from host (For KA: https://cdn.kastatic.org/third_party/javascript-khansrc/live-editor/build/images/ + loc + .png)
 • Scissor/crop large images
 
 Possibly to add:
