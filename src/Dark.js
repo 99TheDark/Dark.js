@@ -1007,7 +1007,7 @@ var Dark = function(dummy = false) {
 
                                 if(d.cachedImageCount == Object.keys(d.imageCache).length) d.begin();
                             });
-                    }
+                    };
                 })
                 .catch(e => Dark.error(e));
             return result;
@@ -1015,7 +1015,26 @@ var Dark = function(dummy = false) {
 
         getImage: function(loc) {
             if(Dark.url.host == "www.kasandbox.org") {
-                return loadImage("https://cdn.kastatic.org/third_party/javascript-khansrc/live-editor/build/images/" + loc + ".png");
+                let url = "https://cdn.kastatic.org/third_party/javascript-khansrc/live-editor/build/images/" + loc + ".png";
+
+                let img = new DImage(1, 1, d);
+                if(Object.keys(d.imageCache).includes(url)) return;
+                d.imageCache[url] = null;
+                img.image = new Image();
+                img.image.src = url;
+                img.image.crossOrigin = "anonymous";
+                img.image.onload = () => {
+                    d.imageCache[url] = img;
+                    d.cachedImageCount++;
+
+                    [img.canvas.width, img.canvas.height] = [img.width, img.height] = [img.image.width, img.image.height];
+                    img.imageData = new ImageData(img.width, img.height);
+                    img.ctx.drawImage(img.image, 0, 0, img.width, img.height);
+                    img.updatePixels();
+
+                    if(d.cachedImageCount == Object.keys(d.imageCache).length) d.begin();
+                };
+                return img;
             } else {
                 return loadImage(Dark.url.host + "/" + loc);
             }
@@ -2602,7 +2621,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
 
 // Current version
-Dark.version = "0.6.1";
+Dark.version = "0.6.1.1";
 
 // Freeze objects
 Object.freeze(Dark);
