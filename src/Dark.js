@@ -1098,6 +1098,12 @@ var Dark = function(dummy = false) {
 
     // Draw function (raf = request animation frame)
     d.raf = function(time) {
+        if(Dark.startTime > d.initializationTime) {
+            console.warn("Deleting old Dark.js instance: " + d);
+            // Dark.instances.splice(Dark.instances.indexOf(d), 1);
+            // return;
+        }
+
         time = performance.now();
 
         let deltaFrame = time - lastFrame;
@@ -2588,10 +2594,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
 
 // Remove KA annoyances
-for(let i = requestAnimationFrame(() => {}); i--;) {
-    console.log(i);
-    cancelAnimationFrame(i);
-}
+// for(let i = requestAnimationFrame(() => 0); i--;) cancelAnimationFrame(i);
 
 // Current version
 Dark.version = "0.6.0.4";
