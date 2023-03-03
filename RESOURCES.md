@@ -17,3 +17,7 @@
 ## Loading Files:
 - [StackOverflow](https://stackoverflow.com/questions/36921947/read-a-server-side-file-using-javascript)
 - [StackOverflow](https://stackoverflow.com/questions/50248329/fetch-image-from-api)
+
+## Psuedo Random Number Generation:
+- [StackOverflow](https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript)
+- [JSHash](https://github.com/bryc/code/blob/master/jshash/PRNGs.md)
