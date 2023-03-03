@@ -985,31 +985,49 @@ var Dark = function(dummy = false) {
             let result = new DImage(1, 1, d);
             if(Object.keys(d.imageCache).includes(url)) return;
             d.imageCache[url] = null;
-            fetch(url)
-                .then(response => response.blob())
-                .then(blob => {
-                    result.image = new Image();
-                    result.image.src = URL.createObjectURL(blob);
-                    result.image.onload = () => {
-                        createImageBitmap(blob)
-                            .then(bitmap => {
-                                let img = new DImage(bitmap.width, bitmap.height, d.canvas);
 
-                                img.ctx.drawImage(bitmap, 0, 0, img.width, img.height);
-                                img.updatePixels();
+            if(Dark.url.host == "www.kasandbox.org") {
+                result.image = new Image();
+                result.image.src = url;
+                result.image.crossOrigin = "anonymous";
+                result.image.onload = () => {
+                    d.imageCache[url] = result;
+                    d.cachedImageCount++;
 
-                                d.imageCache[url] = img;
-                                d.cachedImageCount++;
+                    [result.canvas.width, result.canvas.height] = [result.width, result.height] = [result.image.width, result.image.height];
+                    result.imageData = new ImageData(result.width, result.height);
+                    result.ctx.drawImage(result.image, 0, 0, result.width, result.height);
+                    result.updatePixels();
 
-                                [result.canvas.width, result.canvas.height] = [result.width, result.height] = [img.width, img.height];
-                                result.imageData = img.imageData;
-                                result.loadPixels();
+                    if(d.cachedImageCount == Object.keys(d.imageCache).length) d.begin();
+                };
+            } else {
+                fetch(url)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        result.image = new Image();
+                        result.image.src = URL.createObjectURL(blob);
+                        result.image.onload = () => {
+                            createImageBitmap(blob)
+                                .then(bitmap => {
+                                    let img = new DImage(bitmap.width, bitmap.height, d.canvas);
 
-                                if(d.cachedImageCount == Object.keys(d.imageCache).length) d.begin();
-                            });
-                    };
-                })
-                .catch(e => Dark.error(e));
+                                    img.ctx.drawImage(bitmap, 0, 0, img.width, img.height);
+                                    img.updatePixels();
+
+                                    d.imageCache[url] = img;
+                                    d.cachedImageCount++;
+
+                                    [result.canvas.width, result.canvas.height] = [result.width, result.height] = [img.width, img.height];
+                                    result.imageData = img.imageData;
+                                    result.loadPixels();
+
+                                    if(d.cachedImageCount == Object.keys(d.imageCache).length) d.begin();
+                                });
+                        };
+                    })
+                    .catch(e => Dark.error(e));
+            }
             return result;
         },
 
@@ -1060,7 +1078,7 @@ var Dark = function(dummy = false) {
         between: (num, min, max) => num <= max && num >= min,
         exceeds: (num, min, max) => num > max || num < min,
         lerp: (val1, val2, percent) => (val2 - val1) * percent + val1,
-        map: (num, min1, max1, min2, max2) => min2 + (max2 - min2) / (max1 - min1) * (value - min1),
+        map: (num, min1, max1, min2, max2) => min2 + (max2 - min2) / (max1 - min1) * (num - min1),
         sq: num => num * num,
         cb: num => num * num * num,
         pow: (num, power) => num ** power,
@@ -2024,8 +2042,10 @@ Dark.objects = (function() {
     DVector.prototype.set = function(v) {
         if(Array.isArray(v)) {
             [this.x, this.y, this.z] = v;
-        } else {
+        } else if(typeof v == "object") {
             [this.x, this.y, this.z] = [v.x, v.y, v.z];
+        } else {
+            [this.x, this.y, this.z] = [...arguments];
         }
         if(this.is2D) this.z = undefined;
     };
@@ -2621,7 +2641,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
 
 // Current version
-Dark.version = "0.6.1.1";
+Dark.version = "0.6.2";
 
 // Freeze objects
 Object.freeze(Dark);
