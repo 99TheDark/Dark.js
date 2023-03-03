@@ -22,3 +22,6 @@
 
 ## [Toptal](https://www.toptal.com/developers/javascript-minifier):
 - Minifier
+
+## [JSHash](https://github.com/bryc/code/blob/master/jshash/PRNGs.md#xoshiro):
+- Xoshiro128+ Psuedo Random Number Generator
