@@ -2583,6 +2583,9 @@ Dark.objects = (function() {
 
 })();
 
+// For KA
+Dark.startTime = performance.now();
+
 // Compile for Khan Academy since all files are blocked :(
 Dark.compileKA();
 
@@ -2594,9 +2597,7 @@ Dark.globallyUpdateVariables(Dark.main); // First load of variables
 // for(let i = requestAnimationFrame(() => 0); i--;) cancelAnimationFrame(i);
 
 // Current version
-Dark.version = "0.6.0.2";
-
-Dark.startTime = performance.now();
+Dark.version = "0.6.0.3";
 
 // Freeze objects
 Object.freeze(Dark);
