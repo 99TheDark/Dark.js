@@ -960,28 +960,27 @@ var Dark = function(dummy = false) {
         },
 
         image: function(img, x, y, width, height) {
-            if(d.settings.imageMode == k.CENTER) x -= d.width / 2, y -= d.height / 2;
+            d.ctx.save();
+            if(d.settings.imageMode == k.CENTER) d.ctx.translate(-d.width / 2, -d.height / 2);
             if(img instanceof ImageData) img = new DImage(img);
             switch(arguments.length) {
                 default:
                     Dark.error(new Error("image requires 1, 3, 4 or 5 parameters, not " + arguments.length));
                     break;
                 case 1:
-                    d.ctx.drawImage(img.canvas, 0, 0, d.width, d.height);
+                    d.ctx.drawImage(img.image ?? img.canvas, 0, 0, d.width, d.height);
                     break;
                 case 3:
-                    if(!Dark.rectRect(x, y, img.width, img.height, 0, 0, d.width, d.height)) break;
-                    d.ctx.drawImage(img.image || img.canvas, x, y);
+                    d.ctx.drawImage(img.image ?? img.canvas, x, y);
                     break;
                 case 4:
-                    if(!Dark.rectRect(x, y, width, width, 0, 0, d.width, d.height)) break;
-                    d.ctx.drawImage(img.image || img.canvas, x, y, width, width / img.width * img.height);
+                    d.ctx.drawImage(img.image ?? img.canvas, x, y, width, width / img.width * img.height);
                     break;
                 case 5:
-                    if(!Dark.rectRect(x, y, width, height, 0, 0, d.width, d.height)) break;
-                    d.ctx.drawImage(img.image || img.canvas, x, y, width, height);
+                    d.ctx.drawImage(img.image ?? img.canvas, x, y, width, height);
                     break;
             }
+            d.ctx.restore();
         },
 
         loadImage: function(url) {
@@ -2700,7 +2699,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
 
 // Current version
-Dark.version = "0.6.3";
+Dark.version = "0.6.3.1";
 
 // Freeze objects
 Object.freeze(Dark);
