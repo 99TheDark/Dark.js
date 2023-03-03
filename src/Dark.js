@@ -34,6 +34,9 @@ var Dark = function(dummy = false) {
     d.copy = Dark.copy;
     d.format = Dark.format;
 
+    // Random number generator
+    d.randomGenerator = d.objects.DRandom.create();
+
     // Is a dummy instance?
     d.dummy = dummy;
 
@@ -68,7 +71,7 @@ var Dark = function(dummy = false) {
 
     var cacheVert = function(vert) {
         d.vertices.push(vert);
-        vert.points.forEach(v => d.vertexCache.push(new DVector(v.x, v.y)));
+        vert.points.forEach(v => d.vertexCache.push(d.objects.DVector.create(v.x, v.y)));
     };
 
     var loadEvents = function() {
@@ -283,12 +286,16 @@ var Dark = function(dummy = false) {
         random: function(...args) {
             switch(args.length) {
                 default:
-                    return Math.random() * (args[1] - args[0]) + args[0];
+                    return d.randomGenerator.next() * (args[1] - args[0]) + args[0];
                 case 0:
-                    return Math.random();
+                    return d.randomGenerator.next();
                 case 1:
-                    return Math.random() * args[0];
+                    return d.randomGenerator.next() * args[0];
             }
+        },
+
+        randomSeed: function(seed) {
+            if(seed != d.randomGenerator.seed) d.randomGenerator = d.objects.DRandom.create(seed);
         },
 
         cursor: function(type = "default") {
@@ -347,7 +354,7 @@ var Dark = function(dummy = false) {
         },
 
         randomColor: function() {
-            return color(Math.random() * 255, Math.random() * 255, Math.random() * 255);
+            return color(d.randomGenerator.next() * 255, d.randomGenerator.next() * 255, d.randomGenerator.next() * 255);
         },
 
         // Splitting color into parts
@@ -569,7 +576,7 @@ var Dark = function(dummy = false) {
             d.ctx.beginPath();
             d.ctx.save();
             if(d.settings.rectMode == k.CENTER) d.ctx.translate(- width / 2, - height / 2);
-            // for speed, rounded rect is so much slower
+            // For speed, rounded rect is so much slower
             switch(arguments.length) {
                 default:
                     Dark.error(new Error("rect takes in 4, 5 or 8 parameters, not " + arguments.length));
@@ -580,7 +587,7 @@ var Dark = function(dummy = false) {
                 case 5:
                     d.ctx.roundRect(x, y, width, height, r1);
                     break;
-                case 6:
+                case 8:
                     d.ctx.roundRect(x, y, width, height, [r1, r2, r3, r4]);
                     break;
             }
@@ -953,8 +960,7 @@ var Dark = function(dummy = false) {
         },
 
         image: function(img, x, y, width, height) {
-            d.ctx.save();
-            if(d.settings.imageMode == k.CENTER) d.ctx.translate(- width / 2, - height / 2);
+            if(d.settings.imageMode == k.CENTER) x -= d.width / 2, y -= d.height / 2;
             if(img instanceof ImageData) img = new DImage(img);
             switch(arguments.length) {
                 default:
@@ -976,7 +982,6 @@ var Dark = function(dummy = false) {
                     d.ctx.drawImage(img.image || img.canvas, x, y, width, height);
                     break;
             }
-            d.ctx.restore();
         },
 
         loadImage: function(url) {
@@ -1431,7 +1436,8 @@ Dark.ignoreGlobal = [
     "canvas",
     "ctx",
     "dummy",
-    "loaded"
+    "loaded",
+    "randomGenerator"
 ];
 
 Dark.variables = {
@@ -2036,16 +2042,17 @@ Dark.objects = (function() {
             return new DVector(this.x, this.y, this.z);
         }
     };
-    DVector.set = function(v1, v2) {
-        v1.set(v2);
+    DVector.set = function(v1, ...args) {
+        v1.set.apply(null, args);
     };
-    DVector.prototype.set = function(v) {
+    DVector.prototype.set = function(...args) {
+        let v = args[0];
         if(Array.isArray(v)) {
             [this.x, this.y, this.z] = v;
         } else if(typeof v == "object") {
             [this.x, this.y, this.z] = [v.x, v.y, v.z];
         } else {
-            [this.x, this.y, this.z] = [...arguments];
+            [this.x, this.y, this.z] = args;
         }
         if(this.is2D) this.z = undefined;
     };
@@ -2209,6 +2216,25 @@ Dark.objects = (function() {
             this.imageData,
             this.source
         );
+    };
+    DImage.resize = function(img, width, height) {
+        img.resize(width, height);
+    };
+    DImage.prototype.resize = function(width, height) {
+        if(this.width != width || this.height != height) {
+            // Save pixels
+            let oldCanvas = new OffscreenCanvas(this.width, this.height);
+            let oldCtx = oldCanvas.getContext("2d");
+            oldCtx.drawImage(this.canvas, 0, 0);
+
+            // Resize dimensions
+            [this.canvas.width, this.canvas.height] = [this.width, this.height] = [width, height];
+
+            // Redraw
+            this.ctx.drawImage(oldCanvas, 0, 0, this.width, this.height);
+
+            this.image = undefined;
+        }
     };
     DImage.prototype.loadPixels = function() {
         this.ctx.putImageData(this.imageData, 0, 0);
@@ -2621,11 +2647,44 @@ Dark.objects = (function() {
         return str;
     };
 
+    // Psuedo Random Number Generator
+    let DRandom = function(seed = Math.random() * 1000000) {
+        this.seed = seed;
+        this.a = 0x9AF1B04258D;
+        this.b = 0xC6E35F;
+        this.c = 0x198A660DA;
+        this.d = seed * 0xFE05D3;
+    };
+    DRandom.prototype.next = function() {
+        let t = this.b << 9;
+        let r = this.a + this.d;
+        r = (r << 7 | r >>> 25) + this.a;
+        this.c ^= this.a;
+        this.d ^= this.b;
+        this.b ^= this.c;
+        this.a ^= this.d;
+        this.c ^= t;
+        this.d = this.d << 11 | this.d >>> 21;
+        return (r >>> 0) / 4294967296;
+    };
+    DRandom.copy = function(rand) {
+        return rand.copy();
+    };
+    DRandom.prototype.copy = function() {
+        let rand = new DRandom(this.seed);
+        [rand.a, rand.b, rand.c, rand.d] = [this.a, this.b, this.c, this.d];
+        return rand;
+    };
+    DRandom.create = function(seed) {
+        return new DRandom(seed);
+    };
+
     return {
         DVector: DVector,
         DFont: DFont,
         DImage: DImage,
-        DMatrix: DMatrix
+        DMatrix: DMatrix,
+        DRandom: DRandom
     };
 
 })();
@@ -2641,7 +2700,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
 
 // Current version
-Dark.version = "0.6.2";
+Dark.version = "0.6.3";
 
 // Freeze objects
 Object.freeze(Dark);
