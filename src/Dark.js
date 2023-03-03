@@ -2594,7 +2594,7 @@ Dark.globallyUpdateVariables(Dark.main); // First load of variables
 // for(let i = requestAnimationFrame(() => 0); i--;) cancelAnimationFrame(i);
 
 // Current version
-Dark.version = "0.6.0.1";
+Dark.version = "0.6.0.2";
 
 Dark.startTime = performance.now();
 
