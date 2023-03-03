@@ -14,8 +14,6 @@ To add:
 • preventDefault(listener) and allowDefault(listener)
 • pushStyle and popStyle
 • Make DVector rotations work in 3D
-• Using ImageData for DImage & image()
-• Image cache for speed
 • Get the frameRate to be more constant
 • Update DImage.copy to work with all the new stuff
 • Better copy function with Object.assign
@@ -24,7 +22,6 @@ To add:
 • How to import section in README
 • Scissor/crop large images
 • Pixelate filter
-• Use nullish (??) instead of or (||) for image
 
 Possibly to add:
 • DShape
