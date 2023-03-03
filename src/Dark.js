@@ -14,6 +14,12 @@ var Dark = function(dummy = false) {
 
     Dark.instances.push(d);
 
+    d.info = {
+        id: Math.floor(Math.random() * 1000000),
+        initializationTime: performance.now(),
+        version: Dark.version
+    };
+
     d.settings = {};
     d.transforms = [];
     d.saves = [];
@@ -1358,6 +1364,7 @@ Dark.cursors = [
 
 // Variables to be private
 Dark.ignoreGlobal = [
+    "info",
     "empties",
     "raf",
     "begin",
@@ -2578,7 +2585,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main);
 
 // Current version
-Dark.version = "0.6.0";
+Dark.version = "0.6.0.1";
 
 // Freeze objects
 Object.freeze(Dark);
