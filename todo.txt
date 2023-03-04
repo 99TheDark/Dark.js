@@ -16,11 +16,13 @@ To add:
 • Make DVector rotations work in 3D
 • Get the frameRate to be more constant
 • Update DImage.copy to work with all the new stuff
-• Better copy function with Object.assign
+• Improve copy function
 • Make everything readonly using Object.defineProperty, then only run globallyUpdateVariables on main switch and such
 • Swap filter uv to a uniform
 • How to import section in README
 • Scissor/crop large images
+• Block from running Dark();
+• Load all getImages for KA on run if in right url
 
 Possibly to add:
 • DShape
