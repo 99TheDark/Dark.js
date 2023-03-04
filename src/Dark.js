@@ -1014,7 +1014,7 @@ var Dark = function(dummy = false) {
             if(d.loaded) return Dark.error(new Error("loadImage cannot be run after the setup and draw function have begun"));
 
             let result = new DImage(1, 1, d);
-            if(Object.keys(d.imageCache).includes(url)) return;
+            if(Object.keys(d.imageCache).includes(url)) return d.imageCache[url];
             d.imageCache[url] = null;
 
             if(Dark.khan) {
@@ -1065,6 +1065,7 @@ var Dark = function(dummy = false) {
         getImage: function(loc) {
             if(Dark.khan) {
                 let url = "https://cdn.kastatic.org/third_party/javascript-khansrc/live-editor/build/images/" + loc + ".png";
+                if(Object.keys(d.imageCache).includes(url)) return d.imageCache[url];
 
                 let img = new d.objects.DImage(1, 1, d);
                 if(Object.keys(d.imageCache).includes(url)) return;
@@ -2920,7 +2921,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
 
 // Current version
-Dark.version = "0.6.6";
+Dark.version = "0.6.6.1";
 
 // Freeze objects
 Object.freeze(Dark);
