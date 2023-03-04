@@ -69,6 +69,8 @@ var Dark = function(dummy = false) {
         return (d.settings.angleMode == k.DEGREES) ? angle * 180 / k.PI : angle;
     };
 
+    var rounda = val => Math.abs(Math.round(val));
+
     var cacheVert = function(vert) {
         d.vertices.push(vert);
         vert.points.forEach(v => d.vertexCache.push(d.objects.DVector.create(v.x, v.y)));
@@ -210,7 +212,7 @@ var Dark = function(dummy = false) {
                 d.width = canvas.width;
                 d.height = canvas.height;
 
-                let old = copy(d.ctx);
+                let old = d.copy(d.ctx);
                 d.ctx = canvas.getContext("2d", Dark.defaultContextSettings);
 
                 for(const key in d.ctx) {
@@ -451,6 +453,7 @@ var Dark = function(dummy = false) {
         },
 
         strokeWeight: function(weight) {
+            if(!d.settings.smoothing) weight = d.round(weight);
             d.settings.strokeWeight = weight;
             d.ctx.lineWidth = weight;
         },
@@ -573,7 +576,7 @@ var Dark = function(dummy = false) {
 
         // Shapes
         rect: function(x, y, width, height, r1, r2, r3, r4) {
-            width = Math.abs(width), height = Math.abs(height);
+            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), rounda(width), rounda(height)];
             d.ctx.beginPath();
             d.ctx.save();
             if(d.settings.rectMode == k.CENTER) d.ctx.translate(- width / 2, - height / 2);
@@ -598,7 +601,7 @@ var Dark = function(dummy = false) {
         },
 
         ellipse: function(x, y, width, height) {
-            width = Math.abs(width), height = Math.abs(height);
+            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), rounda(width), rounda(height)];
             d.ctx.beginPath();
             d.ctx.save();
             if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(width / 2, height / 2);
@@ -610,6 +613,7 @@ var Dark = function(dummy = false) {
         },
 
         arc: function(x, y, width, height, start, stop) {
+            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), rounda(width), rounda(height)];
             d.ctx.save();
             if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(width / 2, height / 2);
             d.ctx.beginPath();
@@ -620,6 +624,7 @@ var Dark = function(dummy = false) {
         },
 
         line: function(x1, y1, x2, y2) {
+            if(!d.settings.smoothing) [x1, y1, x2, y2] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2)];
             d.ctx.beginPath();
             d.ctx.moveTo(x1, y1);
             d.ctx.lineTo(x2, y2);
@@ -627,6 +632,7 @@ var Dark = function(dummy = false) {
         },
 
         point: function(x, y) {
+            if(!d.settings.smoothing) x = d.round(x), y = d.round(y);
             d.ctx.save();
             d.ctx.beginPath();
             d.ctx.fillStyle = colorString(d.settings.stroke);
@@ -636,6 +642,7 @@ var Dark = function(dummy = false) {
         },
 
         circle: function(x, y, radius) {
+            if(!d.settings.smoothing) [x, y, radius] = [d.round(x), d.round(y), rounda(radius)];
             d.ctx.save();
             if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(radius, radius);
             d.ctx.beginPath();
@@ -651,6 +658,7 @@ var Dark = function(dummy = false) {
         },
 
         triangle: function(x1, y1, x2, y2, x3, y3) {
+            if(!d.settings.smoothing) [x1, y1, x2, y2, x3, y3] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3)];
             d.ctx.beginPath();
             d.ctx.moveTo(x1, y1);
             d.ctx.lineTo(x2, y2);
@@ -661,6 +669,7 @@ var Dark = function(dummy = false) {
         },
 
         quad: function(x1, y1, x2, y2, x3, y3, x4, y4) {
+            if(!d.settings.smoothing) [x1, y1, x2, y2, x3, y3, x4, y4] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3), d.round(x4), d.round(y4)];
             d.ctx.beginPath();
             d.ctx.moveTo(x1, y1);
             d.ctx.lineTo(x2, y2);
@@ -737,6 +746,7 @@ var Dark = function(dummy = false) {
 
         // Kinda copied from ski, though slightly different (curveVertex)
         vertex: function(x, y) {
+            if(!d.settings.smoothing) [x, y] = [d.round(x), d.round(y)];
             let vert = {
                 type: k.VERTEX,
                 points: [
@@ -751,6 +761,7 @@ var Dark = function(dummy = false) {
         },
 
         curveVertex: function(cx, cy) {
+            if(!d.settings.smoothing) [x, y] = [d.round(cx), d.round(cy)];
             let vert = {
                 type: k.CURVE,
                 points: [
@@ -765,6 +776,7 @@ var Dark = function(dummy = false) {
         },
 
         bezierVertex: function(x1, y1, x2, y2, x3, y3) {
+            if(!d.settings.smoothing) [x1, y1, x2, y2, x3, y3] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3)];
             let vert = {
                 type: k.BEZIER,
                 points: [
@@ -829,6 +841,7 @@ var Dark = function(dummy = false) {
 
         // Text
         textSize: function(size) {
+            if(!d.settings.smoothing) size = d.round(size);
             d.settings.textSize = size;
             d.settings.font.size = size;
             d.reloadFont();
@@ -927,6 +940,7 @@ var Dark = function(dummy = false) {
         },
 
         text: function(text, x, y) {
+            if(!d.settings.smoothing) [x, y] = [d.round(x), d.round(y)];
             let lines = text.split("\n");
             let off = (d.settings.alignY == k.CENTER) ? (d.settings.textHeight + d.settings.lineGap) * lines.length / 2 : 0;
             lines.forEach((line, index) => {
@@ -961,6 +975,7 @@ var Dark = function(dummy = false) {
         },
 
         image: function(img, x, y, width, height) {
+            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), rounda(width), rounda(height)];
             d.ctx.save();
             if(img instanceof ImageData) img = new DImage(img);
             let w, h;
@@ -1505,7 +1520,7 @@ Dark.copy = function(e) {
 
 Dark.format = function(obj) {
     let copied = Dark.copy(obj);
-    if(typeof copied == "object" && (typeof obj == "object" || typeof obj == "function")) {
+    if(typeof copied == "object") {
         return JSON.stringify(Dark.copy(obj), null, "    ");
     } else {
         return obj + "";
@@ -1576,9 +1591,9 @@ Dark.fileCacheKA = {
     "/filters/vignette.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n vec2 pos = (uv * 2.0 - 1.0) * param;\n float dist = 1.0 - sqrt(pos.x * pos.x + pos.y * pos.y);\n color = vec4(tex.rgb * dist, tex.a);\n}",
     "/filters/box.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nuniform float param;\nin vec2 uv;\nout vec4 color;\n#define len (param * 2.0 + 1.0)\n#define count (len * len)\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n vec4 total = vec4(0.0);\n for(float y = -param; y <= param; y++) {\n for(float x = -param; x <= param; x++) {\n total += texture(sampler, uv + vec2(x, y) / size);\n }\n }\n color = vec4(total / count);\n}",
     "/filters/brightness.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb + param, tex.a);\n}",
-    "/filters/TRANSPARENCY.frag": "# version 300 es\n\nprecision lowp float;\n\nuniform sampler2D sampler;\nuniform float param;\n\nin vec2 uv;\nout vec4 color;\n\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb, tex.a - param);\n}",
     "/filters/transparency.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb, tex.a - param);\n}",
-    "/filters/sepia.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(\n 0.393 * tex.r + 0.769 * tex.g + 0.189 * tex.b,\n 0.349 * tex.r + 0.686 * tex.g + 0.168 * tex.b,\n 0.272 * tex.r + 0.534 * tex.g + 0.131 * tex.b,\n tex.a\n );\n}"
+    "/filters/sepia.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(\n 0.393 * tex.r + 0.769 * tex.g + 0.189 * tex.b,\n 0.349 * tex.r + 0.686 * tex.g + 0.168 * tex.b,\n 0.272 * tex.r + 0.534 * tex.g + 0.131 * tex.b,\n tex.a\n );\n}",
+    "/filters/pixelate.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec2 snap(vec2 point) {\n return floor(point * size / param) * param / size;\n}\nvoid main() {\n vec4 tex = texture(sampler, vec2(snap(uv)));\n \n color = tex;\n}"
 };
 
 Dark.compileListKA = [];
@@ -2712,7 +2727,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
 
 // Current version
-Dark.version = "0.6.4";
+Dark.version = "0.6.5";
 
 // Freeze objects
 Object.freeze(Dark);
