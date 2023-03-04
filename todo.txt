@@ -21,7 +21,6 @@ To add:
 • Swap filter uv to a uniform
 • How to import section in README
 • Scissor/crop large images
-• Pixelate filter
 
 Possibly to add:
 • DShape
@@ -37,6 +36,8 @@ Possibly to add:
 • Chaining DVector & DMatrix operations like DVector.mult(a, b, c, d, e)
 • Contours
 • Use of requestFullscreen() in a function to fullscreen the canvas.
+• DUtils
+• ImageBitmapRenderingContext and ImageBitmap to DImage for speed
 
 Bugs:
 • Key typed not working
