@@ -1,6 +1,8 @@
 if(window.Dark) throw "There is more than one Dark.js import"; // Stop multiple imports
 
 var Dark = function(dummy = false) {
+    if(!(this instanceof Dark)) throw "Dark can only be called with the new operator"; // Dark() = bad, new Dark() = good
+
     this.darkObject = true;
 
     // private variables & functions
@@ -83,6 +85,8 @@ var Dark = function(dummy = false) {
             d.keyIsPressed = true;
             d.key = e.key;
             d.keyCode = e.keyCode;
+            Dark.globallyUpdateVariables(d);
+            if(/\w/.test(String.fromCharCode(e.keyCode))) d.keyTyped();
             d.keyPressed();
         });
 
@@ -91,16 +95,13 @@ var Dark = function(dummy = false) {
             d.keyIsPressed = false;
             d.key = undefined;
             d.keyCode = undefined;
+            Dark.globallyUpdateVariables(d);
             d.keyReleased();
-        });
-
-        document.addEventListener("keypress", function(e) {
-            e.preventDefault();
-            d.keyTyped();
         });
 
         window.addEventListener("resize", function(e) {
             e.preventDefault();
+            Dark.globallyUpdateVariables(d);
             d.pageResized();
         });
 
@@ -124,6 +125,7 @@ var Dark = function(dummy = false) {
 
         d.canvas.addEventListener("click", function(e) {
             e.preventDefault();
+            Dark.globallyUpdateVariables(d);
             d.mouseClicked();
         });
 
@@ -131,6 +133,7 @@ var Dark = function(dummy = false) {
             e.preventDefault();
             d.mouseIsPressed = true;
             d.mouseButton = Dark.mouseMap[e.button];
+            Dark.globallyUpdateVariables(d);
             d.mousePressed();
         });
 
@@ -138,18 +141,21 @@ var Dark = function(dummy = false) {
             e.preventDefault();
             d.mouseButton = undefined;
             d.mouseIsPressed = false;
+            Dark.globallyUpdateVariables(d);
             d.mouseReleased();
         });
 
         d.canvas.addEventListener("mouseenter", function(e) {
             e.preventDefault();
             d.mouseIsInside = true;
+            Dark.globallyUpdateVariables(d);
             d.mouseIn();
         });
 
         d.canvas.addEventListener("mouseleave", function(e) {
-            d.mouseIsInside = false;
             e.preventDefault();
+            d.mouseIsInside = false;
+            Dark.globallyUpdateVariables(d);
             d.mouseOut();
         });
 
@@ -161,17 +167,20 @@ var Dark = function(dummy = false) {
             d.pmouseY = d.pmouse.y = d.mouseY;
             d.mouseX = d.mouse.x = d.constrain(d.round(e.pageX - boundingBox.x), 0, width);
             d.mouseY = d.mouse.y = d.constrain(d.round(e.pageY - boundingBox.y), 0, height);
+            Dark.globallyUpdateVariables(d);
             d.mouseMoved();
         });
 
         d.canvas.addEventListener("wheel", function(e) {
             e.preventDefault();
             d.mouseScroll = d.objects.DVector.create(e.deltaX, e.deltaY, e.deltaZ);
+            Dark.globallyUpdateVariables(d);
             d.mouseScrolled();
         });
 
         d.canvas.addEventListener("dblclick", function(e) {
             e.preventDefault();
+            Dark.globallyUpdateVariables(d);
             d.mouseDoubleClicked();
         });
 
@@ -1008,7 +1017,7 @@ var Dark = function(dummy = false) {
             if(Object.keys(d.imageCache).includes(url)) return;
             d.imageCache[url] = null;
 
-            if(Dark.url.host == "www.kasandbox.org") {
+            if(Dark.khan) {
                 result.image = new Image();
                 result.image.src = url;
                 result.image.crossOrigin = "anonymous";
@@ -1054,10 +1063,10 @@ var Dark = function(dummy = false) {
         },
 
         getImage: function(loc) {
-            if(Dark.url.host == "www.kasandbox.org") {
+            if(Dark.khan) {
                 let url = "https://cdn.kastatic.org/third_party/javascript-khansrc/live-editor/build/images/" + loc + ".png";
 
-                let img = new DImage(1, 1, d);
+                let img = new d.objects.DImage(1, 1, d);
                 if(Object.keys(d.imageCache).includes(url)) return;
                 d.imageCache[url] = null;
                 img.image = new Image();
@@ -1165,6 +1174,8 @@ var Dark = function(dummy = false) {
 
     // Draw function (raf = request animation frame)
     d.raf = function(time) {
+        d.loaded = true;
+
         if(Dark.startTime > d.info.initializationTime) {
             Dark.warn("Deleting old Dark.js instance.");
             Dark.instances.splice(Dark.instances.indexOf(d), 1);
@@ -1202,8 +1213,6 @@ var Dark = function(dummy = false) {
 
     // Start draw & do setup
     d.begin = function() {
-        d.loaded = true;
-
         // Setup before draw loop
         d.setup();
 
@@ -1239,6 +1248,8 @@ var Dark = function(dummy = false) {
         d.pmouse = d.objects.DVector.zero2D();
         d.settings.cursor = "auto";
         d.settings.looping = true;
+
+        if(Dark.khan) Dark.imageLocationsKA.forEach(loc => d.getImage(loc));
 
         window.addEventListener("load", () => {
             Dark.globallyUpdateVariables(d);
@@ -1437,6 +1448,183 @@ Dark.cursors = [
     "zoom-out"
 ];
 
+// All KA getImage urls
+Dark.imageLocationsKA = [
+    "avatars/aqualine-sapling",
+    "avatars/aqualine-seed",
+    "avatars/aqualine-seedling",
+    "avatars/aqualine-tree",
+    "avatars/aqualine-ultimate",
+    "avatars/avatar-team",
+    "avatars/duskpin-sapling",
+    "avatars/duskpin-seed",
+    "avatars/duskpin-seedling",
+    "avatars/duskpin-tree",
+    "avatars/duskpin-ultimate",
+    "avatars/leaf-blue",
+    "avatars/leaf-green",
+    "avatars/leaf-grey",
+    "avatars/leaf-orange",
+    "avatars/leaf-red",
+    "avatars/leaf-yellow",
+    "avatars/leafers-sapling",
+    "avatars/leafers-seed",
+    "avatars/leafers-seedling",
+    "avatars/leafers-tree",
+    "avatars/leafers-ultimate",
+    "avatars/marcimus",
+    "avatars/marcimus-orange",
+    "avatars/marcimus-purple",
+    "avatars/marcimus-red",
+    "avatars/mr-pants",
+    "avatars/mr-pants-green",
+    "avatars/mr-pants-orange",
+    "avatars/mr-pants-pink",
+    "avatars/mr-pants-purple",
+    "avatars/mr-pants-with-hat",
+    "avatars/mr-pink",
+    "avatars/mr-pink-green",
+    "avatars/mr-pink-orange",
+    "avatars/old-spice-man",
+    "avatars/old-spice-man-blue",
+    "avatars/orange-juice-squid",
+    "avatars/piceratops-sapling",
+    "avatars/piceratops-seed",
+    "avatars/piceratops-seedling",
+    "avatars/piceratops-tree",
+    "avatars/piceratops-ultimate",
+    "avatars/primosaur-sapling",
+    "avatars/primosaur-seed",
+    "avatars/primosaur-seedling",
+    "avatars/primosaur-tree",
+    "avatars/primosaur-ultimate",
+    "avatars/purple-pi",
+    "avatars/purple-pi-pink",
+    "avatars/purple-pi-teal",
+    "avatars/questionmark",
+    "avatars/robot_female_1",
+    "avatars/robot_female_2",
+    "avatars/robot_female_3",
+    "avatars/robot_male_1",
+    "avatars/robot_male_2",
+    "avatars/robot_male_3",
+    "avatars/spunky-sam",
+    "avatars/spunky-sam",
+    "avatars/spunky-sam-orange",
+    "avatars/spunky-sam-red",
+    "avatars/starky-sapling",
+    "avatars/starky-seed",
+    "avatars/starky-seedling",
+    "avatars/starky-tree",
+    "avatars/starky-ultimate",
+    "creatures/Hopper-Happy",
+    "creatures/Hopper-Cool",
+    "creatures/Hopper-Jumping",
+    "creatures/OhNoes",
+    "creatures/OhNoes-Happy",
+    "creatures/OhNoes-Happy",
+    "creatures/BabyWinston",
+    "creatures/Winston",
+    "cute/Blank",
+    "cute/BrownBlock",
+    "cute/CharacterBoy",
+    "cute/CharacterCatGirl",
+    "cute/CharacterHornGirl",
+    "cute/CharacterPinkGirl",
+    "cute/CharacterPinkGirl",
+    "cute/ChestClosed",
+    "cute/ChestLid",
+    "cute/ChestOpen",
+    "cute/DirtBlock",
+    "cute/DoorTallClosed",
+    "cute/DoorTallOpen",
+    "cute/EnemyBug",
+    "cute/GemBlue",
+    "cute/GemGreen",
+    "cute/GemOrange",
+    "cute/GrassBlock",
+    "cute/Heart",
+    "cute/Key",
+    "cute/PlainBlock",
+    "cute/RampEast",
+    "cute/RampNorth",
+    "cute/RampSouth",
+    "cute/RampWest",
+    "cute/Rock",
+    "cute/RoofEast",
+    "cute/RoofNorth",
+    "cute/RoofNorthEast",
+    "cute/RoofNorthWest",
+    "cute/RoofSouth",
+    "cute/RoofSouthEast",
+    "cute/RoofSouthWest",
+    "cute/RoofWest",
+    "cute/Selector",
+    "cute/ShadowEast",
+    "cute/ShadowNorth",
+    "cute/ShadowNorthEast",
+    "cute/ShadowNorthWest",
+    "cute/ShadowSideWest",
+    "cute/ShadowSouth",
+    "cute/ShadowSouthEast",
+    "cute/ShadowSouthWest",
+    "cute/ShadowWest",
+    "cute/Star",
+    "cute/StoneBlock",
+    "cute/StoneBlockTall",
+    "cute/TreeShort",
+    "cute/TreeTall",
+    "cute/TreeUgly",
+    "cute/WallBlock",
+    "cute/WallBlockTall",
+    "cute/WaterBlock",
+    "cute/WindowTall",
+    "cute/WoodBlock",
+    "space/background",
+    "space/beetleship",
+    "space/collisioncircle",
+    "space/girl1",
+    "space/girl2",
+    "space/girl3",
+    "space/girl4",
+    "space/girl5",
+    "space/healthheart",
+    "space/minus",
+    "space/octopus",
+    "space/planet",
+    "space/plus",
+    "space/rocketship",
+    "space/star",
+    "space/0",
+    "space/1",
+    "space/2",
+    "space/3",
+    "space/4",
+    "space/5",
+    "space/6",
+    "space/7",
+    "space/8",
+    "space/9",
+    "animals/birds_rainbow-lorakeets",
+    "animals/butterfly",
+    "animals/butterfly_monarch",
+    "animals/cat",
+    "animals/cheetah",
+    "animals/crocodiles",
+    "animals/dog_sleeping-puppy",
+    "animals/dogs_collies",
+    "animals/fox",
+    "animals/horse",
+    "animals/kangaroos",
+    "animals/komodo-dragon",
+    "animals/penguins",
+    "animals/rabbit",
+    "animals/retriever",
+    "animals/shark",
+    "animals/snake_green-tree-boa",
+    "animals/spider"
+];
+
 // Variables to be private
 Dark.ignoreGlobal = [
     "info",
@@ -1502,6 +1690,9 @@ Dark.defaultContextSettings = {
 
 // The current url
 Dark.url = new URL(location.href);
+
+// If on Khan Academy
+Dark.khan = Dark.url.host == "www.kasandbox.org";
 
 // Debugging, very handy function
 Dark.copy = function(e) {
@@ -1600,10 +1791,10 @@ Dark.compileListKA = [];
 
 // https://stackoverflow.com/questions/36921947/read-a-server-side-file-using-javascript
 Dark.loadFile = function(loc) {
-    if(Dark.url.host == "www.kasandbox.org") {
+    if(Dark.khan) {
         return Dark.fileCacheKA[loc];
     } else {
-        if(Dark.url.host != "127.0.0.1:4444") loc = "https://cdn.jsdelivr.net/gh/99TheDark/Dark.js@latest" + loc;
+        if(Dark.url.host != "127.0.0.1:4444") loc = "https://cdn.jsdelivr.net/gh/99TheDark/Dark.js@latest" + loc; // to change
         let result = null;
         let xhr = new XMLHttpRequest();
         xhr.open("GET", loc, false);
@@ -2324,7 +2515,7 @@ Dark.objects = (function() {
             f.gl.bindTexture(f.gl.TEXTURE_2D, f.texture);
             f.gl.activeTexture(f.gl.TEXTURE0);
 
-            // f.gl.clear(f.gl.COLOR_BUFFER_BIT | f.gl.DEPTH_BUFFER_BIT);
+            f.gl.clear(f.gl.COLOR_BUFFER_BIT | f.gl.DEPTH_BUFFER_BIT);
 
             f.gl.drawArrays(
                 f.gl.TRIANGLES, // type
@@ -2336,7 +2527,9 @@ Dark.objects = (function() {
             f.gl.readPixels(0, 0, this.width, this.height, f.gl.RGBA, f.gl.UNSIGNED_BYTE, buffer);
 
             this.imageData.data.set(buffer);
-            this.canvas = f.gl_canvas;
+            this.ctx.putImageData(this.imageData, 0, 0);
+
+            if(Dark.khan) this.image = undefined;
         } else {
             return Dark.error(new Error("Invalid filter type"));
         }
@@ -2727,7 +2920,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
 
 // Current version
-Dark.version = "0.6.5";
+Dark.version = "0.6.6";
 
 // Freeze objects
 Object.freeze(Dark);
