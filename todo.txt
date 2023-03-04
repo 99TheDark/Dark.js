@@ -21,8 +21,8 @@ To add:
 • Swap filter uv to a uniform
 • How to import section in README
 • Scissor/crop large images
-• Block from running Dark();
-• Load all getImages for KA on run if in right url
+• Finish all KA image urls
+• Load new image element if not KA because of speed
 
 Possibly to add:
 • DShape
@@ -42,5 +42,5 @@ Possibly to add:
 • ImageBitmapRenderingContext and ImageBitmap to DImage for speed
 
 Bugs:
-• Key typed not working
 • dt is broken again
+• new Dark() breaks everything, only one non dummy instance will work
