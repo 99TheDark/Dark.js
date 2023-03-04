@@ -498,6 +498,7 @@ var Dark = function(dummy = false) {
         },
 
         // Transformations
+
         pushMatrix: function() {
             if(d.transforms.length > d.maxTransforms) {
                 Dark.error(new Error("Maximum matrix stack size reached, pushMatrix() called " + d.maxTransforms + " times."));
@@ -961,25 +962,27 @@ var Dark = function(dummy = false) {
 
         image: function(img, x, y, width, height) {
             d.ctx.save();
-            if(d.settings.imageMode == k.CENTER) d.ctx.translate(-d.width / 2, -d.height / 2);
             if(img instanceof ImageData) img = new DImage(img);
+            let w, h;
             switch(arguments.length) {
                 default:
-                    Dark.error(new Error("image requires 1, 3, 4 or 5 parameters, not " + arguments.length));
-                    break;
+                    d.ctx.restore();
+                    return Dark.error(new Error("image requires 1, 3, 4 or 5 parameters, not " + arguments.length));
                 case 1:
-                    d.ctx.drawImage(img.image ?? img.canvas, 0, 0, d.width, d.height);
+                    [w, h] = [d.width, d.height];
                     break;
                 case 3:
-                    d.ctx.drawImage(img.image ?? img.canvas, x, y);
+                    [w, h] = [img.width, img.height];
                     break;
                 case 4:
-                    d.ctx.drawImage(img.image ?? img.canvas, x, y, width, width / img.width * img.height);
+                    [w, h] = [width, width / img.width * img.height];
                     break;
                 case 5:
-                    d.ctx.drawImage(img.image ?? img.canvas, x, y, width, height);
+                    [w, h] = [width, height];
                     break;
             }
+            if(d.settings.imageMode == k.CENTER) d.ctx.translate(- w / 2, - h / 2);
+            d.ctx.drawImage(img.image ?? img.canvas, x, y, w, h);
             d.ctx.restore();
         },
 
@@ -1311,7 +1314,8 @@ Dark.constants = {
     WHITE: 47,
     MEDIAN: 48, // unused
     BOX: 49,
-    TRANSPARENCY: 50
+    TRANSPARENCY: 50,
+    PIXELATE: 51
 };
 
 Dark.filters = [
@@ -1326,7 +1330,8 @@ Dark.filters = [
     Dark.constants.BLACK,
     Dark.constants.WHITE,
     Dark.constants.BOX,
-    Dark.constants.TRANSPARENCY
+    Dark.constants.TRANSPARENCY,
+    Dark.constants.PIXELATE
 ];
 
 // Special keys map
@@ -2463,6 +2468,14 @@ Dark.objects = (function() {
                 max: 1,
                 default: 0
             }
+        }, {
+            key: Dark.constants.PIXELATE,
+            shader: "pixelate",
+            param: {
+                min: 1,
+                max: 5000,
+                default: 1
+            }
         }
     ]);
 
@@ -2699,7 +2712,7 @@ Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
 
 // Current version
-Dark.version = "0.6.3.1";
+Dark.version = "0.6.4";
 
 // Freeze objects
 Object.freeze(Dark);
