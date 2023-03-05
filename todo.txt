@@ -7,8 +7,8 @@ To add:
 • Errors for 2 beginShapes in a row
 • Easier key use (keys.value)
 • Allow negatives for arcs
-• Convert canvas matrix to and from DMatrix
 • Apply matrix transformations to DVectors (DOMMatrix)
+• To and from DOMPoint on DVector
 • Image masking
 • DImage.crop
 • preventDefault(listener) and allowDefault(listener)
@@ -21,8 +21,9 @@ To add:
 • Swap filter uv to a uniform
 • How to import section in README
 • Scissor/crop large images
-• Finish all KA image urls
 • Load new image element if not KA because of speed
+• Text width and height
+• Multiplying DMatrix by DVector
 
 Possibly to add:
 • DShape
