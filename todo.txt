@@ -5,7 +5,6 @@ To add:
 • Noise (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
 • DImage.noise(), use WebGL to fill the imageWidth. Might even create 4 with the RGBA
 • Errors for 2 beginShapes in a row
-• Easier key use (keys.value)
 • Apply matrix transformations to DVectors (DOMMatrix)
 • To and from DOMPoint on DVector
 • Image masking
