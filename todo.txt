@@ -22,7 +22,6 @@ To add:
 • Scissor/crop large images
 • Text width and height
 • Multiplying DMatrix by DVector
-• Use JSDelivr for backup instead of Dark.js github
 
 Possibly to add:
 • DShape
