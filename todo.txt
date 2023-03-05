@@ -15,7 +15,6 @@ To add:
 • pushStyle and popStyle
 • Make DVector rotations work in 3D
 • Get the frameRate to be more constant
-• Update DImage.copy to work with all the new stuff
 • Improve copy function
 • Make everything readonly using Object.defineProperty, then only run globallyUpdateVariables on main switch and such
 • Swap filter uv to a uniform
@@ -24,6 +23,7 @@ To add:
 • Load new image element if not KA because of speed
 • Text width and height
 • Multiplying DMatrix by DVector
+• Use JSDelivr for backup instead of Dark.js github
 
 Possibly to add:
 • DShape
