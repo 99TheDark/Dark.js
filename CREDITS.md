@@ -7,7 +7,7 @@
 
 ## [ski.js](https://github.com/thelegendski/ski.js/):
 - Snippets of vertex system
-- keyTyped
+- keyTyped help
 
 ## [Soulwire](http://jsfiddle.net/user/soulwire/fiddles/):
 - Catmull-Rom spline to Cubic Bézier
