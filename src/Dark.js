@@ -16,6 +16,13 @@ var Dark = function(dummy = false) {
 
     Dark.instances.push(d);
 
+    let keys = {};
+
+    d.keys = new Proxy(keys, {
+        get: (target, prop) => target[prop] ?? false,
+        set: () => {}
+    });
+
     d.info = {
         id: Math.floor(Math.random() * 1000000),
         initializationTime: performance.now(),
@@ -98,7 +105,7 @@ var Dark = function(dummy = false) {
         d.textFont("12px Arial");
         d.textLeading(5);
     };
-    
+
     var loadStyle = function(context) {
         for(const key in d.ctx) {
             const value = context[key];
@@ -113,15 +120,17 @@ var Dark = function(dummy = false) {
         document.addEventListener("keydown", function(e) {
             e.preventDefault();
             d.keyIsPressed = true;
-            d.key = e.key;
+            d.key = Dark.special[e.keyCode] ?? e.key;
             d.keyCode = e.keyCode;
-            Dark.globallyUpdateVariables(d);
             if(/\w/.test(String.fromCharCode(e.keyCode))) d.keyTyped();
+            keys[d.key] = true;
+            Dark.globallyUpdateVariables(d);
             d.keyPressed();
         });
 
         document.addEventListener("keyup", function(e) {
             e.preventDefault();
+            keys[d.key] = false;
             d.keyIsPressed = false;
             d.key = undefined;
             d.keyCode = undefined;
@@ -671,8 +680,9 @@ var Dark = function(dummy = false) {
             d.ctx.beginPath();
             d.ctx.moveTo(x, y);
             d.ctx.ellipse(x, y, width / 2, height / 2, 0, angle(start), angle(stop), false);
-            d.ctx.closePath();
             d.ctx.fill();
+            d.ctx.beginPath();
+            d.ctx.ellipse(x, y, width / 2, height / 2, 0, angle(start), angle(stop), false);
             d.ctx.stroke();
             d.ctx.restore();
         },
@@ -1259,9 +1269,8 @@ var Dark = function(dummy = false) {
             d.frameCount = ++d.frameCount;
         }
 
-        if(d.isMain) {
-            Dark.globallyUpdateVariables(d);
-        }
+        Dark.globallyUpdateVariables(d);
+
 
         requestAnimationFrame(d.raf);
     };
@@ -1308,7 +1317,7 @@ var Dark = function(dummy = false) {
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.6.8";
+Dark.version = "pre-0.6.9";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1411,12 +1420,15 @@ Dark.filters = [
 // Special keys map
 Dark.special = {
     16: "shift",
-    10: "enter",
+    13: "enter",
     8: "delete",
+    9: "tab",
+    27: "escape",
     32: "space",
     18: "option",
     17: "control",
-    157: "command",
+    91: "left_meta",
+    93: "right_meta",
     38: "up",
     40: "down",
     37: "left",
@@ -1437,6 +1449,7 @@ Dark.special = {
     190: "period",
     188: "comma",
     191: "slash",
+    192: "backtick",
     220: "backslash",
     48: "zero",
     49: "one",
@@ -1949,6 +1962,8 @@ Dark.compileKA = function() {
 
 // Update variables to window for main instance
 Dark.globallyUpdateVariables = function(m) {
+    if(!m.isMain) return; // If it isn't the main instance 
+
     // Update empties so they can be defined
     Dark.empties.forEach(function(key) {
         if(window[key]) m[key] = window[key];
@@ -1959,7 +1974,7 @@ Dark.globallyUpdateVariables = function(m) {
         if(Dark.ignoreGlobal.includes(mainKey)) continue;
         if(Dark.empties.includes(mainKey)) continue;
         // Else set
-        if(typeof m[mainKey] == "object" && !m[mainKey].darkObject) {
+        if(typeof m[mainKey] == "object" && !m[mainKey].darkObject && mainKey != "keys") {
             for(const key in m[mainKey]) {
                 window[key] = m[mainKey][key];
             }
