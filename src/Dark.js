@@ -25,6 +25,7 @@ var Dark = function(dummy = false) {
     d.settings = {};
     d.transforms = [];
     d.saves = [];
+    d.styles = [];
     d.vertices = [];
     d.vertexCache = [];
     d.imageCache = {};
@@ -66,11 +67,11 @@ var Dark = function(dummy = false) {
     };
 
     var angle = function(angle) {
-        return (d.settings.angleMode == k.DEGREES) ? angle * k.PI / 180 : angle;
+        return d.snap((d.settings.angleMode == k.DEGREES) ? angle * k.PI / 180 : angle, 0, k.TAU);
     };
 
     var angleBack = function(angle) {
-        return (d.settings.angleMode == k.DEGREES) ? angle * 180 / k.PI : angle;
+        return d.snap((d.settings.angleMode == k.DEGREES) ? angle * 180 / k.PI : angle, 0, 360);
     };
 
     var rounda = val => Math.abs(Math.round(val));
@@ -78,6 +79,33 @@ var Dark = function(dummy = false) {
     var cacheVert = function(vert) {
         d.vertices.push(vert);
         vert.points.forEach(v => d.vertexCache.push(d.objects.DVector.create(v.x, v.y)));
+    };
+
+    var loadDefault = function() {
+        d.frameRate(60);
+        d.smooth();
+        d.ellipseMode(k.CENTER);
+        d.rectMode(k.CORNER);
+        d.imageMode(k.CORNER);
+        d.angleMode(k.DEGREES);
+        d.strokeCap(k.ROUND);
+        d.strokeJoin(k.MITER);
+        d.textAlign(k.LEFT, k.BASELINE);
+        d.curveTightness(2);
+        d.fill(255);
+        d.stroke(0);
+        d.strokeWeight(1);
+        d.textFont("12px Arial");
+        d.textLeading(5);
+    };
+    
+    var loadStyle = function(context) {
+        for(const key in d.ctx) {
+            const value = context[key];
+            if(key != "canvas" && typeof value != "function") {
+                d.ctx[key] = value;
+            }
+        }
     };
 
     var loadEvents = function() {
@@ -203,13 +231,9 @@ var Dark = function(dummy = false) {
 
                 [d.width, d.height] = [d.canvas.width, d.canvas.height] = [w, h];
 
-                let ignore = [ // TODO: Move somewhere else
-                    "canvas", "width", "height"
-                ];
-
                 for(const key in d.ctx) {
                     const value = old[key];
-                    if(typeof value !== "function" && !ignore.includes(key)) {
+                    if(typeof value !== "function" && !Dark.styleIgnore.includes(key)) {
                         d.ctx[key] = value;
                     }
                 }
@@ -226,12 +250,7 @@ var Dark = function(dummy = false) {
                 let old = d.copy(d.ctx);
                 d.ctx = canvas.getContext("2d", Dark.defaultContextSettings);
 
-                for(const key in d.ctx) {
-                    const value = old[key];
-                    if(key !== "canvas" && typeof value !== "function") {
-                        d.ctx[key] = value;
-                    }
-                }
+                loadStyle(old);
 
                 d.canvas.style.cursor = d.settings.cursor;
                 d.canvas.tabIndex = "1";
@@ -513,8 +532,8 @@ var Dark = function(dummy = false) {
 
         // Transformations
         pushMatrix: function() {
-            if(d.transforms.length > d.maxTransforms) {
-                Dark.error(new Error("Maximum matrix stack size reached, pushMatrix() called " + d.maxTransforms + " times."));
+            if(d.transforms.length > d.maxStackSize) {
+                Dark.error(new Error("Maximum matrix stack size reached, pushMatrix() called " + d.maxStackSize + " times."));
             } else {
                 d.transforms.push(d.ctx.getTransform());
             }
@@ -534,11 +553,31 @@ var Dark = function(dummy = false) {
             d.ctx.resetTransform();
         },
 
-        // pushStyle & popStyle will go here eventually
+        pushStyle: function() {
+            if(d.styles.length > d.maxStackSize) {
+                Dark.error(new Error("Maximum style stack size reached, pushStyle() called " + d.maxStackSize + " times."));
+            } else {
+                d.styles.push(d.copy(d.ctx));
+            }
+        },
+
+        popStyle: function() {
+            let style = d.styles.pop();
+            if(!style) {
+                Dark.error(new Error("No more styles to restore in popStyle()"));
+            } else {
+                loadStyle(style);
+            }
+        },
+
+        resetStyle: function() {
+            d.styles.length = 0;
+            loadDefault();
+        },
 
         push: function() {
-            if(d.transforms.length > d.maxTransforms) {
-                Dark.error(new Error("Maximum matrix stack size reached, push() called " + d.maxTransforms + " times."));
+            if(d.transforms.length > d.maxStackSize) {
+                Dark.error(new Error("Maximum stack size reached, push() called " + d.maxStackSize + " times."));
             } else {
                 d.ctx.save();
                 d.saves.push(Object.assign({}, d.settings));
@@ -587,6 +626,7 @@ var Dark = function(dummy = false) {
         // Shapes
         rect: function(x, y, width, height, r1, r2, r3, r4) {
             if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), rounda(width), rounda(height)];
+
             d.ctx.beginPath();
             d.ctx.save();
             if(d.settings.rectMode == k.CENTER) d.ctx.translate(- width / 2, - height / 2);
@@ -612,6 +652,7 @@ var Dark = function(dummy = false) {
 
         ellipse: function(x, y, width, height) {
             if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), rounda(width), rounda(height)];
+
             d.ctx.beginPath();
             d.ctx.save();
             if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(width / 2, height / 2);
@@ -624,10 +665,13 @@ var Dark = function(dummy = false) {
 
         arc: function(x, y, width, height, start, stop) {
             if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), rounda(width), rounda(height)];
+
             d.ctx.save();
             if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(width / 2, height / 2);
             d.ctx.beginPath();
+            d.ctx.moveTo(x, y);
             d.ctx.ellipse(x, y, width / 2, height / 2, 0, angle(start), angle(stop), false);
+            d.ctx.closePath();
             d.ctx.fill();
             d.ctx.stroke();
             d.ctx.restore();
@@ -635,6 +679,7 @@ var Dark = function(dummy = false) {
 
         line: function(x1, y1, x2, y2) {
             if(!d.settings.smoothing) [x1, y1, x2, y2] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2)];
+
             d.ctx.beginPath();
             d.ctx.moveTo(x1, y1);
             d.ctx.lineTo(x2, y2);
@@ -643,6 +688,7 @@ var Dark = function(dummy = false) {
 
         point: function(x, y) {
             if(!d.settings.smoothing) x = d.round(x), y = d.round(y);
+
             d.ctx.save();
             d.ctx.beginPath();
             d.ctx.fillStyle = colorString(d.settings.stroke);
@@ -653,6 +699,7 @@ var Dark = function(dummy = false) {
 
         circle: function(x, y, radius) {
             if(!d.settings.smoothing) [x, y, radius] = [d.round(x), d.round(y), rounda(radius)];
+
             d.ctx.save();
             if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(radius, radius);
             d.ctx.beginPath();
@@ -669,6 +716,7 @@ var Dark = function(dummy = false) {
 
         triangle: function(x1, y1, x2, y2, x3, y3) {
             if(!d.settings.smoothing) [x1, y1, x2, y2, x3, y3] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3)];
+
             d.ctx.beginPath();
             d.ctx.moveTo(x1, y1);
             d.ctx.lineTo(x2, y2);
@@ -680,6 +728,7 @@ var Dark = function(dummy = false) {
 
         quad: function(x1, y1, x2, y2, x3, y3, x4, y4) {
             if(!d.settings.smoothing) [x1, y1, x2, y2, x3, y3, x4, y4] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3), d.round(x4), d.round(y4)];
+
             d.ctx.beginPath();
             d.ctx.moveTo(x1, y1);
             d.ctx.lineTo(x2, y2);
@@ -756,6 +805,7 @@ var Dark = function(dummy = false) {
         // Kinda copied from ski, though slightly different (curveVertex)
         vertex: function(x, y) {
             if(!d.settings.smoothing) [x, y] = [d.round(x), d.round(y)];
+
             let vert = {
                 type: k.VERTEX,
                 points: [
@@ -771,6 +821,7 @@ var Dark = function(dummy = false) {
 
         curveVertex: function(cx, cy) {
             if(!d.settings.smoothing) [x, y] = [d.round(cx), d.round(cy)];
+
             let vert = {
                 type: k.CURVE,
                 points: [
@@ -786,6 +837,7 @@ var Dark = function(dummy = false) {
 
         bezierVertex: function(x1, y1, x2, y2, x3, y3) {
             if(!d.settings.smoothing) [x1, y1, x2, y2, x3, y3] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3)];
+
             let vert = {
                 type: k.BEZIER,
                 points: [
@@ -851,6 +903,7 @@ var Dark = function(dummy = false) {
         // Text
         textSize: function(size) {
             if(!d.settings.smoothing) size = d.round(size);
+
             d.settings.textSize = size;
             d.settings.font.size = size;
             d.reloadFont();
@@ -950,6 +1003,7 @@ var Dark = function(dummy = false) {
 
         text: function(text, x, y) {
             if(!d.settings.smoothing) [x, y] = [d.round(x), d.round(y)];
+
             let lines = text.split("\n");
             let off = (d.settings.alignY == k.CENTER) ? (d.settings.textHeight + d.settings.lineGap) * lines.length / 2 : 0;
             lines.forEach((line, index) => {
@@ -1011,9 +1065,6 @@ var Dark = function(dummy = false) {
         },
 
         loadImage: function(url) {
-            // TODO: delete
-            if(d.began) return Dark.error(new Error("loadImage cannot be run after the setup and draw function have begun"));
-
             let result = new DImage(1, 1, d);
             if(Object.keys(d.imageCache).includes(url) && d.began) return d.imageCache[url];
             d.imageCache[url] = null;
@@ -1172,7 +1223,9 @@ var Dark = function(dummy = false) {
         acoth: ang => Math.atanh(1 / angle(ang)),
         now: () => performance.now(),
         reciprocal: num => 1 / num,
-        trim: str => str.trim()
+        trim: str => str.trim(),
+        mod: (a, b) => ((a % b) + b) % b,
+        snap: (val, min, max) => (val - min) % (max - min) + min
 
     });
 
@@ -1227,21 +1280,7 @@ var Dark = function(dummy = false) {
     };
 
     // Set defaults
-    d.frameRate(60);
-    d.smooth();
-    d.ellipseMode(k.CENTER);
-    d.rectMode(k.CORNER);
-    d.imageMode(k.CORNER);
-    d.angleMode(k.DEGREES);
-    d.strokeCap(k.ROUND);
-    d.strokeJoin(k.MITER);
-    d.textAlign(k.LEFT, k.BASELINE);
-    d.curveTightness(2);
-    d.fill(255);
-    d.stroke(0);
-    d.strokeWeight(1);
-    d.textFont("12px Arial");
-    d.textLeading(5);
+    loadDefault();
 
     d.defaultSettings = Object.assign({}, d.settings);
 
@@ -1269,7 +1308,7 @@ var Dark = function(dummy = false) {
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.6.7.4";
+Dark.version = "pre-0.6.8";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1700,14 +1739,16 @@ Dark.imageLocationsKA = [
 
 // Variables to be private
 Dark.ignoreGlobal = [
+    "darkObject",
     "info",
     "empties",
     "raf",
     "begin",
     "vertices",
     "transforms",
-    "vertexCache",
+    "styles",
     "saves",
+    "vertexCache",
     "imageCache",
     "cachedImageCount",
     "successfullyCachedImageCount",
@@ -1722,7 +1763,15 @@ Dark.ignoreGlobal = [
     "randomGenerator"
 ];
 
-Dark.variables = {
+// For loading and saving styles
+Dark.styleIgnore = [
+    "canvas",
+    "width",
+    "height"
+];
+
+// All variables
+Dark.variables = { // TODO: Change to array and load
     width: innerWidth,
     height: innerHeight,
     dt: 0,
@@ -1757,7 +1806,7 @@ Dark.darkObject = true;
 // Constants, but not quite (can be edited)
 Dark.changeable.errorCount = 0; // Since object values inside frozen object can be edited
 Dark.maxErrorCount = 50;
-Dark.maxTransforms = 1000;
+Dark.maxStackSize = 500;
 
 Dark.defaultContextSettings = {
     willReadFrequently: true
