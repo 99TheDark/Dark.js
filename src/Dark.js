@@ -1269,7 +1269,7 @@ var Dark = function(dummy = false) {
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.6.7.3";
+Dark.version = "pre-0.6.7.4";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1872,7 +1872,7 @@ Dark.loadFile = function(loc) {
     if(Dark.khan) {
         return Dark.fileCacheKA[loc];
     } else {
-        if(!Dark.editor) loc = "https://github.com/99TheDark/Dark.js/tree/" + Dark.version + "/filters/" + loc;
+        if(!Dark.editor) loc = "https://cdn.jsdelivr.net/gh/99TheDark/Dark.js@" + Dark.version + "/filters/" + loc;
         let result = null;
         let xhr = new XMLHttpRequest();
         xhr.open("GET", loc, false);
@@ -2500,7 +2500,7 @@ Dark.objects = (function() {
         return img.copy();
     };
     DImage.prototype.copy = function() {
-        return new DImage(this.imageData, this.source);
+        return new DImage(new ImageData(new Uint8ClampedArray(this.imageData.data), this.width, this.height), this.source);
     };
     DImage.resize = function(img, width, height) {
         img.resize(width, height);
