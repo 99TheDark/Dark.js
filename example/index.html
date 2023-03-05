@@ -17,16 +17,20 @@
         setCanvas(document.getElementById("canvas"));
 
         size(1000, 600);
+
+        noSmooth();
         
         let img = loadImage("https://images.pexels.com/photos/206359/pexels-photo-206359.jpeg?cs=srgb&dl=pexels-pixabay-206359.jpg&fm=jpg");
 
         frameRate(Infinity);
 
-        // Demo code
+        setup = function() {
+            img.filter(POSTERIZE, 8);
+            img.filter(VIGNETTE);
+        };
+
         draw = function() {
             image(img, 0, 0, width);
-            filter(POSTERIZE, 8);
-            filter(VIGNETTE);
 
             strokeWeight(2);
             stroke(0);
