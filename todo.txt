@@ -20,7 +20,6 @@ To add:
 • Swap filter uv to a uniform
 • How to import section in README
 • Scissor/crop large images
-• Load new image element if not KA because of speed
 • Text width and height
 • Multiplying DMatrix by DVector
 • Use JSDelivr for backup instead of Dark.js github
