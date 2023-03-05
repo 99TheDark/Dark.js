@@ -1265,7 +1265,7 @@ var Dark = function(dummy = false) {
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.6.7";
+Dark.version = "pre-0.6.7.1";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1633,7 +1633,7 @@ Dark.imageLocationsKA = [
     "landscapes/beach-sunset",
     "landscapes/beach-waves-at-sunset",
     "landscapes/beach-waves-daytime",
-    "landscapes/beach-with-palm-tree",
+    "landscapes/beach-with-palm-trees",
     "landscapes/beach",
     "landscapes/clouds-from-plane",
     "landscapes/crop-circle",
@@ -1642,12 +1642,12 @@ Dark.imageLocationsKA = [
     "landscapes/lake",
     "landscapes/lava",
     "landscapes/lotus-garden",
-    "landscapes/mountain-matterhorn",
+    "landscapes/mountain_matterhorn",
     "landscapes/mountains-and-lake",
     "landscapes/mountains-in-hawaii",
     "landscapes/mountains-sunset",
     "landscapes/sand-dunes",
-    "landscapes/landscapes/waterfall_niagara-falls",
+    "landscapes/waterfall_niagara-falls",
     "food/bananas",
     "food/berries",
     "food/broccoli",
@@ -2469,7 +2469,7 @@ Dark.objects = (function() {
         return img.get.apply(null, args);
     };
     DImage.prototype.get = function(...args) {
-        if(args.length == 0) {
+        if(args.length == 0) { // TODO: Change to switch-case-break
             return this.copy();
         } else if(args.length == 4) {
             return new DImage(
@@ -2494,10 +2494,7 @@ Dark.objects = (function() {
         return img.copy();
     };
     DImage.prototype.copy = function() {
-        return new DImage(
-            this.imageData,
-            this.source
-        );
+        return new DImage(this.imageData, this.source);
     };
     DImage.resize = function(img, width, height) {
         img.resize(width, height);
