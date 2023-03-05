@@ -30,6 +30,7 @@ var Dark = function(dummy = false) {
     d.imageCache = {};
     d.cachedImageCount = 0;
     d.loaded = false;
+    d.began = false;
     d.objects = Dark.objects;
 
     // copy over
@@ -510,7 +511,6 @@ var Dark = function(dummy = false) {
         },
 
         // Transformations
-
         pushMatrix: function() {
             if(d.transforms.length > d.maxTransforms) {
                 Dark.error(new Error("Maximum matrix stack size reached, pushMatrix() called " + d.maxTransforms + " times."));
@@ -709,7 +709,7 @@ var Dark = function(dummy = false) {
                             d.ctx.lineTo(pt.x, pt.y);
                             break;
                         case k.CURVE:
-                            // maybe update only on curveTightness for speed
+                            // TODO: update only on curveTightness for speed
                             let t = (d.settings.curveTightness - 1) / 6;
 
                             let p0 = d.vertexCache[index - 3];
@@ -727,7 +727,6 @@ var Dark = function(dummy = false) {
                                 if(index == 3) d.ctx.lineTo(p1.x, p1.y);
 
                                 // See http://jsfiddle.net/soulwire/FsEVR/
-
                                 d.ctx.bezierCurveTo(
                                     p2.x * t + p1.x - p0.x * t,
                                     p2.y * t + p1.y - p0.y * t,
@@ -1011,10 +1010,11 @@ var Dark = function(dummy = false) {
         },
 
         loadImage: function(url) {
-            if(d.loaded) return Dark.error(new Error("loadImage cannot be run after the setup and draw function have begun"));
+            // DELETE
+            if(d.began) return Dark.error(new Error("loadImage cannot be run after the setup and draw function have begun"));
 
             let result = new DImage(1, 1, d);
-            if(Object.keys(d.imageCache).includes(url)) return d.imageCache[url];
+            if(Object.keys(d.imageCache).includes(url) && d.began) return d.imageCache[url];
             d.imageCache[url] = null;
 
             if(Dark.khan) {
@@ -1065,10 +1065,9 @@ var Dark = function(dummy = false) {
         getImage: function(loc) {
             if(Dark.khan) {
                 let url = "https://cdn.kastatic.org/third_party/javascript-khansrc/live-editor/build/images/" + loc + ".png";
-                if(Object.keys(d.imageCache).includes(url)) return d.imageCache[url];
+                if(Object.keys(d.imageCache).includes(url) && d.began) return d.imageCache[url];
 
                 let img = new d.objects.DImage(1, 1, d);
-                if(Object.keys(d.imageCache).includes(url)) return;
                 d.imageCache[url] = null;
                 img.image = new Image();
                 img.image.src = url;
@@ -1175,8 +1174,6 @@ var Dark = function(dummy = false) {
 
     // Draw function (raf = request animation frame)
     d.raf = function(time) {
-        d.loaded = true;
-
         if(Dark.startTime > d.info.initializationTime) {
             Dark.warn("Deleting old Dark.js instance.");
             Dark.instances.splice(Dark.instances.indexOf(d), 1);
@@ -1214,11 +1211,15 @@ var Dark = function(dummy = false) {
 
     // Start draw & do setup
     d.begin = function() {
-        // Setup before draw loop
-        d.setup();
+        if(d.loaded) {
+            d.began = true;
 
-        // Start draw function
-        requestAnimationFrame(d.raf);
+            // Setup before draw loop
+            d.setup();
+
+            // Start draw function
+            requestAnimationFrame(d.raf);
+        }
     };
 
     // Set defaults
@@ -1253,15 +1254,18 @@ var Dark = function(dummy = false) {
         if(Dark.khan) Dark.imageLocationsKA.forEach(loc => d.getImage(loc));
 
         window.addEventListener("load", () => {
+            d.loaded = true;
             Dark.globallyUpdateVariables(d);
-
-            if(Object.keys(d.imageCache).length == 0) d.begin();
+            if(!d.began) d.begin();
         });
     }
 };
 
 // List of all instances
 Dark.instances = [];
+
+// Current version
+Dark.version = "pre-0.6.7";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1623,7 +1627,71 @@ Dark.imageLocationsKA = [
     "animals/retriever",
     "animals/shark",
     "animals/snake_green-tree-boa",
-    "animals/spider"
+    "animals/spider",
+    "landscapes/beach-at-dusk",
+    "landscapes/beach-in-hawaii",
+    "landscapes/beach-sunset",
+    "landscapes/beach-waves-at-sunset",
+    "landscapes/beach-waves-daytime",
+    "landscapes/beach-with-palm-tree",
+    "landscapes/beach",
+    "landscapes/clouds-from-plane",
+    "landscapes/crop-circle",
+    "landscapes/fields-of-grain",
+    "landscapes/fields-of-wine",
+    "landscapes/lake",
+    "landscapes/lava",
+    "landscapes/lotus-garden",
+    "landscapes/mountain-matterhorn",
+    "landscapes/mountains-and-lake",
+    "landscapes/mountains-in-hawaii",
+    "landscapes/mountains-sunset",
+    "landscapes/sand-dunes",
+    "landscapes/landscapes/waterfall_niagara-falls",
+    "food/bananas",
+    "food/berries",
+    "food/broccoli",
+    "food/brussels-sprouts",
+    "food/cake",
+    "food/chocolates",
+    "food/coffee-beans",
+    "food/croissant",
+    "food/dumplings",
+    "food/fish_grilled-snapper",
+    "food/fruits",
+    "food/grapes",
+    "food/hamburger",
+    "food/ice-cream",
+    "food/mushroom",
+    "food/oysters",
+    "food/pasta",
+    "food/potato-chips",
+    "food/potatoes",
+    "food/shish-kebab",
+    "food/strawberries",
+    "food/sushi",
+    "food/tomatoes",
+    "seasonal/father-winston",
+    "seasonal/fireworks-2015",
+    "seasonal/fireworks-in-sky",
+    "seasonal/fireworks-over-harbor",
+    "seasonal/fireworks-scattered",
+    "seasonal/gingerbread-family",
+    "seasonal/gingerbread-house",
+    "seasonal/gingerbread-houses",
+    "seasonal/gingerbread-man",
+    "seasonal/hannukah-dreidel",
+    "seasonal/hannukah-menorah",
+    "seasonal/hopper-elfer",
+    "seasonal/hopper-partying",
+    "seasonal/hopper-reindeer",
+    "seasonal/house-with-lights",
+    "seasonal/reindeer",
+    "seasonal/snow-crystal1",
+    "seasonal/snow-crystal2",
+    "seasonal/snow-crystal3",
+    "seasonal/snownoes",
+    "seasonal/snowy-slope-with-trees"
 ];
 
 // Variables to be private
@@ -1694,6 +1762,9 @@ Dark.url = new URL(location.href);
 
 // If on Khan Academy
 Dark.khan = Dark.url.host == "www.kasandbox.org";
+
+// If editing
+Dark.editor = Dark.url.host == "127.0.0.1:4444";
 
 // Debugging, very handy function
 Dark.copy = function(e) {
@@ -1795,7 +1866,7 @@ Dark.loadFile = function(loc) {
     if(Dark.khan) {
         return Dark.fileCacheKA[loc];
     } else {
-        if(Dark.url.host != "127.0.0.1:4444") loc = "https://cdn.jsdelivr.net/gh/99TheDark/Dark.js@latest" + loc; // to change
+        if(!Dark.editor) loc = "https://github.com/99TheDark/Dark.js/tree/" + Dark.version + "/filters/" + loc;
         let result = null;
         let xhr = new XMLHttpRequest();
         xhr.open("GET", loc, false);
@@ -1803,7 +1874,7 @@ Dark.loadFile = function(loc) {
         if(xhr.status == 200) {
             result = xhr.responseText;
         }
-        if(Dark.url.host == "127.0.0.1:4444") {
+        if(Dark.editor) {
             // https://stackoverflow.com/questions/1981349/regex-to-replace-multiple-spaces-with-a-single-space
             Dark.compileListKA.push({
                 location: loc,
@@ -1815,7 +1886,7 @@ Dark.loadFile = function(loc) {
 };
 
 Dark.compileKA = function() {
-    if(Dark.url.host == "127.0.0.1:4444") {
+    if(Dark.editor) {
         Dark.compileListKA.forEach(file => Dark.fileCacheKA[file.location] = file.contents);
         console.log(Dark.format(Dark.fileCacheKA));
     }
@@ -2530,7 +2601,7 @@ Dark.objects = (function() {
             this.imageData.data.set(buffer);
             this.ctx.putImageData(this.imageData, 0, 0);
 
-            if(Dark.khan) this.image = undefined;
+            if(Dark.khan) this.image = null;
         } else {
             return Dark.error(new Error("Invalid filter type"));
         }
@@ -2708,6 +2779,15 @@ Dark.objects = (function() {
             }
             this.mat = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
             this.set(width);
+        } else if(width instanceof DOMMatrix) {
+            this.width = 4;
+            this.height = 4;
+            this.mat = [
+                width.m11, width.m21, width.m31, width.m41,
+                width.m12, width.m22, width.m32, width.m42,
+                width.m13, width.m23, width.m33, width.m43,
+                width.m14, width.m24, width.m34, width.m44
+            ];
         } else {
             this.width = width;
             this.height = height;
@@ -2851,11 +2931,39 @@ Dark.objects = (function() {
         this.height = mat.height;
         this.mat = mat.mat;
     };
+    DMatrix.copy = function(matrix) {
+        return new DMatrix([...matrix.mat]);
+    };
     DMatrix.prototype.copy = function() {
         return new DMatrix([...this.mat]);
     };
-    DMatrix.prototype.toArray = function() {
+    DMatrix.fromDOMMatrix = function(matrix) {
+        if(matrix instanceof DOMMatrix) {
+            return new DMatrix(matrix);
+        } else {
+            Dark.error(matrix + " is not a DOMMatrix");
+        }
+    };
+    DMatrix.prototype.fromDOMMatrix = function(matrix) {
+        if(matrix instanceof DOMMatrix) {
+            this.width = 4;
+            this.height = 4;
+            this.mat = new DMatrix(matrix).mat;
+        } else {
+            Dark.error(matrix + " is not a DOMMatrix");
+        }
+    };
+    DMatrix.toDOMMatrix = function(matrix) {
+        return matrix.toDOMMatrix();
+    };
+    DMatrix.prototype.toDOMMatrix = function() {
+        return new DOMMatrix(this.toArray());
+    };
+    DMatrix.prototype.toArray2D = function() {
         return [...this.mat];
+    };
+    DMatrix.prototype.toArray = function() {
+        return [...this.mat.flat(1)];
     };
     DMatrix.prototype.toString = function() {
         let str = "";
@@ -2868,7 +2976,7 @@ Dark.objects = (function() {
         return str;
     };
 
-    // Psuedo Random Number Generator
+    // Psuedo-Random Number Generator
     let DRandom = function(seed = Math.random() * 1000000) {
         this.seed = seed;
         this.a = 0x9AF1B04258D;
@@ -2919,9 +3027,6 @@ Dark.compileKA();
 Dark.utils = new Dark(true); // Dummy instance for utils
 Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
-
-// Current version
-Dark.version = "0.6.6.1";
 
 // Freeze objects
 Object.freeze(Dark);
