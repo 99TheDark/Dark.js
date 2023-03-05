@@ -6,13 +6,11 @@ To add:
 • DImage.noise(), use WebGL to fill the imageWidth. Might even create 4 with the RGBA
 • Errors for 2 beginShapes in a row
 • Easier key use (keys.value)
-• Allow negatives for arcs
 • Apply matrix transformations to DVectors (DOMMatrix)
 • To and from DOMPoint on DVector
 • Image masking
 • DImage.crop
 • preventDefault(listener) and allowDefault(listener)
-• pushStyle and popStyle
 • Make DVector rotations work in 3D
 • Get the frameRate to be more constant
 • Improve copy function
@@ -22,6 +20,8 @@ To add:
 • Scissor/crop large images
 • Text width and height
 • Multiplying DMatrix by DVector
+• ellipseMode RADIUS
+• Share image cache onto main Dark
 
 Possibly to add:
 • DShape
