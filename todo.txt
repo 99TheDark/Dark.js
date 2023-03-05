@@ -41,5 +41,4 @@ Possibly to add:
 • ImageBitmapRenderingContext and ImageBitmap to DImage for speed
 
 Bugs:
-• dt is broken again
 • new Dark() breaks everything, only one non dummy instance will work
