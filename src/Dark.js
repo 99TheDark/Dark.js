@@ -1005,12 +1005,12 @@ var Dark = function(dummy = false) {
                     break;
             }
             if(d.settings.imageMode == k.CENTER) d.ctx.translate(- w / 2, - h / 2);
-            d.ctx.drawImage(img.image ?? img.canvas, x, y, w, h);
+            d.ctx.drawImage(img.imageLoaded ? img.image : img.canvas, x, y, w, h);
             d.ctx.restore();
         },
 
         loadImage: function(url) {
-            // DELETE
+            // TODO: delete
             if(d.began) return Dark.error(new Error("loadImage cannot be run after the setup and draw function have begun"));
 
             let result = new DImage(1, 1, d);
@@ -1211,7 +1211,7 @@ var Dark = function(dummy = false) {
 
     // Start draw & do setup
     d.begin = function() {
-        if(d.loaded) {
+        if(d.loaded && !d.began) {
             d.began = true;
 
             // Setup before draw loop
@@ -1256,7 +1256,7 @@ var Dark = function(dummy = false) {
         window.addEventListener("load", () => {
             d.loaded = true;
             Dark.globallyUpdateVariables(d);
-            if(!d.began) d.begin();
+            if(Object.keys(d.imageCache).length == 0) d.begin();
         });
     }
 };
@@ -1265,7 +1265,7 @@ var Dark = function(dummy = false) {
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.6.7.1";
+Dark.version = "pre-0.6.7.2";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -2569,6 +2569,9 @@ Dark.objects = (function() {
                 f.gl.uniform1f(f.paramUniformLocation, value);
             }
 
+            f.applied ??= [];
+            f.applied.push({filter: type, parameter: value});
+
             f.texture = f.gl.createTexture();
 
             // ST instead of UV coords
@@ -2598,7 +2601,23 @@ Dark.objects = (function() {
             this.imageData.data.set(buffer);
             this.ctx.putImageData(this.imageData, 0, 0);
 
-            if(Dark.khan) this.image = null;
+            // Reset
+            this.image = null;
+            this.imageLoaded = false;
+
+            // Load to image, drawing images is faster
+            if(!Dark.khan) {
+                // Wait until canvas has rendered
+                requestAnimationFrame(() => {
+                    // Convert to blob
+                    this.canvas.convertToBlob({type: "image/png"}).then(blob => {
+                        this.image = new Image();
+                        this.image.src = URL.createObjectURL(blob);
+                        this.image.crossOrigin = "anonymous";
+                        this.image.onload = () => this.imageLoaded = true; // Load
+                    })
+                });
+            }
         } else {
             return Dark.error(new Error("Invalid filter type"));
         }
