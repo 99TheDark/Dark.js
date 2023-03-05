@@ -29,6 +29,7 @@ var Dark = function(dummy = false) {
     d.vertexCache = [];
     d.imageCache = {};
     d.cachedImageCount = 0;
+    d.successfullyCachedImageCount = 0;
     d.loaded = false;
     d.began = false;
     d.objects = Dark.objects;
@@ -1018,21 +1019,23 @@ var Dark = function(dummy = false) {
             d.imageCache[url] = null;
 
             if(Dark.khan) {
+                d.cachedImageCount++;
                 result.image = new Image();
                 result.image.src = url;
                 result.image.crossOrigin = "anonymous";
                 result.image.onload = () => {
                     d.imageCache[url] = result;
-                    d.cachedImageCount++;
+                    d.successfullyCachedImageCount++;
 
                     [result.canvas.width, result.canvas.height] = [result.width, result.height] = [result.image.width, result.image.height];
                     result.imageData = new ImageData(result.width, result.height);
                     result.ctx.drawImage(result.image, 0, 0, result.width, result.height);
                     result.updatePixels();
 
-                    if(d.cachedImageCount == Object.keys(d.imageCache).length) d.begin();
+                    if(d.successfullyCachedImageCount == Object.keys(d.imageCache).length) d.begin();
                 };
             } else {
+                d.cachedImageCount++;
                 fetch(url)
                     .then(response => response.blob())
                     .then(blob => {
@@ -1047,13 +1050,13 @@ var Dark = function(dummy = false) {
                                     img.updatePixels();
 
                                     d.imageCache[url] = img;
-                                    d.cachedImageCount++;
+                                    d.successfullyCachedImageCount++;
 
                                     [result.canvas.width, result.canvas.height] = [result.width, result.height] = [img.width, img.height];
                                     result.imageData = img.imageData;
                                     result.loadPixels();
 
-                                    if(d.cachedImageCount == Object.keys(d.imageCache).length) d.begin();
+                                    if(d.successfullyCachedImageCount == Object.keys(d.imageCache).length) d.begin();
                                 });
                         };
                     })
@@ -1069,19 +1072,20 @@ var Dark = function(dummy = false) {
 
                 let img = new d.objects.DImage(1, 1, d);
                 d.imageCache[url] = null;
+                d.cachedImageCount++;
                 img.image = new Image();
                 img.image.src = url;
                 img.image.crossOrigin = "anonymous";
                 img.image.onload = () => {
                     d.imageCache[url] = img;
-                    d.cachedImageCount++;
+                    d.successfullyCachedImageCount++;
 
                     [img.canvas.width, img.canvas.height] = [img.width, img.height] = [img.image.width, img.image.height];
                     img.imageData = new ImageData(img.width, img.height);
                     img.ctx.drawImage(img.image, 0, 0, img.width, img.height);
                     img.updatePixels();
 
-                    if(d.cachedImageCount == Object.keys(d.imageCache).length) d.begin();
+                    if(d.successfullyCachedImageCount == Object.keys(d.imageCache).length) d.begin();
                 };
                 return img;
             } else {
@@ -1253,10 +1257,10 @@ var Dark = function(dummy = false) {
 
         if(Dark.khan) Dark.imageLocationsKA.forEach(loc => d.getImage(loc));
 
-        window.addEventListener("load", () => {
+        addEventListener("load", () => {
             d.loaded = true;
             Dark.globallyUpdateVariables(d);
-            if(Object.keys(d.imageCache).length == 0) d.begin();
+            if(!d.began && d.successfullyCachedImageCount == d.cachedImageCount) d.begin();
         });
     }
 };
@@ -1265,7 +1269,7 @@ var Dark = function(dummy = false) {
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.6.7.2";
+Dark.version = "pre-0.6.7.3";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1706,6 +1710,7 @@ Dark.ignoreGlobal = [
     "saves",
     "imageCache",
     "cachedImageCount",
+    "successfullyCachedImageCount",
     "settings",
     "defaultSettings",
     "isMain",
@@ -1713,6 +1718,7 @@ Dark.ignoreGlobal = [
     "ctx",
     "dummy",
     "loaded",
+    "began",
     "randomGenerator"
 ];
 
