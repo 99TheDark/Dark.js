@@ -81,8 +81,6 @@ var Dark = function(dummy = false) {
         return d.snap((d.settings.angleMode == k.DEGREES) ? angle * 180 / k.PI : angle, 0, 360);
     };
 
-    var rounda = val => Math.abs(Math.round(val));
-
     var cacheVert = function(vert) {
         d.vertices.push(vert);
         vert.points.forEach(v => d.vertexCache.push(d.objects.DVector.create(v.x, v.y)));
@@ -118,27 +116,31 @@ var Dark = function(dummy = false) {
     var loadEvents = function() {
 
         document.addEventListener("keydown", function(e) {
-            e.preventDefault();
-            d.keyIsPressed = true;
-            d.key = Dark.special[e.keyCode] ?? e.key;
-            d.keyCode = e.keyCode;
-            if(/\w/.test(String.fromCharCode(e.keyCode))) d.keyTyped();
-            keys[d.key] = true;
-            Dark.globallyUpdateVariables(d);
-            d.keyPressed();
+            if(Dark.focus.target === d.canvas) {
+                e.preventDefault();
+                d.keyIsPressed = true;
+                d.key = Dark.special[e.keyCode] ?? e.key;
+                d.keyCode = e.keyCode;
+                if(/\w/.test(String.fromCharCode(e.keyCode))) d.keyTyped();
+                keys[d.key] = true;
+                Dark.globallyUpdateVariables(d);
+                d.keyPressed();
+            }
         });
 
         document.addEventListener("keyup", function(e) {
-            e.preventDefault();
-            keys[d.key] = false;
-            d.keyIsPressed = false;
-            d.key = undefined;
-            d.keyCode = undefined;
-            Dark.globallyUpdateVariables(d);
-            d.keyReleased();
+            if(Dark.focus.target === d.canvas) {
+                e.preventDefault();
+                keys[d.key] = false;
+                d.keyIsPressed = false;
+                d.key = undefined;
+                d.keyCode = undefined;
+                Dark.globallyUpdateVariables(d);
+                d.keyReleased();
+            }
         });
 
-        window.addEventListener("resize", function(e) {
+        addEventListener("resize", function(e) {
             e.preventDefault();
             Dark.globallyUpdateVariables(d);
             d.pageResized();
@@ -386,7 +388,7 @@ var Dark = function(dummy = false) {
                     return r;
                 }
             }
-            if(!a) a = 255;
+            a ??= 255;
             r = d.constrain(r, 0, 255);
             g = d.constrain(g, 0, 255);
             b = d.constrain(b, 0, 255);
@@ -634,7 +636,8 @@ var Dark = function(dummy = false) {
 
         // Shapes
         rect: function(x, y, width, height, r1, r2, r3, r4) {
-            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), rounda(width), rounda(height)];
+            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
+            [width, height] = [d.abs(width), d.abs(height)];
 
             d.ctx.beginPath();
             d.ctx.save();
@@ -660,7 +663,8 @@ var Dark = function(dummy = false) {
         },
 
         ellipse: function(x, y, width, height) {
-            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), rounda(width), rounda(height)];
+            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
+            [width, height] = [d.abs(width), d.abs(height)]
 
             d.ctx.beginPath();
             d.ctx.save();
@@ -673,7 +677,7 @@ var Dark = function(dummy = false) {
         },
 
         arc: function(x, y, width, height, start, stop) {
-            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), rounda(width), rounda(height)];
+            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
 
             d.ctx.save();
             if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(width / 2, height / 2);
@@ -708,7 +712,8 @@ var Dark = function(dummy = false) {
         },
 
         circle: function(x, y, radius) {
-            if(!d.settings.smoothing) [x, y, radius] = [d.round(x), d.round(y), rounda(radius)];
+            if(!d.settings.smoothing) [x, y, radius] = [d.round(x), d.round(y), d.round(radius)];
+            radius = d.round(radius);
 
             d.ctx.save();
             if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(radius, radius);
@@ -1048,7 +1053,8 @@ var Dark = function(dummy = false) {
         },
 
         image: function(img, x, y, width, height) {
-            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), rounda(width), rounda(height)];
+            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
+            [width, height] = [d.abs(width), d.abs(height)];
             d.ctx.save();
             if(img instanceof ImageData) img = new DImage(img);
             let w, h;
@@ -1317,7 +1323,7 @@ var Dark = function(dummy = false) {
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.6.9";
+Dark.version = "pre-0.6.10";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -3103,6 +3109,14 @@ Dark.objects = (function() {
     };
 
 })();
+
+// Focused element
+Dark.focus = {};
+
+document.addEventListener("click", e => {
+    Dark.focus.target = e.target;
+    Dark.focus.time = performance.now();
+});
 
 // For KA
 Dark.startTime = performance.now();
