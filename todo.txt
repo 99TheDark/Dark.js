@@ -6,10 +6,8 @@ To add:
 • DImage.noise(), use WebGL to fill the imageWidth. Might even create 4 with the RGBA
 • Errors for 2 beginShapes in a row
 • Apply matrix transformations to DVectors (DOMMatrix)
-• To and from DOMPoint on DVector
 • Image masking
 • DImage.crop
-• preventDefault(listener) and allowDefault(listener)
 • Make DVector rotations work in 3D
 • Get the frameRate to be more constant
 • Improve copy function
@@ -20,23 +18,21 @@ To add:
 • Multiplying DMatrix by DVector
 • ellipseMode RADIUS
 • Share image cache onto main Dark
+• Kernel system for filters
+• Switch Dark.error to not require new Error()
 
 Possibly to add:
-• DShape
-• Transformations from point for ease of use (maybe to DShape)
 • Store shapes in variables, maybe DShape
+• Transformations from point for ease of use (maybe to DShape)
 • println-like console
 • Font library for Google Fonts (Like https://www.khanacademy.org/computer-programming/i/6162502356762624)
 • Audio
 • Local storage, cookies, etc easy support
-• Cursor lock function — lock()
-• Custom cursors
+• Cursor lock function — lockCursor() & unlockCursor()
 • Proxy-ify functions with the current setting
 • Chaining DVector & DMatrix operations like DVector.mult(a, b, c, d, e)
 • Contours
-• Use of requestFullscreen() in a function to fullscreen the canvas.
-• DUtils
-• ImageBitmapRenderingContext and ImageBitmap to DImage for speed
+• fullscreen() function using d.canvas.addEventListener("click", () => d.canvas.requestFullscreen());
 • Framerate above natural refresh rate
 
 Bugs:
