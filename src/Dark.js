@@ -9,6 +9,7 @@ var Dark = function(dummy = false) {
     let lastFrame = performance.now();
     let lastTime = performance.now();
     let lastHidden = -1;
+    let lastScrollTime = null;
 
     // Shorter = faster to typing time
     let d = this;
@@ -102,6 +103,9 @@ var Dark = function(dummy = false) {
         d.strokeWeight(1);
         d.textFont("12px Arial");
         d.textLeading(5);
+        d.preventDefault(k.KEY);
+        d.allowDefault(k.CLICK);
+        d.preventDefault(k.SCROLL);
     };
 
     var loadStyle = function(context) {
@@ -117,7 +121,7 @@ var Dark = function(dummy = false) {
 
         document.addEventListener("keydown", function(e) {
             if(Dark.focus.target === d.canvas) {
-                e.preventDefault();
+                if(d.settings.keyEvents) e.preventDefault();
                 d.keyIsPressed = true;
                 d.key = Dark.special[e.keyCode] ?? e.key;
                 d.keyCode = e.keyCode;
@@ -130,7 +134,7 @@ var Dark = function(dummy = false) {
 
         document.addEventListener("keyup", function(e) {
             if(Dark.focus.target === d.canvas) {
-                e.preventDefault();
+                if(d.settings.keyEvents) e.preventDefault();
                 keys[d.key] = false;
                 d.keyIsPressed = false;
                 d.key = undefined;
@@ -141,7 +145,6 @@ var Dark = function(dummy = false) {
         });
 
         addEventListener("resize", function(e) {
-            e.preventDefault();
             Dark.globallyUpdateVariables(d);
             d.pageResized();
         });
@@ -165,13 +168,13 @@ var Dark = function(dummy = false) {
     var reloadEvents = function() {
 
         d.canvas.addEventListener("click", function(e) {
-            e.preventDefault();
+            if(d.settings.clickEvents) e.preventDefault();
             Dark.globallyUpdateVariables(d);
             d.mouseClicked();
         });
 
         d.canvas.addEventListener("mousedown", function(e) {
-            e.preventDefault();
+            if(d.settings.clickEvents) e.preventDefault();
             d.mouseIsPressed = true;
             d.mouseButton = Dark.mouseMap[e.button];
             Dark.globallyUpdateVariables(d);
@@ -179,7 +182,7 @@ var Dark = function(dummy = false) {
         });
 
         d.canvas.addEventListener("mouseup", function(e) {
-            e.preventDefault();
+            if(d.settings.clickEvents) e.preventDefault();
             d.mouseButton = undefined;
             d.mouseIsPressed = false;
             Dark.globallyUpdateVariables(d);
@@ -187,40 +190,38 @@ var Dark = function(dummy = false) {
         });
 
         d.canvas.addEventListener("mouseenter", function(e) {
-            e.preventDefault();
             d.mouseIsInside = true;
             Dark.globallyUpdateVariables(d);
             d.mouseIn();
         });
 
         d.canvas.addEventListener("mouseleave", function(e) {
-            e.preventDefault();
             d.mouseIsInside = false;
             Dark.globallyUpdateVariables(d);
             d.mouseOut();
         });
 
         d.canvas.addEventListener("mousemove", function(e) {
-            e.preventDefault();
             // https://stackoverflow.com/questions/3234256/find-mouse-position-relative-to-element
             let boundingBox = e.target.getBoundingClientRect();
             d.pmouseX = d.pmouse.x = d.mouseX;
             d.pmouseY = d.pmouse.y = d.mouseY;
-            d.mouseX = d.mouse.x = d.constrain(d.round(e.pageX - boundingBox.x), 0, width);
-            d.mouseY = d.mouse.y = d.constrain(d.round(e.pageY - boundingBox.y), 0, height);
+            d.mouseX = d.mouse.x = d.constrain(d.round(e.pageX - boundingBox.x), 0, d.width);
+            d.mouseY = d.mouse.y = d.constrain(d.round(e.pageY - boundingBox.y), 0, d.height);
             Dark.globallyUpdateVariables(d);
             d.mouseMoved();
         });
 
         d.canvas.addEventListener("wheel", function(e) {
-            e.preventDefault();
+            if(d.settings.scrollEvents) e.preventDefault();
+            lastScrollTime = performance.now();
             d.mouseScroll = d.objects.DVector.create(e.deltaX, e.deltaY, e.deltaZ);
             Dark.globallyUpdateVariables(d);
             d.mouseScrolled();
         });
 
         d.canvas.addEventListener("dblclick", function(e) {
-            e.preventDefault();
+            if(d.settings.clickEvents) e.preventDefault();
             Dark.globallyUpdateVariables(d);
             d.mouseDoubleClicked();
         });
@@ -511,6 +512,42 @@ var Dark = function(dummy = false) {
             d.ctx.imageSmoothingQuality = "low";
         },
 
+        preventDefault: function(listener) {
+            if(arguments.length == 0) Dark.error(new Error("No listener type given"));
+            switch(listener) {
+                default:
+                    Dark.error(new Error("Invalid listener given"));
+                    break;
+                case k.KEY:
+                    d.settings.keyEvents = true;
+                    break;
+                case k.CLICK:
+                    d.settings.clickEvents = true;
+                    break;
+                case k.SCROLL:
+                    d.settings.scrollEvents = true;
+                    break;
+            }
+        },
+
+        allowDefault: function(listener) {
+            if(arguments.length == 0) Dark.error(new Error("No listener type given"));
+            switch(listener) {
+                default:
+                    Dark.error(new Error("Invalid listener given"));
+                    break;
+                case k.KEY:
+                    d.settings.keyEvents = false;
+                    break;
+                case k.CLICK:
+                    d.settings.clickEvents = false;
+                    break;
+                case k.SCROLL:
+                    d.settings.scrollEvents = false;
+                    break;
+            }
+        },
+
         angleMode: function(mode) {
             switch(mode) {
                 default:
@@ -562,6 +599,14 @@ var Dark = function(dummy = false) {
         resetMatrix: function() {
             d.transforms.length = 0;
             d.ctx.resetTransform();
+        },
+
+        getMatrixAsDOM: function() {
+            return d.transforms[d.transforms.length - 1];
+        },
+
+        getMatrix: function() {
+            return d.objects.DMatrix.fromDOMMatrix(d.transforms[d.transforms.length - 1]);
         },
 
         pushStyle: function() {
@@ -1241,7 +1286,8 @@ var Dark = function(dummy = false) {
         reciprocal: num => 1 / num,
         trim: str => str.trim(),
         mod: (a, b) => ((a % b) + b) % b,
-        snap: (val, min, max) => (val - min) % (max - min) + min
+        snap: (val, min, max) => (val - min) % (max - min) + min,
+        percent: val => val / 100
 
     });
 
@@ -1259,7 +1305,12 @@ var Dark = function(dummy = false) {
         let deltaTime = time - lastTime;
         lastTime = performance.now();
 
-        let run = (deltaFrame > d.settings.frameStep - deltaTime / 2 && d.settings.looping)
+        if(lastScrollTime != null && lastTime - lastScrollTime > 16) {
+            lastScrollTime = null;
+            d.mouseScroll.zero3D();
+        }
+
+        let run = deltaFrame > d.settings.frameStep - deltaTime / 2 && d.settings.looping;
 
         // If the user left the page and just entered, make fix deltas
         if(lastHidden < time && lastHidden > lastTime) {
@@ -1277,14 +1328,13 @@ var Dark = function(dummy = false) {
 
         Dark.globallyUpdateVariables(d);
 
-
         requestAnimationFrame(d.raf);
     };
 
     // Start draw & do setup
     d.begin = function() {
-        if(d.loaded && !d.began) {
-            d.began = true;
+        if(d.loaded && !d.began) { // Don't begin x2 and wait until images are loaded
+            d.began = true; // I mean, it is true
 
             // Setup before draw loop
             d.setup();
@@ -1306,6 +1356,7 @@ var Dark = function(dummy = false) {
         // Setup later options
         d.mouse = d.objects.DVector.zero2D();
         d.pmouse = d.objects.DVector.zero2D();
+        d.mouseScroll = d.objects.DVector.zero3D();
         d.settings.cursor = "auto";
         d.settings.looping = true;
 
@@ -1314,6 +1365,7 @@ var Dark = function(dummy = false) {
         addEventListener("load", () => {
             d.loaded = true;
             Dark.globallyUpdateVariables(d);
+            d.preload();
             if(!d.began && d.successfullyCachedImageCount == d.cachedImageCount) d.begin();
         });
     }
@@ -1323,12 +1375,13 @@ var Dark = function(dummy = false) {
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.6.10";
+Dark.version = "pre-0.6.11";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
     "draw",
     "setup",
+    "preload",
     "keyPressed",
     "keyReleased",
     "keyTyped",
@@ -1378,33 +1431,37 @@ Dark.constants = {
     BOTTOM: 22,
     GET: 23,
     SET: 24,
-    PERLIN: 25, // unused
-    SIMPLEX: 26, // unused
-    WORLEY: 27, // unused
-    VALUE: 28, // unused
-    RANDOM: 29, // unused
-    INVERT: 30,
-    OPAQUE: 31,
-    GRAY: 32,
-    ERODE: 33, // unused
-    DILATE: 34, // unused
-    THRESHOLD: 35,
-    POSTERIZE: 36,
-    BLUR: 37, // unused
-    SHARPEN: 38, // unused
-    SEPIA: 39,
-    OUTLINE: 40, // unused
-    EMBOSS: 41, // unused
-    EDGE: 42, // unused
-    COTRAST: 43, // unused
-    VIGNETTE: 44,
-    BRIGHTNESS: 45,
-    BLACK: 46,
-    WHITE: 47,
-    MEDIAN: 48, // unused
-    BOX: 49,
-    TRANSPARENCY: 50,
-    PIXELATE: 51
+    RADIUS: 25, // unused
+    KEY: 26, // unused
+    CLICK: 27, // unused
+    SCROLL: 28, // unused
+    PERLIN: 29, // unused
+    SIMPLEX: 30, // unused
+    WORLEY: 31, // unused
+    VALUE: 32, // unused
+    RANDOM: 33, // unused
+    INVERT: 34,
+    OPAQUE: 35,
+    GRAY: 36,
+    ERODE: 37, // unused
+    DILATE: 38, // unused
+    THRESHOLD: 39,
+    POSTERIZE: 40,
+    BLUR: 41, // unused
+    SHARPEN: 42, // unused
+    SEPIA: 43,
+    OUTLINE: 44, // unused
+    EMBOSS: 45, // unused
+    EDGE: 46, // unused
+    COTRAST: 47, // unused
+    VIGNETTE: 48,
+    BRIGHTNESS: 49,
+    BLACK: 50,
+    WHITE: 51,
+    MEDIAN: 52, // unused
+    BOX: 53,
+    TRANSPARENCY: 54,
+    PIXELATE: 55
 };
 
 Dark.filters = [
@@ -1994,6 +2051,8 @@ Dark.objects = (function() {
 
     // Vectors
     let DVector = function(x, y, z) {
+        if(!(this instanceof DVector)) return new (Function.prototype.bind.apply(DVector, [null].concat(...arguments)));
+
         this.darkObject = true;
 
         switch(arguments.length) {
@@ -2457,6 +2516,8 @@ Dark.objects = (function() {
 
     // Fonts
     let DFont = function(str) {
+        if(!(this instanceof DFont)) return new (Function.prototype.bind.apply(DFont, [null].concat(...arguments)));
+
         this.darkObject = true;
 
         this.style = "normal";
@@ -2516,6 +2577,8 @@ Dark.objects = (function() {
 
     // Images
     let DImage = function(...args) {
+        if(!(this instanceof DImage)) return new (Function.prototype.bind.apply(DImage, [null].concat(...arguments)));
+
         this.darkObject = true;
 
         this.filters = {};
@@ -2853,6 +2916,8 @@ Dark.objects = (function() {
 
     // Matrices
     let DMatrix = function(width, height, val = 0) {
+        if(!(this instanceof DMatrix)) return new (Function.prototype.bind.apply(DMatrix, [null].concat(...arguments)));
+
         this.darkObject = true;
 
         // https://stackoverflow.com/questions/53992415/how-to-fill-multidimensional-array-in-javascript
@@ -3070,6 +3135,10 @@ Dark.objects = (function() {
 
     // Psuedo-Random Number Generator
     let DRandom = function(seed = Math.random() * 1000000) {
+        if(!(this instanceof DRandom)) return new (Function.prototype.bind.apply(DRandom, [null].concat(...arguments)));
+        
+        this.darkObject = true;
+
         this.seed = seed;
         this.a = 0x9AF1B04258D;
         this.b = 0xC6E35F;
