@@ -13,6 +13,7 @@
 - [WebGL2 Fundamentals](https://webgl2fundamentals.org/webgl/lessons/webgl-fundamentals.html)
 - [Mozilla](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/uniform)
 - [Wikipedia](https://en.wikipedia.org/wiki/Gaussian_blur)
+- [Setosa](https://setosa.io/ev/image-kernels/)
 
 ## Loading Files:
 - [StackOverflow](https://stackoverflow.com/questions/36921947/read-a-server-side-file-using-javascript)
