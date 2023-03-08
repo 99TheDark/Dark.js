@@ -139,10 +139,11 @@ var Dark = function(dummy = false) {
                 if(d.settings.keyEvents) e.preventDefault();
                 keys[d.key] = false;
                 d.keyIsPressed = false;
+                Dark.globallyUpdateVariables(d);
+                d.keyReleased();
                 d.key = undefined;
                 d.keyCode = undefined;
                 Dark.globallyUpdateVariables(d);
-                d.keyReleased();
             }
         });
 
@@ -1393,7 +1394,7 @@ var Dark = function(dummy = false) {
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.0";
+Dark.version = "pre-0.7.0.1";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -2446,7 +2447,7 @@ Dark.objects = (function() {
         if(v.mag() > max) v.mult(max / v.mag());
         return v;
     };
-    DVector.prototype.limit = function() {
+    DVector.prototype.limit = function(max) {
         if(this.mag() > max) this.mult(max / this.mag());
     };
     DVector.lerp = function(v1, v2, percent) {
