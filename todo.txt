@@ -5,21 +5,17 @@ To add:
 • Noise (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
 • DImage.noise(), use WebGL to fill the imageWidth. Might even create 4 with the RGBA
 • Errors for 2 beginShapes in a row
-• Apply matrix transformations to DVectors (DOMMatrix)
 • Image masking
 • DImage.crop
 • Make DVector rotations work in 3D
 • Get the frameRate to be more constant
 • Improve copy function
 • Make everything readonly in Dark instances
-• Swap filter uv to a uniform
 • How to import section in README
 • Text width and height
-• Multiplying DMatrix by DVector
-• ellipseMode RADIUS
 • Share image cache onto main Dark
-• Kernel system for filters
-• Switch Dark.error to not require new Error()
+• left, right, top and bottom SOBEL
+• Swap kernels to uniforms
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
@@ -36,3 +32,4 @@ Possibly to add:
 • Framerate above natural refresh rate
 
 Bugs:
+• Crazy lag when leaving the page with a filter (specifically kernel ones)
