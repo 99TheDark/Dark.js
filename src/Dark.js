@@ -1393,7 +1393,7 @@ var Dark = function(dummy = false) {
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.6.11";
+Dark.version = "pre-0.7.0";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
