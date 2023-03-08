@@ -1,3 +1,5 @@
+"use strict";
+
 if(window.Dark) throw "There is more than one Dark.js import"; // Stop multiple imports
 
 var Dark = function(dummy = false) {
@@ -296,7 +298,7 @@ var Dark = function(dummy = false) {
                 dy = args[4] - args[1];
                 dz = args[5] - args[2];
             } else {
-                Dark.error(new Error("dist requires 4 or 6 parameters, not " + args.length));
+                Dark.error("dist requires 4 or 6 parameters, not " + args.length);
             }
             return d.sqrt(dx * dx + dy * dy + dz * dz);
         },
@@ -372,6 +374,10 @@ var Dark = function(dummy = false) {
         disableContextMenu: function() {
             d.settings.contextMenu = false;
             d.canvas.oncontextmenu = false;
+        },
+
+        fullscreen: function() {
+            d.canvas.requestFullscreen();
         },
 
         // Color
@@ -458,7 +464,7 @@ var Dark = function(dummy = false) {
         strokeCap: function(mode) {
             switch(mode) {
                 default:
-                    Dark.error(new Error("Invalid strokeCap type"));
+                    Dark.error("Invalid strokeCap type");
                     break;
                 case k.FLAT:
                     d.ctx.lineCap = "butt";
@@ -477,7 +483,7 @@ var Dark = function(dummy = false) {
         strokeJoin: function(mode = k.MITER) {
             switch(mode) {
                 default:
-                    Dark.error(new Error("Invalid strokeJoin type"));
+                    Dark.error("Invalid strokeJoin type");
                     break;
                 case k.MITER:
                     d.ctx.lineJoin = "miter";
@@ -513,10 +519,10 @@ var Dark = function(dummy = false) {
         },
 
         preventDefault: function(listener) {
-            if(arguments.length == 0) Dark.error(new Error("No listener type given"));
+            if(arguments.length == 0) Dark.error("No listener type given");
             switch(listener) {
                 default:
-                    Dark.error(new Error("Invalid listener given"));
+                    Dark.error("Invalid listener given");
                     break;
                 case k.KEY:
                     d.settings.keyEvents = true;
@@ -531,10 +537,10 @@ var Dark = function(dummy = false) {
         },
 
         allowDefault: function(listener) {
-            if(arguments.length == 0) Dark.error(new Error("No listener type given"));
+            if(arguments.length == 0) Dark.error("No listener type given");
             switch(listener) {
                 default:
-                    Dark.error(new Error("Invalid listener given"));
+                    Dark.error("Invalid listener given");
                     break;
                 case k.KEY:
                     d.settings.keyEvents = false;
@@ -551,7 +557,7 @@ var Dark = function(dummy = false) {
         angleMode: function(mode) {
             switch(mode) {
                 default:
-                    Dark.error(new Error("Invalid angleMode type"));
+                    Dark.error("Invalid angleMode type");
                     break;
                 case k.DEGREES:
                     d.settings.angleMode = k.DEGREES;
@@ -581,7 +587,7 @@ var Dark = function(dummy = false) {
         // Transformations
         pushMatrix: function() {
             if(d.transforms.length > d.maxStackSize) {
-                Dark.error(new Error("Maximum matrix stack size reached, pushMatrix() called " + d.maxStackSize + " times."));
+                Dark.error("Maximum matrix stack size reached, pushMatrix() called " + d.maxStackSize + " times.");
             } else {
                 d.transforms.push(d.ctx.getTransform());
             }
@@ -590,7 +596,7 @@ var Dark = function(dummy = false) {
         popMatrix: function() {
             let transform = d.transforms.pop();
             if(!transform) {
-                Dark.error(new Error("No more transforms to restore in popMatrix()"));
+                Dark.error("No more transforms to restore in popMatrix()");
             } else {
                 d.ctx.setTransform(transform);
             }
@@ -611,7 +617,7 @@ var Dark = function(dummy = false) {
 
         pushStyle: function() {
             if(d.styles.length > d.maxStackSize) {
-                Dark.error(new Error("Maximum style stack size reached, pushStyle() called " + d.maxStackSize + " times."));
+                Dark.error("Maximum style stack size reached, pushStyle() called " + d.maxStackSize + " times.");
             } else {
                 d.styles.push(d.copy(d.ctx));
             }
@@ -620,7 +626,7 @@ var Dark = function(dummy = false) {
         popStyle: function() {
             let style = d.styles.pop();
             if(!style) {
-                Dark.error(new Error("No more styles to restore in popStyle()"));
+                Dark.error("No more styles to restore in popStyle()");
             } else {
                 loadStyle(style);
             }
@@ -633,7 +639,7 @@ var Dark = function(dummy = false) {
 
         push: function() {
             if(d.transforms.length > d.maxStackSize) {
-                Dark.error(new Error("Maximum stack size reached, push() called " + d.maxStackSize + " times."));
+                Dark.error("Maximum stack size reached, push() called " + d.maxStackSize + " times.");
             } else {
                 d.ctx.save();
                 d.saves.push(Object.assign({}, d.settings));
@@ -643,7 +649,7 @@ var Dark = function(dummy = false) {
         pop: function() {
             let save = d.saves.pop();
             if(!save) {
-                Dark.error(new Error("No more saves to restore in pop()"));
+                Dark.error("No more saves to restore in pop()");
             } else {
                 d.ctx.restore();
                 Object.assign(d.settings, save);
@@ -690,7 +696,7 @@ var Dark = function(dummy = false) {
             // For speed, rounded rect is so much slower
             switch(arguments.length) {
                 default:
-                    Dark.error(new Error("rect takes in 4, 5 or 8 parameters, not " + arguments.length));
+                    Dark.error("rect takes in 4, 5 or 8 parameters, not " + arguments.length);
                     break;
                 case 4:
                     d.ctx.rect(x, y, width, height);
@@ -708,8 +714,10 @@ var Dark = function(dummy = false) {
         },
 
         ellipse: function(x, y, width, height) {
+            if(d.settings.ellipseMode == k.RADIUS) width /= 2, height /= 2;
+
             if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
-            [width, height] = [d.abs(width), d.abs(height)]
+            [width, height] = [d.abs(width), d.abs(height)];
 
             d.ctx.beginPath();
             d.ctx.save();
@@ -722,6 +730,8 @@ var Dark = function(dummy = false) {
         },
 
         arc: function(x, y, width, height, start, stop) {
+            if(d.settings.ellipseMode == k.RADIUS) width /= 2, height /= 2;
+
             if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
 
             d.ctx.save();
@@ -757,6 +767,8 @@ var Dark = function(dummy = false) {
         },
 
         circle: function(x, y, radius) {
+            if(d.settings.ellipseMode == k.RADIUS) width /= 2, height /= 2;
+
             if(!d.settings.smoothing) [x, y, radius] = [d.round(x), d.round(y), d.round(radius)];
             radius = d.round(radius);
 
@@ -974,7 +986,7 @@ var Dark = function(dummy = false) {
             if(arguments.length == 1 && alignX == k.CENTER) alignY = k.CENTER;
             switch(alignX) {
                 default:
-                    Dark.error(new Error("Invalid x alignment type"));
+                    Dark.error("Invalid x alignment type");
                     break;
                 case k.LEFT:
                     d.ctx.textAlign = "left";
@@ -991,7 +1003,7 @@ var Dark = function(dummy = false) {
             }
             switch(alignY) {
                 default:
-                    Dark.error(new Error("Invalid y alignment type"));
+                    Dark.error("Invalid y alignment type");
                     break;
                 case k.BASELINE:
                     d.ctx.textBaseline = "alphabetic";
@@ -1086,7 +1098,7 @@ var Dark = function(dummy = false) {
                     d.canvas
                 );
             } else {
-                Dark.error(new Error("get requires 0 or 4 parameters, not " + args.length));
+                Dark.error("get requires 0 or 4 parameters, not " + args.length);
             }
         },
 
@@ -1106,7 +1118,7 @@ var Dark = function(dummy = false) {
             switch(arguments.length) {
                 default:
                     d.ctx.restore();
-                    return Dark.error(new Error("image requires 1, 3, 4 or 5 parameters, not " + arguments.length));
+                    return Dark.error("image requires 1, 3, 4 or 5 parameters, not " + arguments.length);
                 case 1:
                     [w, h] = [d.width, d.height];
                     break;
@@ -1287,7 +1299,13 @@ var Dark = function(dummy = false) {
         trim: str => str.trim(),
         mod: (a, b) => ((a % b) + b) % b,
         snap: (val, min, max) => (val - min) % (max - min) + min,
-        percent: val => val / 100
+        percent: val => val / 100,
+        translateX: x => d.translate(x, 0),
+        translateY: y => d.translate(0, y),
+        scaleX: x => d.scale(x, 1),
+        scaleY: y => d.scale(1, y),
+        skewX: x => d.skew(x, 0),
+        skewY: y => d.skew(0, y)
 
     });
 
@@ -1432,9 +1450,9 @@ Dark.constants = {
     GET: 23,
     SET: 24,
     RADIUS: 25, // unused
-    KEY: 26, // unused
-    CLICK: 27, // unused
-    SCROLL: 28, // unused
+    KEY: 26,
+    CLICK: 27,
+    SCROLL: 28,
     PERLIN: 29, // unused
     SIMPLEX: 30, // unused
     WORLEY: 31, // unused
@@ -1448,17 +1466,17 @@ Dark.constants = {
     THRESHOLD: 39,
     POSTERIZE: 40,
     BLUR: 41, // unused
-    SHARPEN: 42, // unused
+    SHARPEN: 42,
     SEPIA: 43,
-    OUTLINE: 44, // unused
+    OUTLINE: 44,
     EMBOSS: 45, // unused
-    EDGE: 46, // unused
+    EDGE: 46,
     COTRAST: 47, // unused
     VIGNETTE: 48,
     BRIGHTNESS: 49,
     BLACK: 50,
     WHITE: 51,
-    MEDIAN: 52, // unused
+    NORMALIZE: 52,
     BOX: 53,
     TRANSPARENCY: 54,
     PIXELATE: 55
@@ -1470,11 +1488,15 @@ Dark.filters = [
     Dark.constants.GRAY,
     Dark.constants.THRESHOLD,
     Dark.constants.POSTERIZE,
+    Dark.constants.SHARPEN,
     Dark.constants.SEPIA,
+    Dark.constants.OUTLINE,
+    Dark.constants.EDGE,
     Dark.constants.VIGNETTE,
     Dark.constants.BRIGHTNESS,
     Dark.constants.BLACK,
     Dark.constants.WHITE,
+    Dark.constants.NORMALIZE,
     Dark.constants.BOX,
     Dark.constants.TRANSPARENCY,
     Dark.constants.PIXELATE
@@ -1633,7 +1655,7 @@ Dark.imageLocationsKA = [
     "avatars/robot_male_2",
     "avatars/robot_male_3",
     "avatars/spunky-sam",
-    "avatars/spunky-sam",
+    "avatars/spunky-sam-green",
     "avatars/spunky-sam-orange",
     "avatars/spunky-sam-red",
     "avatars/starky-sapling",
@@ -1939,12 +1961,12 @@ Dark.warn = function(warning) {
 };
 
 Dark.error = function(error) {
-    Dark.doError("error", error);
+    Dark.doError("error", new Error(error));
 };
 
 Dark.observe = function(object, type, callback) {
     if(arguments.length == 3 && type != Dark.constants.GET && type != Dark.constants.SET) {
-        Dark.error(new Error("Invalid type, must be either GET or SET"));
+        Dark.error("Invalid type, must be either GET or SET");
     }
     object = new Proxy(object, {
         get: function(target, prop) { // also reciever
@@ -1974,7 +1996,7 @@ Dark.getMain = function() {
 };
 
 Dark.fileCacheKA = {
-    "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 pos;\nout vec2 uv;\nvoid main() {\n uv = (pos + 1.0) * 0.5; // Vertex position = -1 to 1, UV = 0 to 1\n gl_Position = vec4(pos, 0.0, 1.0);\n}",
+    "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 vertPos;\nin vec2 vertUV;\nout vec2 uv;\nvoid main() {\n uv = vertUV;\n gl_Position = vec4(vertPos, 0.0, 1.0);\n}",
     "/filters/invert.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(1.0 - tex.rgb, tex.a);\n}",
     "/filters/opaque.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(tex.rgb, 1.0);\n}",
     "/filters/grayscale.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Based on how human eyes precieve\n color = vec4(vec3(luminance), tex.a);\n}",
@@ -1987,7 +2009,11 @@ Dark.fileCacheKA = {
     "/filters/brightness.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb + param, tex.a);\n}",
     "/filters/transparency.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(tex.rgb, tex.a - param);\n}",
     "/filters/sepia.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n \n color = vec4(\n 0.393 * tex.r + 0.769 * tex.g + 0.189 * tex.b,\n 0.349 * tex.r + 0.686 * tex.g + 0.168 * tex.b,\n 0.272 * tex.r + 0.534 * tex.g + 0.131 * tex.b,\n tex.a\n );\n}",
-    "/filters/pixelate.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec2 snap(vec2 point) {\n return floor(point * size / param) * param / size;\n}\nvoid main() {\n vec4 tex = texture(sampler, vec2(snap(uv)));\n \n color = tex;\n}"
+    "/filters/pixelate.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec2 snap(vec2 point) {\n return floor(point * size / param) * param / size;\n}\nvoid main() {\n vec4 tex = texture(sampler, vec2(snap(uv)));\n \n color = tex;\n}",
+    "/filters/sharpen.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nvoid main() {\n vec4 tex = texture(sampler, uv);\n const float kernel[9] = float[](\n 0.0, -1.0, 0.0,\n -1.0, 5.0, -1.0,\n 0.0, -1.0, 0.0\n ); \n color = vec4((\n get(-1.0, -1.0) * kernel[0] +\n get(0.0, -1.0) * kernel[1] +\n get(1.0, -1.0) * kernel[2] +\n get(-1.0, 0.0) * kernel[3] +\n get(0.0, 0.0) * kernel[4] +\n get(1.0, 0.0) * kernel[5] +\n get(-1.0, 1.0) * kernel[6] +\n get(0.0, 1.0) * kernel[7] +\n get(1.0, 1.0) * kernel[8]\n ).rgb, tex.a);\n}",
+    "/filters/outline.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nvoid main() {\n vec4 tex = texture(sampler, uv);\n const float kernel[9] = float[](\n -1.0, -1.0, -1.0,\n -1.0, 8.0, -1.0,\n -1.0, -1.0, -1.0\n ); \n color = vec4((\n get(-1.0, -1.0) * kernel[0] +\n get(0.0, -1.0) * kernel[1] +\n get(1.0, -1.0) * kernel[2] +\n get(-1.0, 0.0) * kernel[3] +\n get(0.0, 0.0) * kernel[4] +\n get(1.0, 0.0) * kernel[5] +\n get(-1.0, 1.0) * kernel[6] +\n get(0.0, 1.0) * kernel[7] +\n get(1.0, 1.0) * kernel[8]\n ).rgb, tex.a);\n}",
+    "/filters/edge.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nvoid main() {\n vec4 tex = texture(sampler, uv);\n const float kernel[9] = float[](\n 0.0, 1.0, 0.0,\n 1.0, -4.0, 1.0,\n 0.0, 1.0, 0.0\n ); \n color = vec4((\n get(-1.0, -1.0) * kernel[0] +\n get(0.0, -1.0) * kernel[1] +\n get(1.0, -1.0) * kernel[2] +\n get(-1.0, 0.0) * kernel[3] +\n get(0.0, 0.0) * kernel[4] +\n get(1.0, 0.0) * kernel[5] +\n get(-1.0, 1.0) * kernel[6] +\n get(0.0, 1.0) * kernel[7] +\n get(1.0, 1.0) * kernel[8]\n ).rgb, tex.a);\n}",
+    "/filters/normalize.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(tex.rgb / length(tex.rgb), tex.a);\n}"
 };
 
 Dark.compileListKA = [];
@@ -2057,7 +2083,7 @@ Dark.objects = (function() {
 
         switch(arguments.length) {
             default:
-                Dark.error(new Error("DVector requires 2 or 3 parameters, not " + arguments.length));
+                Dark.error("DVector requires 2 or 3 parameters, not " + arguments.length);
                 break;
             case 3:
                 this.x = x;
@@ -2186,6 +2212,20 @@ Dark.objects = (function() {
                     v1.z * v2.z
                 );
             }
+        } else if(v2 instanceof DMatrix || v2 instanceof DOMMatrix) {
+            if(v2 instanceof DOMMatrix) v2 = new DMatrix(v2);
+            if(v1.is2D) {
+                return new DVector(
+                    v1.x * v2.get(0, 0) + v1.y * v2.get(1, 0) + v2.get(3, 0),
+                    v1.x * v2.get(0, 1) + v1.y * v2.get(1, 1) + v2.get(3, 1),
+                );
+            } else {
+                return new DVector(
+                    v1.x * v2.get(0, 0) + v1.y * v2.get(1, 0) + v1.z * v2.get(2, 0) + v2.get(3, 0),
+                    v1.x * v2.get(0, 1) + v1.y * v2.get(1, 1) + v1.z * v2.get(2, 1) + v2.get(3, 1),
+                    v1.x * v2.get(0, 2) + v1.y * v2.get(1, 2) + v1.z * v2.get(2, 2) + v2.get(3, 2)
+                );
+            }
         } else {
             if(v1.is2D) {
                 return new DVector(
@@ -2206,6 +2246,12 @@ Dark.objects = (function() {
             this.x *= v.x;
             this.y *= v.y;
             this.z *= v.z;
+        } else if(v instanceof DMatrix || v instanceof DOMMatrix) {
+            if(v instanceof DOMMatrix) v = new DMatrix(v);
+            let z = this.z ?? 0;
+            this.x * v.get(0, 0) + this.y * v.get(1, 0) + z * v.get(2, 0) + v.get(3, 0);
+            this.x * v.get(0, 1) + this.y * v.get(1, 1) + z * v.get(2, 1) + v.get(3, 1);
+            this.x * v.get(0, 2) + this.y * v.get(1, 2) + z * v.get(2, 2) + v.get(3, 2);
         } else {
             this.x *= v;
             this.y *= v;
@@ -2377,7 +2423,7 @@ Dark.objects = (function() {
             } else if(!v1.is2D && !v2.is2D) {
                 return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
             } else {
-                Dark.error(new Error("Cannot take the dot product of a 2D and 3D vector"));
+                Dark.error("Cannot take the dot product of a 2D and 3D vector");
             }
         }
     };
@@ -2442,16 +2488,22 @@ Dark.objects = (function() {
             dy = v2.y - v1.y;
             dz = v2.z - v1.z;
         } else {
-            Dark.error(new Error("Cannot find the distance between a 2D and 3D DVector"));
+            Dark.error("Cannot find the distance between a 2D and 3D DVector");
         }
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     };
     DVector.prototype.dist = function(vector) {
         return DVector.dist(this, vector);
     };
-    DVector.get = function(v) {
-        return v.get();
+    DVector.applyTransform = function(vector, matrix) {
+        return DVector.mult(vector, matrix);
     };
+    DVector.prototype.applyTransform = function(matrix) {
+        this.mult(matrix);
+    },
+        DVector.get = function(v) {
+            return v.get();
+        };
     DVector.prototype.get = function() {
         if(this.is2D) {
             return new DVector(this.x, this.y);
@@ -2496,7 +2548,7 @@ Dark.objects = (function() {
     DVector.prototype.fromArray = function(arr) {
         switch(arr.length) {
             default:
-                Dark.error(new Error("DVector.fromArray takes in an array of length 2 or 3, not " + arr.length));
+                Dark.error("DVector.fromArray takes in an array of length 2 or 3, not " + arr.length);
                 break;
             case 2:
                 [this.x, this.y] = arr;
@@ -2616,7 +2668,7 @@ Dark.objects = (function() {
                 this.source
             );
         } else {
-            Dark.error(new Error("DImage.get requires 0 or 4 parameters, not " + args.length));
+            Dark.error("DImage.get requires 0 or 4 parameters, not " + args.length);
         }
     };
     DImage.set = function(img, ...args) {
@@ -2675,22 +2727,39 @@ Dark.objects = (function() {
             }
 
             f.gl.useProgram(f.program);
+
             f.tris = f.gl.createBuffer();
             f.gl.bindBuffer(f.gl.ARRAY_BUFFER, f.tris);
-            f.gl.bufferData(f.gl.ARRAY_BUFFER, DImage.texUV, f.gl.STATIC_DRAW);
+            f.gl.bufferData(f.gl.ARRAY_BUFFER, DImage.texData, f.gl.STATIC_DRAW);
+
+            f.trisIndex = f.gl.createBuffer();
+            f.gl.bindBuffer(f.gl.ELEMENT_ARRAY_BUFFER, f.trisIndex);
+            f.gl.bufferData(f.gl.ELEMENT_ARRAY_BUFFER, DImage.texIndices, f.gl.STATIC_DRAW);
 
             f.fs = Float32Array.BYTES_PER_ELEMENT;
 
-            f.posAttribLocation = f.gl.getAttribLocation(f.program, "pos");
+            f.posAttribLocation = f.gl.getAttribLocation(f.program, "vertPos");
+            f.uvAttribLocation = f.gl.getAttribLocation(f.program, "vertUV");
+
             f.gl.vertexAttribPointer(
                 f.posAttribLocation, // location
                 2, // parameter count (vec2)
                 f.gl.FLOAT, // type
                 f.gl.FALSE, // normalized?
-                2 * f.fs, // byte input size
+                4 * f.fs, // byte input size
                 0 // byte offset
             );
+            f.gl.vertexAttribPointer(
+                f.uvAttribLocation,
+                2,
+                f.gl.FLOAT,
+                f.gl.FALSE,
+                4 * f.fs,
+                2 * f.fs
+            );
+
             f.gl.enableVertexAttribArray(f.posAttribLocation);
+            f.gl.enableVertexAttribArray(f.uvAttribLocation);
 
             // Size of image, width by height.
             f.sizeUniformLocation = f.gl.getUniformLocation(f.program, "size");
@@ -2728,10 +2797,11 @@ Dark.objects = (function() {
 
             f.gl.clear(f.gl.COLOR_BUFFER_BIT | f.gl.DEPTH_BUFFER_BIT);
 
-            f.gl.drawArrays(
+            f.gl.drawElements(
                 f.gl.TRIANGLES, // type
-                0, // offset
-                6 // point count
+                DImage.texIndices.length, // vertex count
+                f.gl.UNSIGNED_SHORT, // index type
+                0 // skip count
             );
 
             let buffer = new Uint8ClampedArray(this.width * this.height * 4);
@@ -2758,18 +2828,21 @@ Dark.objects = (function() {
                 });
             }
         } else {
-            return Dark.error(new Error("Invalid filter type"));
+            return Dark.error("Invalid filter type");
         }
     };
-    DImage.texUV = new Float32Array([ // rectangle = 2 triangles, UV mapped
+    DImage.texData = new Float32Array([ // rectangle = 2 triangles, UV mapped
+        // Position, UV
+        -1, -1, 0, 0,
+        1, -1, 1, 0,
+        -1, 1, 0, 1,
+        1, 1, 1, 1
+    ]);
+    DImage.texIndices = new Uint16Array([
         // Triangle #1
-        -1, -1,
-        1, -1,
-        -1, 1,
+        0, 1, 2,
         // Triangle #2
-        1, 1,
-        1, -1,
-        -1, 1
+        1, 2, 3
     ]);
     DImage.globalVertexShader = Dark.loadFile("/filters/global.vert");
     DImage.filterShaders = [];
@@ -2777,17 +2850,17 @@ Dark.objects = (function() {
     DImage.gl = DImage.gl_canvas.getContext("webgl2", {antialias: false});
     DImage.initializeShaders = function(arr) {
         let gl = DImage.gl;
+        let vertexSource = DImage.globalVertexShader;
 
         if(!gl) return Dark.warn("Your browser does not support WebGL2.");
 
         arr.forEach(function(obj) {
             let shader = Dark.loadFile("/filters/" + obj.shader + ".frag");
 
-            vertexSource = DImage.globalVertexShader;
-            fragmentSource = shader;
+            let fragmentSource = shader;
 
-            vertexShader = gl.createShader(gl.VERTEX_SHADER);
-            fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+            let vertexShader = gl.createShader(gl.VERTEX_SHADER);
+            let fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 
             gl.shaderSource(vertexShader, vertexSource);
             gl.shaderSource(fragmentShader, fragmentSource);
@@ -2797,13 +2870,13 @@ Dark.objects = (function() {
 
             // Check for compiler errors, very nice for debugging
             if(!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-                return Dark.error(new Error("Error compiling vertex shader.\n\n" + gl.getShaderInfoLog(vertexShader)));
+                return Dark.error("Error compiling vertex shader.\n\n" + gl.getShaderInfoLog(vertexShader));
             }
             if(!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-                return Dark.error(new Error("Error compiling fragment shader.\n\n" + gl.getShaderInfoLog(fragmentShader)));
+                return Dark.error("Error compiling fragment shader.\n\n" + gl.getShaderInfoLog(fragmentShader));
             }
 
-            program = gl.createProgram();
+            let program = gl.createProgram();
 
             gl.attachShader(program, vertexShader);
             gl.attachShader(program, fragmentShader);
@@ -2812,11 +2885,11 @@ Dark.objects = (function() {
 
             // Check for more errors
             if(!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-                return Dark.error(new Error("Error linking program.\n\n" + gl.getProgramInfoLog(program)));
+                return Dark.error("Error linking program.\n\n" + gl.getProgramInfoLog(program));
             }
             gl.validateProgram(program);
             if(!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-                return Dark.error(new Error("Error validating program.\n\n" + gl.getProgramInfoLog(program)));
+                return Dark.error("Error validating program.\n\n" + gl.getProgramInfoLog(program));
             }
 
             DImage.filterShaders[obj.key] = {
@@ -2853,8 +2926,17 @@ Dark.objects = (function() {
                 default: 255
             }
         }, {
+            key: Dark.constants.SHARPEN,
+            shader: "sharpen"
+        }, {
             key: Dark.constants.SEPIA,
             shader: "sepia"
+        }, {
+            key: Dark.constants.OUTLINE,
+            shader: "outline"
+        }, {
+            key: Dark.constants.EDGE,
+            shader: "edge"
         }, {
             key: Dark.constants.VIGNETTE,
             shader: "vignette",
@@ -2887,6 +2969,9 @@ Dark.objects = (function() {
                 max: 1,
                 default: 1
             }
+        }, {
+            key: Dark.constants.NORMALIZE,
+            shader: "normalize"
         }, {
             key: Dark.constants.BOX,
             shader: "box",
@@ -2993,7 +3078,7 @@ Dark.objects = (function() {
             }
             return sum;
         } else {
-            Dark.error(new Error("Can only take the dot product of two DMatrices  with equal width and height"));
+            Dark.error("Can only take the dot product of two DMatrices  with equal width and height");
         }
     };
     DMatrix.prototype.dot = function(matrix) {
@@ -3010,7 +3095,7 @@ Dark.objects = (function() {
         if(this.width == this.height) {
             this.mat = DMatrix.identity(this.width).mat; // this.width or this.height
         } else {
-            Dark.error(new Error("Only DMatrices with square dimensions have identity DMatrices"));
+            Dark.error("Only DMatrices with square dimensions have identity DMatrices");
         }
     };
     DMatrix.add = function(mat1, mat2) {
@@ -3031,7 +3116,7 @@ Dark.objects = (function() {
             }
             return mat;
         } else {
-            Dark.error(new Error("Cannot add two DMatrices with different dimensions"));
+            Dark.error("Cannot add two DMatrices with different dimensions");
         }
     };
     DMatrix.prototype.add = function(matrix) {
@@ -3055,7 +3140,7 @@ Dark.objects = (function() {
             }
             return mat;
         } else {
-            Dark.error(new Error("Cannot subtract two DMatrices with different dimensions"));
+            Dark.error("Cannot subtract two DMatrices with different dimensions");
         }
     };
     DMatrix.prototype.sub = function(matrix) {
@@ -3079,7 +3164,7 @@ Dark.objects = (function() {
             }
             return mat;
         } else {
-            Dark.error(new Error("Can only multiply two DMatrices with equal width and height"));
+            Dark.error("Can only multiply two DMatrices with equal width and height");
         }
     };
     DMatrix.prototype.mult = function(matrix) {
@@ -3136,7 +3221,7 @@ Dark.objects = (function() {
     // Psuedo-Random Number Generator
     let DRandom = function(seed = Math.random() * 1000000) {
         if(!(this instanceof DRandom)) return new (Function.prototype.bind.apply(DRandom, [null].concat(...arguments)));
-        
+
         this.darkObject = true;
 
         this.seed = seed;
