@@ -1,21 +1,23 @@
 To add:
-• Gradient fill & stroke
+* Gradient fill & stroke
 • Colorspaces
 • blendColor
 • Noise (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
 • DImage.noise(), use WebGL to fill the imageWidth. Might even create 4 with the RGBA
-• Errors for 2 beginShapes in a row
-• Image masking
-• DImage.crop
+* Errors for 2 beginShapes in a row
+* Image masking
+* DImage.crop
 • Make DVector rotations work in 3D
-• Get the frameRate to be more constant
-• Improve copy function
+* Improve copy function
 • Make everything readonly in Dark instances
-• How to import section in README
-• Text width and height
-• Share image cache onto main Dark
-• left, right, top and bottom SOBEL
-• Swap kernels to uniforms
+* Text width and height
+* Share image cache onto main Dark
+* left, right, top and bottom SOBEL
+* imageData, loadPixels & updatePixels main
+• Better global variable updating & handling
+* Make resize work with one parameter
+* resizeMode(AUTO)
+* Errors for invalid modes on the rest of the mode functions
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
@@ -32,4 +34,7 @@ Possibly to add:
 • Framerate above natural refresh rate
 
 Bugs:
-• Crazy lag when leaving the page with a filter (specifically kernel ones)
+• Dark.js breaks when the canvas is larger than the screen
+• Dark.js mouse breaks when width / height is not the same as the style width / height
+
+Note: * = to add by next minor update
