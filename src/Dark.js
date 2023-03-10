@@ -91,6 +91,17 @@ var Dark = function(dummy = false) {
         vert.points.forEach(v => d.vertexCache.push(o.DVector.create(v.x, v.y)));
     };
 
+    // Integer-only factorial, 100% accurate and faster
+    var intFactorial = function(num) {
+        num = d.floor(num);
+
+        let total = num;
+        while(--num > 1) {
+            total *= num;
+        }
+        return total;
+    };
+
     var loadDefault = function() {
         d.frameRate(60);
         d.smooth();
@@ -317,17 +328,6 @@ var Dark = function(dummy = false) {
         // Not very accurate, pretty good up to the hundreths
         factorial: function(num) {
             return Number.isInteger(num) ? intFactorial(num) : gamma(num + 1);
-        },
-
-        // Integer-only factorial, 100% accurate and faster
-        intFactorial: function(num) {
-            num = d.floor(num);
-
-            let total = num;
-            while(--num > 1) {
-                total *= num;
-            }
-            return total;
         },
 
         choose: function(n, k) {
@@ -569,7 +569,7 @@ var Dark = function(dummy = false) {
         angleMode: function(mode) {
             switch(mode) {
                 default:
-                    Dark.error("Invalid angleMode type");
+                    Dark.error("Invalid angleMode");
                     break;
                 case k.DEGREES:
                     d.settings.angleMode = k.DEGREES;
@@ -580,20 +580,63 @@ var Dark = function(dummy = false) {
             }
         },
 
-        ellipseMode: function(type = k.CENTER) {
-            d.settings.ellipseMode = type;
+        ellipseMode: function(mode = k.CENTER) {
+            switch(mode) {
+                default:
+                    Dark.error("Invalid ellipseMode");
+                    break;
+                case k.CENTER:
+                    d.settings.ellipseMode = k.CENTER;
+                    break;
+                case k.CORNER:
+                    d.settings.ellipseMode = k.CORNER;
+                    break;
+                case k.RADIUS:
+                    d.settings.ellipseMode = k.RADIUS;
+                    break;
+            }
         },
 
-        rectMode: function(type = k.CORNER) {
-            d.settings.rectMode = type;
+        rectMode: function(mode = k.CORNER) {
+            switch(mode) {
+                default:
+                    Dark.error("Invalid rectMode");
+                    break;
+                case k.CORNER:
+                    d.settings.rectMode = k.CORNER;
+                    break;
+                case k.CENTER:
+                    d.settings.rectMode = k.CENTER;
+                    break;
+            }
         },
 
-        imageMode: function(type = k.CORNER) {
-            d.settings.imageMode = type;
+        imageMode: function(mode = k.CORNER) {
+            switch(mode) {
+                default:
+                    Dark.error("Invalid imageMode");
+                    break;
+                case k.CORNER:
+                    d.settings.imageMode = k.CORNER;
+                    break;
+                case k.CENTER:
+                    d.settings.imageMode = k.CENTER;
+                    break;
+            }
         },
 
-        resizeMode: function(type = k.WIDTH) {
-            d.settings.resizeMode = type;
+        resizeMode: function(mode = k.WIDTH) {
+            switch(mode) {
+                default:
+                    Dark.error("Invalid resizeMode");
+                    break;
+                case k.WIDTH:
+                    d.settings.resizeMode = k.WIDTH;
+                    break;
+                case k.HEIGHT:
+                    d.settings.resizeMode = k.HEIGHT;
+                    break;
+            }
         },
 
         curveTightness: function(tightness = 0) {
@@ -1123,7 +1166,7 @@ var Dark = function(dummy = false) {
         image: function(img, x, y, width, height) {
             [width, height] = [d.abs(width), d.abs(height)];
             d.ctx.save();
-            if(img instanceof ImageData) img = new o.DImage(img);
+            if(img instanceof ImageData) img = new o.DImage(img, d);
             let w, h;
             switch(arguments.length) {
                 default:
@@ -1188,7 +1231,7 @@ var Dark = function(dummy = false) {
                         result.image.onload = () => {
                             createImageBitmap(blob)
                                 .then(bitmap => {
-                                    let img = new o.DImage(bitmap.width, bitmap.height, d.canvas);
+                                    let img = new o.DImage(bitmap.width, bitmap.height, d);
 
                                     img.ctx.drawImage(bitmap, 0, 0, img.width, img.height);
                                     img.updatePixels();
@@ -1238,7 +1281,7 @@ var Dark = function(dummy = false) {
         },
 
         filter: function(filter, value) {
-            let screen = new o.DImage(d.canvas);
+            let screen = new o.DImage(d.canvas, d);
             screen.setDisposability(true);
             screen.filter(filter, value);
             d.ctx.putImageData(screen.imageData, 0, 0);
@@ -1250,7 +1293,7 @@ var Dark = function(dummy = false) {
         max: (a, b) => (a > b) ? a : b,
         log10: num => Math.log10(num),
         log2: num => Math.log2(num),
-        log: num => Math.log(num),
+        log: num => Math.log(num), // note: ln
         logBase: (base, num) => Math.log(base) / Math.log(num),
         mag: (a, b) => Math.sqrt(a * a + b * b),
         norm: (num, min, max) => (num - min) / (max - min),
@@ -1467,9 +1510,9 @@ Dark.constants = {
     SQUARE: 19,
     LEFT: 20,
     RIGHT: 21,
-    BASELINE: 22,
-    TOP: 23,
-    BOTTOM: 24,
+    TOP: 22,
+    BOTTOM: 23,
+    BASELINE: 24,
     GET: 25,
     SET: 26,
     RADIUS: 27,
@@ -1492,7 +1535,7 @@ Dark.constants = {
     SHARPEN: 44,
     SEPIA: 45,
     OUTLINE: 46,
-    SWIRL: 47, 
+    SWIRL: 47,
     EDGE: 48,
     CONTRAST: 49,
     VIGNETTE: 50,
@@ -1504,7 +1547,8 @@ Dark.constants = {
     TRANSPARENCY: 56,
     PIXELATE: 57,
     FISHEYE: 58,
-    EMBOSS: 59
+    EMBOSS: 59,
+    SOBEL: 60
 };
 
 Dark.filters = [
@@ -1531,7 +1575,8 @@ Dark.filters = [
     Dark.constants.TRANSPARENCY,
     Dark.constants.PIXELATE,
     Dark.constants.FISHEYE,
-    Dark.constants.EMBOSS
+    Dark.constants.EMBOSS,
+    Dark.constants.SOBEL
 ];
 
 // Special keys map
@@ -2691,7 +2736,7 @@ Dark.objects = (function() {
         } else if(args[0] instanceof OffscreenCanvas || args[0] instanceof HTMLCanvasElement) {
             this.width = args[0].width;
             this.height = args[0].height;
-            this.source = args[0];
+            this.source = args[1];
             this.canvas = args[0];
             this.ctx = this.canvas.getContext("2d", Dark.defaultContextSettings);
             this.imageData = this.ctx.getImageData(0, 0, this.width, this.height);
@@ -2733,7 +2778,7 @@ Dark.objects = (function() {
     };
     DImage.prototype.copy = function() {
         let img = new DImage();
-        [img.width, img.height, img.image, img.imageData, img.source, img.disposable, img.imageLoaded, img.imageSent] = [this.width, this.height, this.image, this.imageData, this.canvas, this.disposable, this.imageLoaded, this.imageSent];
+        [img.width, img.height, img.image, img.imageData, img.source, img.disposable, img.imageLoaded, img.imageSent] = [this.width, this.height, this.image, this.imageData, this.source, this.disposable, this.imageLoaded, this.imageSent];
         img.canvas = new OffscreenCanvas(this.width, this.height);
         img.ctx = img.canvas.getContext("2d");
         img.ctx.drawImage(this.imageLoaded ? this.image : this.canvas, 0, 0);
@@ -2741,13 +2786,20 @@ Dark.objects = (function() {
     };
     DImage.resize = function(img, width, height) {
         let newImg = img.copy();
+        newImg.setDisposability(true);
         newImg.resize(width, height);
         return newImg;
     };
     DImage.prototype.resize = function(width, height) {
         if(width == 0 || height == 0) return Dark.error("Image size must be greater than zero");
         if(this.width != width || this.height != height) {
-            if(this.source instanceof Dark);
+            if(this.source instanceof Dark) {
+                if(this.source.settings.resizeMode == this.source.constants.HEIGHT) {
+                    [width, height] = [width / img.height * img.width, width];
+                } else {
+                    [width, height] = [width, width / img.width * img.height];
+                }
+            }
 
             // Save pixels
             let oldCanvas = new OffscreenCanvas(width, height);
@@ -2761,7 +2813,7 @@ Dark.objects = (function() {
             // Redraw
             this.ctx.drawImage(oldCanvas, 0, 0);
 
-            // this.loadImage(); // TODO: Make this not destroy my computer for no reason
+            this.loadImage(); // TODO: Make this not destroy my computer for no reason
         }
     };
     DImage.prototype.loadPixels = function() {
@@ -2826,16 +2878,24 @@ Dark.objects = (function() {
             f.sizeUniformLocation = f.gl.getUniformLocation(f.program, "size");
             f.gl.uniform2f(f.sizeUniformLocation, this.width, this.height); // floats bc then I don't have to convert
 
-            // If the filter has a parameter
-            if(filter.param) {
-                // Constrain between min and max, otherwise set to default if not defined
-                if(value != undefined) {
-                    value = Dark.utils.constrain(value, filter.param.min, filter.param.max);
-                } else {
-                    value = filter.param.default;
+            // If it has many kernels
+            if(filter.multikernel) {
+                if(!Object.keys(filter.multikernel).includes(String(value))) value = filter.defaultShader;
+
+                f.kernelUniformLocation = f.gl.getUniformLocation(f.program, "kernel");
+                f.gl.uniform1fv(f.kernelUniformLocation, filter.multikernel[value]);
+            } else {
+                // If the filter has a parameter
+                if(filter.param) {
+                    // Constrain between min and max, otherwise set to default if not defined
+                    if(value != undefined) {
+                        value = Dark.utils.constrain(value, filter.param.min, filter.param.max);
+                    } else {
+                        value = filter.param.default;
+                    }
+                    f.paramUniformLocation = f.gl.getUniformLocation(f.program, "param");
+                    f.gl.uniform1f(f.paramUniformLocation, value);
                 }
-                f.paramUniformLocation = f.gl.getUniformLocation(f.program, "param");
-                f.gl.uniform1f(f.paramUniformLocation, value);
             }
 
             f.applied ??= [];
@@ -2941,7 +3001,9 @@ Dark.objects = (function() {
             DImage.filterShaders[obj.key] = {
                 shader: shader,
                 param: obj.param,
-                program: program
+                program: program,
+                multikernel: obj.multikernel,
+                defaultShader: obj.defaultShader
             };
         });
     };
@@ -3083,6 +3145,32 @@ Dark.objects = (function() {
         }, {
             key: Dark.constants.EMBOSS,
             shader: "emboss"
+        }, {
+            key: Dark.constants.SOBEL,
+            shader: "sobel",
+            multikernel: Object.fromEntries([
+                [Dark.constants.TOP, [
+                    1.0, 2.0, 1.0,
+                    0.0, 0.0, 0.0,
+                    -1.0, -2.0, -1.0
+                ]],
+                [Dark.constants.BOTTOM, [
+                    -1.0, -2.0, -1.0,
+                    0.0, 0.0, 0.0,
+                    1.0, 2.0, 1.0
+                ]],
+                [Dark.constants.LEFT, [
+                    1.0, 0.0, -1.0,
+                    2.0, 0.0, -2.0,
+                    1.0, 0.0, -1.0
+                ]],
+                [Dark.constants.RIGHT, [
+                    -1.0, 0.0, 1.0,
+                    -2.0, 0.0, 2.0,
+                    -1.0, 0.0, 1.0
+                ]]
+            ]),
+            defaultShader: Dark.constants.TOP
         }
     ]);
     DImage.prototype.generateImage = function(blob) {
@@ -3097,7 +3185,6 @@ Dark.objects = (function() {
     DImage.prototype.loadImage = function() {
         // Reset
         this.image = null;
-        this.imageSent = false;
         this.imageLoaded = false;
 
         if(!Dark.khan && !this.disposable && !this.imageSent) {
