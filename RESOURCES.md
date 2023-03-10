@@ -14,6 +14,10 @@
 - [Mozilla](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/uniform)
 - [Wikipedia](https://en.wikipedia.org/wiki/Gaussian_blur)
 - [Setosa](https://setosa.io/ev/image-kernels/)
+- [GLFX](https://github.com/evanw/glfx.js/)
+- [P5.js](https://github.com/processing/p5.js?files=1)
+- [Prcocessing.js](https://github.com/processing-js/processing-js/blob/master/src/Processing.js)
+- [Shadertoy](https://www.shadertoy.com/)
 
 ## Loading Files:
 - [StackOverflow](https://stackoverflow.com/questions/36921947/read-a-server-side-file-using-javascript)
@@ -22,3 +26,5 @@
 ## Psuedo Random Number Generation:
 - [StackOverflow](https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript)
 - [JSHash](https://github.com/bryc/code/blob/master/jshash/PRNGs.md)
+
+<sub>Note: Resources are sites used but not closely followed or completely copied</sub>
