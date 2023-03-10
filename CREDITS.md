@@ -26,3 +26,8 @@
 
 ## [JSHash](https://github.com/bryc/code/blob/master/jshash/PRNGs.md#xoshiro):
 - Xoshiro128+ Psuedo Random Number Generator
+
+## [Geeks3D](https://www.geeks3d.com/20110428/shader-library-swirl-post-processing-filter-in-glsl/)
+- Swirl image filter 
+
+<sub>Note: Credits are sites or people who Dark.js closely followed or copied</sub>
