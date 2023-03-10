@@ -1,4 +1,4 @@
-"use strict";
+"use strict"; // For ES6+ strict error mode
 
 if(window.Dark) throw "There is more than one Dark.js import"; // Stop multiple imports
 
@@ -13,9 +13,12 @@ var Dark = function(dummy = false) {
     let lastHidden = -1;
     let lastScrollTime = null;
 
-    // Shorter = faster to typing time
+    let shapeInProgress = false;
+
+    // Shorter = faster typing time
     let d = this;
     let k = d.constants = Dark.constants;
+    let o = d.objects = Dark.objects;
 
     Dark.instances.push(d);
 
@@ -43,14 +46,13 @@ var Dark = function(dummy = false) {
     d.successfullyCachedImageCount = 0;
     d.loaded = false;
     d.began = false;
-    d.objects = Dark.objects;
 
     // copy over
     d.copy = Dark.copy;
     d.format = Dark.format;
 
     // Random number generator
-    d.randomGenerator = d.objects.DRandom.create();
+    d.randomGenerator = o.DRandom.create();
 
     // Is a dummy instance?
     d.dummy = dummy;
@@ -86,7 +88,7 @@ var Dark = function(dummy = false) {
 
     var cacheVert = function(vert) {
         d.vertices.push(vert);
-        vert.points.forEach(v => d.vertexCache.push(d.objects.DVector.create(v.x, v.y)));
+        vert.points.forEach(v => d.vertexCache.push(o.DVector.create(v.x, v.y)));
     };
 
     var loadDefault = function() {
@@ -95,6 +97,7 @@ var Dark = function(dummy = false) {
         d.ellipseMode(k.CENTER);
         d.rectMode(k.CORNER);
         d.imageMode(k.CORNER);
+        d.resizeMode(k.WIDTH);
         d.angleMode(k.DEGREES);
         d.strokeCap(k.ROUND);
         d.strokeJoin(k.MITER);
@@ -137,6 +140,8 @@ var Dark = function(dummy = false) {
         document.addEventListener("keyup", function(e) {
             if(Dark.focus.target === d.canvas) {
                 if(d.settings.keyEvents) e.preventDefault();
+                d.key = Dark.special[e.keyCode] ?? e.key;
+                d.keyCode = e.keyCode;
                 keys[d.key] = false;
                 d.keyIsPressed = false;
                 Dark.globallyUpdateVariables(d);
@@ -218,7 +223,7 @@ var Dark = function(dummy = false) {
         d.canvas.addEventListener("wheel", function(e) {
             if(d.settings.scrollEvents) e.preventDefault();
             lastScrollTime = performance.now();
-            d.mouseScroll = d.objects.DVector.create(e.deltaX, e.deltaY, e.deltaZ);
+            d.mouseScroll = o.DVector.create(e.deltaX, e.deltaY, e.deltaZ);
             Dark.globallyUpdateVariables(d);
             d.mouseScrolled();
         });
@@ -342,7 +347,7 @@ var Dark = function(dummy = false) {
         },
 
         randomSeed: function(seed) {
-            if(seed != d.randomGenerator.seed) d.randomGenerator = d.objects.DRandom.create(seed);
+            if(seed != d.randomGenerator.seed) d.randomGenerator = o.DRandom.create(seed);
         },
 
         cursor: function(type = "default") {
@@ -509,12 +514,18 @@ var Dark = function(dummy = false) {
 
         smooth: function() {
             d.settings.smoothing = true;
+            d.ctx.mozImageSmoothingEnabled = true;
+            d.ctx.webkitImageSmoothingEnabled = true;
+            d.ctx.msImageSmoothingEnabled = true;
             d.ctx.imageSmoothingEnabled = true;
             d.ctx.imageSmoothingQuality = "high";
         },
 
         noSmooth: function() {
             d.settings.smoothing = true;
+            d.ctx.mozImageSmoothingEnabled = false;
+            d.ctx.webkitImageSmoothingEnabled = false;
+            d.ctx.msImageSmoothingEnabled = false;
             d.ctx.imageSmoothingEnabled = false;
             d.ctx.imageSmoothingQuality = "low";
         },
@@ -581,8 +592,13 @@ var Dark = function(dummy = false) {
             d.settings.imageMode = type;
         },
 
+        resizeMode: function(type = k.WIDTH) {
+            d.settings.resizeMode = type;
+        },
+
         curveTightness: function(tightness = 0) {
             d.settings.curveTightness = tightness;
+            d.settings.curveMatrixTightness = (tightness - 1) / 6;
         },
 
         // Transformations
@@ -613,7 +629,7 @@ var Dark = function(dummy = false) {
         },
 
         getMatrix: function() {
-            return d.objects.DMatrix.fromDOMMatrix(d.transforms[d.transforms.length - 1]);
+            return o.DMatrix.fromDOMMatrix(d.transforms[d.transforms.length - 1]);
         },
 
         pushStyle: function() {
@@ -768,8 +784,6 @@ var Dark = function(dummy = false) {
         },
 
         circle: function(x, y, radius) {
-            if(d.settings.ellipseMode == k.RADIUS) width /= 2, height /= 2;
-
             if(!d.settings.smoothing) [x, y, radius] = [d.round(x), d.round(y), d.round(radius)];
             radius = d.round(radius);
 
@@ -813,9 +827,14 @@ var Dark = function(dummy = false) {
         },
 
         beginShape: function() {
-            // faster than = []
-            d.vertices.length = 0;
-            d.vertexCache.length = 0;
+            if(shapeInProgress) {
+                Dark.error("Cannot begin a new shape before the previous shape has ended");
+            } else {
+                // faster than = []
+                d.vertices.length = 0;
+                d.vertexCache.length = 0;
+                shapeInProgress = true;
+            }
         },
 
         // https://www.cs.umd.edu/~reastman/slides/L19P01ParametricCurves.pdf
@@ -832,8 +851,7 @@ var Dark = function(dummy = false) {
                             d.ctx.lineTo(pt.x, pt.y);
                             break;
                         case k.CURVE:
-                            // TODO: update only on curveTightness for speed
-                            let t = (d.settings.curveTightness - 1) / 6;
+                            let t = d.settings.curveMatrixTightness;
 
                             let p0 = d.vertexCache[index - 3];
                             let p1 = d.vertexCache[index - 2];
@@ -864,15 +882,13 @@ var Dark = function(dummy = false) {
                             let pts = vert.points;
                             d.ctx.bezierCurveTo(pts[0].x, pts[0].y, pts[1].x, pts[1].y, pts[2].x, pts[2].y);
                             break;
-                        case k.SMOOTH:
-                            // to be implemented
-                            break;
                     }
                 }
             });
             if(type == k.CLOSE) d.ctx.closePath();
             d.ctx.fill();
             d.ctx.stroke();
+            shapeInProgress = false;
         },
 
         // Kinda copied from ski, though slightly different (curveVertex)
@@ -1027,9 +1043,9 @@ var Dark = function(dummy = false) {
 
         textFont: function(font) {
             if(typeof font == "string") {
-                font = new d.objects.DFont(font);
+                font = new o.DFont(font);
             }
-            if(font instanceof d.objects.DFont) {
+            if(font instanceof o.DFont) {
                 d.settings.font = font;
                 d.settings.textSize = font.size;
                 d.reloadFont();
@@ -1089,15 +1105,9 @@ var Dark = function(dummy = false) {
         // Images
         get: function(...args) {
             if(args.length == 0) {
-                return new DImage(
-                    d.ctx.getImageData(0, 0, d.width, d.height),
-                    d.canvas
-                );
+                return new o.DImage(d.ctx.getImageData(0, 0, d.width, d.height), d);
             } else if(args.length == 4) {
-                return new DImage(
-                    d.ctx.getImageData(args[0], args[1], args[2], args[3]),
-                    d.canvas
-                );
+                return new o.DImage(d.ctx.getImageData(args[0], args[1], args[2], args[3]), d);
             } else {
                 Dark.error("get requires 0 or 4 parameters, not " + args.length);
             }
@@ -1111,35 +1121,44 @@ var Dark = function(dummy = false) {
         },
 
         image: function(img, x, y, width, height) {
-            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
             [width, height] = [d.abs(width), d.abs(height)];
             d.ctx.save();
-            if(img instanceof ImageData) img = new DImage(img);
+            if(img instanceof ImageData) img = new o.DImage(img);
             let w, h;
             switch(arguments.length) {
                 default:
                     d.ctx.restore();
                     return Dark.error("image requires 1, 3, 4 or 5 parameters, not " + arguments.length);
                 case 1:
-                    [w, h] = [d.width, d.height];
+                    [x, y, w, h] = [0, 0, d.width, d.height];
                     break;
                 case 3:
                     [w, h] = [img.width, img.height];
                     break;
                 case 4:
-                    [w, h] = [width, width / img.width * img.height];
+                    if(d.settings.resizeMode == k.HEIGHT) {
+                        [w, h] = [width / img.height * img.width, width];
+                    } else {
+                        [w, h] = [width, width / img.width * img.height];
+                    }
                     break;
                 case 5:
                     [w, h] = [width, height];
                     break;
             }
             if(d.settings.imageMode == k.CENTER) d.ctx.translate(- w / 2, - h / 2);
-            d.ctx.drawImage(img.imageLoaded ? img.image : img.canvas, x, y, w, h);
+            if(d.settings.smoothing) {
+                let copied = DImage.resize(img, w, h);
+                d.ctx.drawImage(copied.imageLoaded ? copied.image : copied.canvas, x, y, w, h);
+            } else {
+                [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
+                d.ctx.drawImage(img.imageLoaded ? img.image : img.canvas, x, y, w, h);
+            }
             d.ctx.restore();
         },
 
         loadImage: function(url) {
-            let result = new DImage(1, 1, d);
+            let result = new o.DImage(1, 1, d);
             if(Object.keys(d.imageCache).includes(url) && d.began) return d.imageCache[url];
             d.imageCache[url] = null;
 
@@ -1169,7 +1188,7 @@ var Dark = function(dummy = false) {
                         result.image.onload = () => {
                             createImageBitmap(blob)
                                 .then(bitmap => {
-                                    let img = new DImage(bitmap.width, bitmap.height, d.canvas);
+                                    let img = new o.DImage(bitmap.width, bitmap.height, d.canvas);
 
                                     img.ctx.drawImage(bitmap, 0, 0, img.width, img.height);
                                     img.updatePixels();
@@ -1195,7 +1214,7 @@ var Dark = function(dummy = false) {
                 let url = "https://cdn.kastatic.org/third_party/javascript-khansrc/live-editor/build/images/" + loc + ".png";
                 if(Object.keys(d.imageCache).includes(url) && d.began) return d.imageCache[url];
 
-                let img = new d.objects.DImage(1, 1, d);
+                let img = new o.DImage(1, 1, d);
                 d.imageCache[url] = null;
                 d.cachedImageCount++;
                 img.image = new Image();
@@ -1219,7 +1238,8 @@ var Dark = function(dummy = false) {
         },
 
         filter: function(filter, value) {
-            let screen = new DImage(d.ctx.getImageData(0, 0, d.width, d.height), d.canvas);
+            let screen = new o.DImage(d.canvas);
+            screen.setDisposability(true);
             screen.filter(filter, value);
             d.ctx.putImageData(screen.imageData, 0, 0);
         },
@@ -1373,9 +1393,9 @@ var Dark = function(dummy = false) {
         loadEvents();
 
         // Setup later options
-        d.mouse = d.objects.DVector.zero2D();
-        d.pmouse = d.objects.DVector.zero2D();
-        d.mouseScroll = d.objects.DVector.zero3D();
+        d.mouse = o.DVector.zero2D();
+        d.pmouse = o.DVector.zero2D();
+        d.mouseScroll = o.DVector.zero3D();
         d.settings.cursor = "auto";
         d.settings.looping = true;
 
@@ -1394,7 +1414,7 @@ var Dark = function(dummy = false) {
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.0.1";
+Dark.version = "pre-0.7.1";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1431,68 +1451,77 @@ Dark.constants = {
     RADIANS: 3,
     VERTEX: 4,
     CURVE: 5,
-    SMOOTH: 6, // unused
-    BEZIER: 7,
-    CLOSE: 8,
-    OPEN: 9,
-    CENTER: 10,
-    CORNER: 11,
-    BOLD: 12,
-    ITALIC: 13,
-    NORMAL: 14,
-    BEVEL: 15,
-    MITER: 16,
-    SQUARE: 17,
-    LEFT: 18,
-    RIGHT: 19,
-    BASELINE: 20,
-    TOP: 21,
-    BOTTOM: 22,
-    GET: 23,
-    SET: 24,
-    RADIUS: 25, // unused
-    KEY: 26,
-    CLICK: 27,
-    SCROLL: 28,
-    PERLIN: 29, // unused
-    SIMPLEX: 30, // unused
-    WORLEY: 31, // unused
-    VALUE: 32, // unused
-    RANDOM: 33, // unused
-    INVERT: 34,
-    OPAQUE: 35,
-    GRAY: 36,
-    ERODE: 37, // unused
-    DILATE: 38, // unused
-    THRESHOLD: 39,
-    POSTERIZE: 40,
-    BLUR: 41, // unused
-    SHARPEN: 42,
-    SEPIA: 43,
-    OUTLINE: 44,
-    EMBOSS: 45, // unused
-    EDGE: 46,
-    COTRAST: 47, // unused
-    VIGNETTE: 48,
-    BRIGHTNESS: 49,
-    BLACK: 50,
-    WHITE: 51,
-    NORMALIZE: 52,
-    BOX: 53,
-    TRANSPARENCY: 54,
-    PIXELATE: 55
+    BEZIER: 6,
+    CLOSE: 7,
+    OPEN: 8,
+    CENTER: 9,
+    CORNER: 10,
+    WIDTH: 11,
+    HEIGHT: 12,
+    AUTO: 13, // unused
+    BOLD: 14,
+    ITALIC: 15,
+    NORMAL: 16,
+    BEVEL: 17,
+    MITER: 18,
+    SQUARE: 19,
+    LEFT: 20,
+    RIGHT: 21,
+    BASELINE: 22,
+    TOP: 23,
+    BOTTOM: 24,
+    GET: 25,
+    SET: 26,
+    RADIUS: 27,
+    KEY: 28,
+    CLICK: 29,
+    SCROLL: 30,
+    PERLIN: 31, // unused
+    SIMPLEX: 32, // unused
+    WORLEY: 33, // unused
+    VALUE: 34, // unused
+    RANDOM: 35, // unused
+    INVERT: 36,
+    OPAQUE: 37,
+    GRAY: 38,
+    ERODE: 39,
+    DILATE: 40,
+    THRESHOLD: 41,
+    POSTERIZE: 42,
+    BLUR: 43,
+    SHARPEN: 44,
+    SEPIA: 45,
+    OUTLINE: 46,
+    SWIRL: 47, 
+    EDGE: 48,
+    CONTRAST: 49,
+    VIGNETTE: 50,
+    BRIGHTNESS: 51,
+    BLACK: 52,
+    WHITE: 53,
+    NORMALIZE: 54,
+    BOX: 55,
+    TRANSPARENCY: 56,
+    PIXELATE: 57,
+    FISHEYE: 58,
+    EMBOSS: 59
 };
 
 Dark.filters = [
     Dark.constants.INVERT,
     Dark.constants.OPAQUE,
     Dark.constants.GRAY,
+    Dark.constants.ERODE,
+    Dark.constants.DILATE,
     Dark.constants.THRESHOLD,
     Dark.constants.POSTERIZE,
+    Dark.constants.BLUR,
     Dark.constants.SHARPEN,
     Dark.constants.SEPIA,
     Dark.constants.OUTLINE,
+    Dark.constants.SWIRL,
     Dark.constants.EDGE,
+    Dark.constants.CONTRAST,
     Dark.constants.VIGNETTE,
     Dark.constants.BRIGHTNESS,
     Dark.constants.BLACK,
@@ -1500,7 +1529,9 @@ Dark.filters = [
     Dark.constants.NORMALIZE,
     Dark.constants.BOX,
     Dark.constants.TRANSPARENCY,
-    Dark.constants.PIXELATE
+    Dark.constants.PIXELATE,
+    Dark.constants.FISHEYE,
+    Dark.constants.EMBOSS
 ];
 
 // Special keys map
@@ -1668,7 +1699,7 @@ Dark.imageLocationsKA = [
     "creatures/Hopper-Cool",
     "creatures/Hopper-Jumping",
     "creatures/OhNoes",
-    "creatures/OhNoes-Happy",
+    "creatures/OhNoes-Hmm",
     "creatures/OhNoes-Happy",
     "creatures/BabyWinston",
     "creatures/Winston",
@@ -1678,7 +1709,7 @@ Dark.imageLocationsKA = [
     "cute/CharacterCatGirl",
     "cute/CharacterHornGirl",
     "cute/CharacterPinkGirl",
-    "cute/CharacterPinkGirl",
+    "cute/CharacterPrincessGirl",
     "cute/ChestClosed",
     "cute/ChestLid",
     "cute/ChestOpen",
@@ -1997,7 +2028,7 @@ Dark.getMain = function() {
 };
 
 Dark.fileCacheKA = {
-    "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 vertPos;\nin vec2 vertUV;\nout vec2 uv;\nvoid main() {\n uv = vertUV;\n gl_Position = vec4(vertPos, 0.0, 1.0);\n}",
+    "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 vertPos;\nin vec2 vertUV;\nout vec2 uv;\nout vec2 pos;\nvoid main() {\n pos = vertPos;\n uv = vertUV;\n gl_Position = vec4(vertPos, 0.0, 1.0);\n}",
     "/filters/invert.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(1.0 - tex.rgb, tex.a);\n}",
     "/filters/opaque.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(tex.rgb, 1.0);\n}",
     "/filters/grayscale.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n float luminance = 0.2126 * tex.r + 0.7152 * tex.g + 0.0722 * tex.b; // Based on how human eyes precieve\n color = vec4(vec3(luminance), tex.a);\n}",
@@ -2014,7 +2045,14 @@ Dark.fileCacheKA = {
     "/filters/sharpen.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nvoid main() {\n vec4 tex = texture(sampler, uv);\n const float kernel[9] = float[](\n 0.0, -1.0, 0.0,\n -1.0, 5.0, -1.0,\n 0.0, -1.0, 0.0\n ); \n color = vec4((\n get(-1.0, -1.0) * kernel[0] +\n get(0.0, -1.0) * kernel[1] +\n get(1.0, -1.0) * kernel[2] +\n get(-1.0, 0.0) * kernel[3] +\n get(0.0, 0.0) * kernel[4] +\n get(1.0, 0.0) * kernel[5] +\n get(-1.0, 1.0) * kernel[6] +\n get(0.0, 1.0) * kernel[7] +\n get(1.0, 1.0) * kernel[8]\n ).rgb, tex.a);\n}",
     "/filters/outline.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nvoid main() {\n vec4 tex = texture(sampler, uv);\n const float kernel[9] = float[](\n -1.0, -1.0, -1.0,\n -1.0, 8.0, -1.0,\n -1.0, -1.0, -1.0\n ); \n color = vec4((\n get(-1.0, -1.0) * kernel[0] +\n get(0.0, -1.0) * kernel[1] +\n get(1.0, -1.0) * kernel[2] +\n get(-1.0, 0.0) * kernel[3] +\n get(0.0, 0.0) * kernel[4] +\n get(1.0, 0.0) * kernel[5] +\n get(-1.0, 1.0) * kernel[6] +\n get(0.0, 1.0) * kernel[7] +\n get(1.0, 1.0) * kernel[8]\n ).rgb, tex.a);\n}",
     "/filters/edge.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nvoid main() {\n vec4 tex = texture(sampler, uv);\n const float kernel[9] = float[](\n 0.0, 1.0, 0.0,\n 1.0, -4.0, 1.0,\n 0.0, 1.0, 0.0\n ); \n color = vec4((\n get(-1.0, -1.0) * kernel[0] +\n get(0.0, -1.0) * kernel[1] +\n get(1.0, -1.0) * kernel[2] +\n get(-1.0, 0.0) * kernel[3] +\n get(0.0, 0.0) * kernel[4] +\n get(1.0, 0.0) * kernel[5] +\n get(-1.0, 1.0) * kernel[6] +\n get(0.0, 1.0) * kernel[7] +\n get(1.0, 1.0) * kernel[8]\n ).rgb, tex.a);\n}",
-    "/filters/normalize.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(tex.rgb / length(tex.rgb), tex.a);\n}"
+    "/filters/normalize.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(tex.rgb / length(tex.rgb), tex.a);\n}",
+    "/filters/erode.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nfloat luminance(vec4 col) {\n return 0.2126 * col.r + 0.7152 * col.g + 0.0722 * col.b; // from grayscale\n}\nvoid main() {\n vec4 middle = get(0.0, 0.0);\n vec4 top = get(0.0, 1.0);\n vec4 bottom = get(0.0, -1.0);\n vec4 right = get(1.0, 0.0);\n vec4 left = get(-1.0, 0.0);\n float lumMiddle = luminance(middle);\n float lumTop = luminance(top);\n float lumBottom = luminance(bottom);\n float lumRight = luminance(right);\n float lumLeft = luminance(left);\n if(lumBottom > lumMiddle) {\n color = bottom;\n } else if(lumTop > lumMiddle) {\n color = top;\n } else if(lumRight > lumMiddle) {\n color = right;\n } else if(lumLeft > lumMiddle) {\n color = left;\n } else {\n color = middle;\n }\n}",
+    "/filters/dilate.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nfloat luminance(vec4 col) {\n return 0.2126 * col.r + 0.7152 * col.g + 0.0722 * col.b; // from grayscale\n}\nvoid main() {\n vec4 middle = get(0.0, 0.0);\n vec4 top = get(0.0, 1.0);\n vec4 bottom = get(0.0, -1.0);\n vec4 right = get(1.0, 0.0);\n vec4 left = get(-1.0, 0.0);\n float lumMiddle = luminance(middle);\n float lumTop = luminance(top);\n float lumBottom = luminance(bottom);\n float lumRight = luminance(right);\n float lumLeft = luminance(left);\n if(lumBottom < lumMiddle) {\n color = bottom;\n } else if(lumTop < lumMiddle) {\n color = top;\n } else if(lumRight < lumMiddle) {\n color = right;\n } else if(lumLeft < lumMiddle) {\n color = left;\n } else {\n color = middle;\n }\n}",
+    "/filters/blur.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nuniform float param;\nin vec2 uv;\nout vec4 color;\n#define len (param * 2.0 + 1.0)\n#define count (len * len)\n#define TAU (6.2831853071795864769252867665590057683943)\nvoid main() { \n vec4 total = vec4(0.0);\n float matrixTotal = 0.0;\n for(float y = -param; y <= param; y++) {\n for(float x = -param; x <= param; x++) {\n vec4 tex = texture(sampler, uv + vec2(x, y) / size);\n float gaussian = exp(- (x * x + y * y) / (2.0 * param * param)) / (TAU * param * param);\n matrixTotal += gaussian;\n total += vec4(tex.rgb * gaussian, tex.a);\n }\n }\n color = total / matrixTotal;\n}",
+    "/filters/swirl.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nuniform float param;\nin vec2 uv;\nout vec4 color;\n#define radius (0.5)\nvoid main() {\n vec2 cUV = uv - vec2(0.5); // centered UV\n float len = length(cUV);\n float theta = atan(cUV.y, cUV.x) + param * smoothstep(radius, 0.0, len);\n float dist = length(cUV);\n vec4 tex = texture(sampler, vec2(dist * cos(theta), dist * sin(theta)) + vec2(0.5));\n \n color = tex;\n}",
+    "/filters/contrast.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4((tex.rgb - 0.5) * param + 0.5, tex.a);\n}",
+    "/filters/fisheye.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nin vec2 pos;\nout vec4 color;\nvoid main() {\n vec2 mapped = (vec2(\n pos.x * sqrt(1.0 - pos.y * pos.y * param),\n pos.y * sqrt(1.0 - pos.x * pos.x * param)\n ) + 1.0) / 2.0;\n \n vec4 tex = texture(sampler, mapped);\n color = tex;\n}",
+    "/filters/emboss.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nvoid main() {\n vec4 tex = texture(sampler, uv);\n const float kernel[9] = float[](\n -2.0, -1.0, 0.0,\n -1.0, 1.0, 1.0,\n 0.0, 1.0, 2.0\n ); \n color = vec4((\n get(-1.0, -1.0) * kernel[0] +\n get(0.0, -1.0) * kernel[1] +\n get(1.0, -1.0) * kernel[2] +\n get(-1.0, 0.0) * kernel[3] +\n get(0.0, 0.0) * kernel[4] +\n get(1.0, 0.0) * kernel[5] +\n get(-1.0, 1.0) * kernel[6] +\n get(0.0, 1.0) * kernel[7] +\n get(1.0, 1.0) * kernel[8]\n ).rgb, tex.a);\n}"
 };
 
 Dark.compileListKA = [];
@@ -2046,7 +2084,7 @@ Dark.loadFile = function(loc) {
 Dark.compileKA = function() {
     if(Dark.editor) {
         Dark.compileListKA.forEach(file => Dark.fileCacheKA[file.location] = file.contents);
-        console.log(Dark.format(Dark.fileCacheKA));
+        // console.log(Dark.format(Dark.fileCacheKA));
     }
 };
 
@@ -2650,6 +2688,13 @@ Dark.objects = (function() {
             this.imageData = new ImageData(this.width, this.height);
             this.canvas = new OffscreenCanvas(this.width, this.height);
             this.ctx = this.canvas.getContext("2d", Dark.defaultContextSettings);
+        } else if(args[0] instanceof OffscreenCanvas || args[0] instanceof HTMLCanvasElement) {
+            this.width = args[0].width;
+            this.height = args[0].height;
+            this.source = args[0];
+            this.canvas = args[0];
+            this.ctx = this.canvas.getContext("2d", Dark.defaultContextSettings);
+            this.imageData = this.ctx.getImageData(0, 0, this.width, this.height);
         } else {
             this.imageData = null;
             this.source = args[0];
@@ -2661,15 +2706,16 @@ Dark.objects = (function() {
         return img.get.apply(null, args);
     };
     DImage.prototype.get = function(...args) {
-        if(args.length == 0) { // TODO: Change to switch-case-break
-            return this.copy();
-        } else if(args.length == 4) {
-            return new DImage(
-                this.ctx.getImageData(args[0], args[1], args[2], args[3]),
-                this.source
-            );
-        } else {
-            Dark.error("DImage.get requires 0 or 4 parameters, not " + args.length);
+        switch(args.length) {
+            default:
+                return Dark.error("DImage.get requires 0 or 4 parameters, not " + args.length);
+            case 0:
+                return this.copy();
+            case 4:
+                return new DImage(
+                    this.ctx.getImageData(args[0], args[1], args[2], args[3]),
+                    this.source
+                );
         }
     };
     DImage.set = function(img, ...args) {
@@ -2686,25 +2732,36 @@ Dark.objects = (function() {
         return img.copy();
     };
     DImage.prototype.copy = function() {
-        return new DImage(new ImageData(new Uint8ClampedArray(this.imageData.data), this.width, this.height), this.source);
+        let img = new DImage();
+        [img.width, img.height, img.image, img.imageData, img.source, img.disposable, img.imageLoaded, img.imageSent] = [this.width, this.height, this.image, this.imageData, this.canvas, this.disposable, this.imageLoaded, this.imageSent];
+        img.canvas = new OffscreenCanvas(this.width, this.height);
+        img.ctx = img.canvas.getContext("2d");
+        img.ctx.drawImage(this.imageLoaded ? this.image : this.canvas, 0, 0);
+        return img;
     };
     DImage.resize = function(img, width, height) {
-        img.resize(width, height);
+        let newImg = img.copy();
+        newImg.resize(width, height);
+        return newImg;
     };
     DImage.prototype.resize = function(width, height) {
+        if(width == 0 || height == 0) return Dark.error("Image size must be greater than zero");
         if(this.width != width || this.height != height) {
+            if(this.source instanceof Dark);
+
             // Save pixels
-            let oldCanvas = new OffscreenCanvas(this.width, this.height);
+            let oldCanvas = new OffscreenCanvas(width, height);
             let oldCtx = oldCanvas.getContext("2d");
+            oldCtx.scale(width / this.width, height / this.height);
             oldCtx.drawImage(this.canvas, 0, 0);
 
             // Resize dimensions
             [this.canvas.width, this.canvas.height] = [this.width, this.height] = [width, height];
 
             // Redraw
-            this.ctx.drawImage(oldCanvas, 0, 0, this.width, this.height);
+            this.ctx.drawImage(oldCanvas, 0, 0);
 
-            this.image = undefined;
+            // this.loadImage(); // TODO: Make this not destroy my computer for no reason
         }
     };
     DImage.prototype.loadPixels = function() {
@@ -2712,6 +2769,9 @@ Dark.objects = (function() {
     };
     DImage.prototype.updatePixels = function() {
         this.imageData.data.set(this.ctx.getImageData(0, 0, this.width, this.height).data);
+    };
+    DImage.prototype.setDisposability = function(disposable) {
+        this.disposable = disposable
     };
     DImage.prototype.filter = function(type, value) {
         if(Dark.filters.includes(type)) {
@@ -2789,7 +2849,7 @@ Dark.objects = (function() {
             f.gl.texParameteri(f.gl.TEXTURE_2D, f.gl.TEXTURE_WRAP_T, f.gl.CLAMP_TO_EDGE);
             f.gl.texParameteri(f.gl.TEXTURE_2D, f.gl.TEXTURE_MIN_FILTER, f.gl.LINEAR);
             f.gl.texParameteri(f.gl.TEXTURE_2D, f.gl.TEXTURE_MAG_FILTER, f.gl.LINEAR);
-            f.gl.texImage2D(f.gl.TEXTURE_2D, 0, f.gl.RGBA, f.gl.RGBA, f.gl.UNSIGNED_BYTE, this.imageData);
+            f.gl.texImage2D(f.gl.TEXTURE_2D, 0, f.gl.RGBA, f.gl.RGBA, f.gl.UNSIGNED_BYTE, this.image ?? this.canvas ?? this.imageData);
             f.gl.bindTexture(f.gl.TEXTURE_2D, null);
 
             // Bind texture
@@ -2806,28 +2866,13 @@ Dark.objects = (function() {
             );
 
             let buffer = new Uint8ClampedArray(this.width * this.height * 4);
-            f.gl.readPixels(0, 0, this.width, this.height, f.gl.RGBA, f.gl.UNSIGNED_BYTE, buffer);
+            f.gl.readPixels(0, 0, this.width, this.height, f.gl.RGBA, f.gl.UNSIGNED_BYTE, buffer); // slow
 
             this.imageData.data.set(buffer);
             this.ctx.putImageData(this.imageData, 0, 0);
 
-            // Reset
-            this.image = null;
-            this.imageLoaded = false;
-
             // Load to image, drawing images is faster
-            if(!Dark.khan) {
-                // Wait until canvas has rendered
-                requestAnimationFrame(() => {
-                    // Convert to blob
-                    this.canvas.convertToBlob({type: "image/png"}).then(blob => {
-                        this.image = new Image();
-                        this.image.src = URL.createObjectURL(blob);
-                        this.image.crossOrigin = "anonymous";
-                        this.image.onload = () => this.imageLoaded = true; // Load
-                    })
-                });
-            }
+            this.loadImage();
         } else {
             return Dark.error("Invalid filter type");
         }
@@ -2911,6 +2956,12 @@ Dark.objects = (function() {
             key: Dark.constants.GRAY,
             shader: "grayscale"
         }, {
+            key: Dark.constants.ERODE,
+            shader: "erode"
+        }, {
+            key: Dark.constants.DILATE,
+            shader: "dilate"
+        }, {
             key: Dark.constants.THRESHOLD,
             shader: "threshold",
             param: {
@@ -2927,6 +2978,14 @@ Dark.objects = (function() {
                 default: 255
             }
         }, {
+            key: Dark.constants.BLUR,
+            shader: "blur",
+            param: {
+                min: 0,
+                max: 25,
+                default: 1
+            }
+        }, {
             key: Dark.constants.SHARPEN,
             shader: "sharpen"
         }, {
@@ -2936,8 +2995,24 @@ Dark.objects = (function() {
             key: Dark.constants.OUTLINE,
             shader: "outline"
         }, {
+            key: Dark.constants.SWIRL,
+            shader: "swirl",
+            param: {
+                min: 0,
+                max: 12,
+                default: 4
+            }
+        }, {
             key: Dark.constants.EDGE,
             shader: "edge"
+        }, {
+            key: Dark.constants.CONTRAST,
+            shader: "contrast",
+            param: {
+                min: 0,
+                max: 15,
+                default: 3
+            }
         }, {
             key: Dark.constants.VIGNETTE,
             shader: "vignette",
@@ -2997,8 +3072,48 @@ Dark.objects = (function() {
                 max: 5000,
                 default: 1
             }
+        }, {
+            key: Dark.constants.FISHEYE,
+            shader: "fisheye",
+            param: {
+                min: -1,
+                max: 1,
+                default: -1
+            }
+        }, {
+            key: Dark.constants.EMBOSS,
+            shader: "emboss"
         }
     ]);
+    DImage.prototype.generateImage = function(blob) {
+        this.image = new Image();
+        this.image.src = URL.createObjectURL(blob);
+        this.image.crossOrigin = "anonymous";
+        this.image.addEventListener("load", () => {
+            this.imageLoaded = true;
+            this.imageSent = false;
+        }); // Load
+    };
+    DImage.prototype.loadImage = function() {
+        // Reset
+        this.image = null;
+        this.imageSent = false;
+        this.imageLoaded = false;
+
+        if(!Dark.khan && !this.disposable && !this.imageSent) {
+            this.imageSent = true;
+
+            // Wait until canvas has rendered
+            requestAnimationFrame(() => {
+                // Convert to blob 
+                if(this.canvas instanceof HTMLCanvasElement) {
+                    this.canvas.toBlob(this.generateImage, {type: "image/png"});
+                } else {
+                    this.canvas.convertToBlob({type: "image/png"}).then(blob => this.generateImage(blob));
+                }
+            });
+        }
+    };
 
     // Matrices
     let DMatrix = function(width, height, val = 0) {
@@ -3255,12 +3370,63 @@ Dark.objects = (function() {
         return new DRandom(seed);
     };
 
+    let DTimer = function() {
+        if(!(this instanceof DTimer)) return new (Function.prototype.bind.apply(DTimer, [null].concat(...arguments)));
+
+        this.darkObject = true;
+        this.reset();
+    };
+    DTimer.prototype.start = function() {
+        if(this.start == null) {
+            this.start = performance.now();
+        } else {
+            Dark.error("DTimer.reset must be called before a new timer begins");
+        }
+    };
+    DTimer.prototype.stop = function() {
+        if(this.start == null) {
+            Dark.error("DTimer.start must be called before DTimer.error");
+        } else {
+            this.end = performance.now();
+            this.time = this.end - this.start;
+        }
+    };
+    DTimer.prototype.reset = function() {
+        this.start = null;
+        this.end = null;
+        this.time = null;
+    };
+    DTimer.prototype.copy = function() {
+        let timer = new DTimer();
+        [timer.start, timer.end, timer.time] = [this.start, this.end, this.time];
+
+        return timer;
+    };
+    DTimer.prototype.toString = function() {
+        if(this.start == null) {
+            return `From ${this.start.toFixed(2)} to ${this.end.toFixed(2)}, taking ${this.time.toFixed(2)} milliseconds`;
+        } else {
+            return `The timer has yet to begin`;
+        }
+    };
+    DTimer.prototype.getSecond = () => this.time / 1000;
+    DTimer.prototype.getMillis = () => this.time;
+    DTimer.prototype.getMicro = () => this.time * 1000;
+    DTimer.prototype.getNano = () => this.time * 1000000;
+    DTimer.prototype.getFPS = () => 1000 / this.time;
+    DTimer.start = timer => timer.start();
+    DTimer.stop = timer => timer.stop();
+    DTimer.reset = timer => timer.reset();
+    DTimer.copy = timer => timer.copy();
+    DTimer.toString = timer => timer.toString();
+
     return {
         DVector: DVector,
         DFont: DFont,
         DImage: DImage,
         DMatrix: DMatrix,
-        DRandom: DRandom
+        DRandom: DRandom,
+        DTimer: DTimer
     };
 
 })();
