@@ -398,6 +398,7 @@ var Dark = function(dummy = false) {
                         a = g, g = r, b = r;
                     }
                 } else {
+                    if(l == 2) return (r & k.ALPHA_MASK) | (g << 24)
                     return r;
                 }
             }
@@ -1488,6 +1489,10 @@ Dark.constants = {
     PHI: Math.PHI,
     TAU: Math.PI * 2,
     EPSILON: Number.EPSILON,
+    RED_MASK: 0b11111111000000001111111111111111,
+    GREEN_MASK: 0b11111111111111110000000011111111,
+    BLUE_MASK: 0b11111111111111111111111100000000,
+    ALPHA_MASK: 0b00000000111111111111111111111111,
     ROUND: 0,
     FLAT: 1,
     DEGREES: 2,
@@ -2747,9 +2752,6 @@ Dark.objects = (function() {
             this.height = 0;
         }
     };
-    DImage.get = function(img, ...args) {
-        return img.get.apply(null, args);
-    };
     DImage.prototype.get = function(...args) {
         switch(args.length) {
             default:
@@ -2763,9 +2765,6 @@ Dark.objects = (function() {
                 );
         }
     };
-    DImage.set = function(img, ...args) {
-        img.set.apply(null, args);
-    };
     DImage.prototype.set = function(x, y, col) {
         let index = (x + y * this.width) * 4;
         this.imageData.data[index] = Dark.utils.red(col);
@@ -2773,20 +2772,19 @@ Dark.objects = (function() {
         this.imageData.data[index + 2] = Dark.utils.blue(col);
         this.imageData.data[index + 3] = Dark.utils.alpha(col);
     };
-    DImage.copy = function(img) {
-        return img.copy();
-    };
     DImage.prototype.copy = function() {
         let img = new DImage();
-        [img.width, img.height, img.image, img.imageData, img.source, img.disposable, img.imageLoaded, img.imageSent] = [this.width, this.height, this.image, this.imageData, this.source, this.disposable, this.imageLoaded, this.imageSent];
+        [img.width, img.height, img.imageData, img.source, img.disposable] = [this.width, this.height, this.imageData, this.source, this.disposable];
         img.canvas = new OffscreenCanvas(this.width, this.height);
         img.ctx = img.canvas.getContext("2d");
         img.ctx.drawImage(this.imageLoaded ? this.image : this.canvas, 0, 0);
         return img;
     };
+    DImage.prototype.getRenderable = function() {
+        return (this.imageLoaded ? this.image : this.canvas) ?? this.imageData;
+    };
     DImage.resize = function(img, width, height) {
         let newImg = img.copy();
-        newImg.setDisposability(true);
         newImg.resize(width, height);
         return newImg;
     };
@@ -2805,7 +2803,7 @@ Dark.objects = (function() {
             let oldCanvas = new OffscreenCanvas(width, height);
             let oldCtx = oldCanvas.getContext("2d");
             oldCtx.scale(width / this.width, height / this.height);
-            oldCtx.drawImage(this.canvas, 0, 0);
+            oldCtx.drawImage(this.image ?? this.canvas ?? this.imageData, 0, 0);
 
             // Resize dimensions
             [this.canvas.width, this.canvas.height] = [this.width, this.height] = [width, height];
@@ -2813,7 +2811,28 @@ Dark.objects = (function() {
             // Redraw
             this.ctx.drawImage(oldCanvas, 0, 0);
 
-            this.loadImage(); // TODO: Make this not destroy my computer for no reason
+            this.loadImage(); 
+        }
+    };
+    DImage.crop = function(img, x, y, width, height) {
+        let newImg = img.copy();
+        newImg.crop(x, y, width, height);
+        return newImg;
+    };
+    DImage.prototype.crop = function(x, y, width, height) {
+        if(width <= 0 || height <= 0) return Dark.error("The image crop area must have a size greater than zero");
+        if(x + width > this.width || y + height > this.height || x < 0 || y < 0) return Dark.error("The cropped area must be within the image");
+        if(this.width != width || this.height != height) {
+            // Save pixels
+            let oldCanvas = new OffscreenCanvas(width, height);
+            let oldCtx = oldCanvas.getContext("2d");
+            oldCtx.drawImage(this.image ?? this.canvas ?? this.imageData, 0, 0);
+
+            // Resize dimensions
+            [this.canvas.width, this.canvas.height] = [this.width, this.height] = [width, height];
+
+            // Redraw
+            this.ctx.drawImage(oldCanvas, x + 50, y, width, height, 0, 0, width, height);
         }
     };
     DImage.prototype.loadPixels = function() {
@@ -2824,6 +2843,11 @@ Dark.objects = (function() {
     };
     DImage.prototype.setDisposability = function(disposable) {
         this.disposable = disposable
+    };
+    DImage.filter = function(img, type, value) {
+        let newImg = img.copy();
+        newImg.filter(type, value);
+        return newImg;
     };
     DImage.prototype.filter = function(type, value) {
         if(Dark.filters.includes(type)) {
@@ -3007,6 +3031,41 @@ Dark.objects = (function() {
             };
         });
     };
+    DImage.prototype.generateImage = function(blob) {
+        this.image = new Image();
+        this.image.src = URL.createObjectURL(blob);
+        this.image.crossOrigin = "anonymous";
+        this.image.addEventListener("load", () => {
+            this.imageLoaded = true;
+            this.imageSent = false;
+        }); // Load
+    };
+    DImage.prototype.loadImage = function() {
+        // Reset
+        this.image = null;
+        this.imageLoaded = false;
+
+        if(!Dark.khan && !this.disposable && !this.imageSent) {
+            this.imageSent = true;
+
+            // Wait until canvas has rendered
+            requestAnimationFrame(() => {
+                // Convert to blob 
+                if(this.canvas instanceof HTMLCanvasElement) {
+                    this.canvas.toBlob(this.generateImage, {type: "image/png"});
+                } else {
+                    this.canvas.convertToBlob({type: "image/png"}).then(blob => this.generateImage(blob));
+                }
+            });
+        }
+    };
+    DImage.get = (img, ...args) => img.get.apply(null, args);
+    DImage.set = (img, ...args) => img.set.apply(null, args);
+    DImage.copy = img => img.copy();
+    DImage.getRenderable = img => img.getRenderable();
+    DImage.loadPixels = img => img.loadPixels();
+    DImage.updatePixels = img => img.updatePixels();
+    DImage.setDisposability = (img, disposable) => img.setDisposability(disposable);
     DImage.initializeShaders([
         {
             key: Dark.constants.INVERT,
@@ -3173,34 +3232,6 @@ Dark.objects = (function() {
             defaultShader: Dark.constants.TOP
         }
     ]);
-    DImage.prototype.generateImage = function(blob) {
-        this.image = new Image();
-        this.image.src = URL.createObjectURL(blob);
-        this.image.crossOrigin = "anonymous";
-        this.image.addEventListener("load", () => {
-            this.imageLoaded = true;
-            this.imageSent = false;
-        }); // Load
-    };
-    DImage.prototype.loadImage = function() {
-        // Reset
-        this.image = null;
-        this.imageLoaded = false;
-
-        if(!Dark.khan && !this.disposable && !this.imageSent) {
-            this.imageSent = true;
-
-            // Wait until canvas has rendered
-            requestAnimationFrame(() => {
-                // Convert to blob 
-                if(this.canvas instanceof HTMLCanvasElement) {
-                    this.canvas.toBlob(this.generateImage, {type: "image/png"});
-                } else {
-                    this.canvas.convertToBlob({type: "image/png"}).then(blob => this.generateImage(blob));
-                }
-            });
-        }
-    };
 
     // Matrices
     let DMatrix = function(width, height, val = 0) {
@@ -3506,6 +3537,19 @@ Dark.objects = (function() {
     DTimer.reset = timer => timer.reset();
     DTimer.copy = timer => timer.copy();
     DTimer.toString = timer => timer.toString();
+
+    /*
+    
+    DColor feature ideas:
+
+    convert(color, colorSpace1, colorSpace2);
+    mode
+    setRed(value);
+    setGreen(value);
+    setBlue(value);
+    setAlpha(value);
+
+    */
 
     return {
         DVector: DVector,
