@@ -12,12 +12,10 @@ To add:
 • Make everything readonly in Dark instances
 * Text width and height
 * Share image cache onto main Dark
-* left, right, top and bottom SOBEL
 * imageData, loadPixels & updatePixels main
 • Better global variable updating & handling
-* Make resize work with one parameter
 * resizeMode(AUTO)
-* Errors for invalid modes on the rest of the mode functions
+• DColor
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
@@ -29,9 +27,10 @@ Possibly to add:
 • Cursor lock function — lockCursor() & unlockCursor()
 • Proxy-ify functions with the current setting
 • Chaining DVector & DMatrix operations like DVector.mult(a, b, c, d, e)
-• Contours
-• fullscreen() function using d.canvas.addEventListener("click", () => d.canvas.requestFullscreen());
+• Contours (negative shapes)
 • Framerate above natural refresh rate
+• Average & Color palette splitter using median cut
+• texture() for shapes
 
 Bugs:
 • Dark.js breaks when the canvas is larger than the screen
