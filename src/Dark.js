@@ -1204,7 +1204,7 @@ var Dark = function(dummy = false) {
             copied.setDisposability(true);
             copied.resize(w, h);
             d.ctx.drawImage(copied.getRenderable(), x, y);*/
-            d.ctx.drawImage(img.getRenderable(), x, y);
+            d.ctx.drawImage(img.getRenderable(), x, y, w, h);
             d.ctx.restore();
         },
 
