@@ -19,6 +19,7 @@ var Dark = function(dummy = false) {
     let d = this;
     let k = d.constants = Dark.constants;
     let o = d.objects = Dark.objects;
+    let s = d.settings = {};
 
     Dark.instances.push(d);
 
@@ -35,7 +36,6 @@ var Dark = function(dummy = false) {
         version: Dark.version
     };
 
-    d.settings = {};
     d.transforms = [];
     d.saves = [];
     d.styles = [];
@@ -66,7 +66,7 @@ var Dark = function(dummy = false) {
 
     // Create canvas
     d.canvas = new OffscreenCanvas(innerWidth, innerHeight);
-    d.ctx = d.canvas.getContext("2d", Dark.defaultContextSettings);
+    d.ctx = d.canvas.getContext("2d");
 
     // Add empties
     Dark.empties.forEach(emp => d[emp] = () => {});
@@ -79,11 +79,11 @@ var Dark = function(dummy = false) {
     };
 
     var angle = function(angle) {
-        return d.snap((d.settings.angleMode == k.DEGREES) ? angle * k.PI / 180 : angle, 0, k.TAU);
+        return d.snap((s.angleMode == k.DEGREES) ? angle * k.PI / 180 : angle, 0, k.TAU);
     };
 
     var angleBack = function(angle) {
-        return d.snap((d.settings.angleMode == k.DEGREES) ? angle * 180 / k.PI : angle, 0, 360);
+        return d.snap((s.angleMode == k.DEGREES) ? angle * 180 / k.PI : angle, 0, 360);
     };
 
     var cacheVert = function(vert) {
@@ -137,7 +137,7 @@ var Dark = function(dummy = false) {
 
         document.addEventListener("keydown", function(e) {
             if(Dark.focus.target === d.canvas) {
-                if(d.settings.keyEvents) e.preventDefault();
+                if(s.keyEvents) e.preventDefault();
                 d.keyIsPressed = true;
                 d.key = Dark.special[e.keyCode] ?? e.key;
                 d.keyCode = e.keyCode;
@@ -150,7 +150,7 @@ var Dark = function(dummy = false) {
 
         document.addEventListener("keyup", function(e) {
             if(Dark.focus.target === d.canvas) {
-                if(d.settings.keyEvents) e.preventDefault();
+                if(s.keyEvents) e.preventDefault();
                 d.key = Dark.special[e.keyCode] ?? e.key;
                 d.keyCode = e.keyCode;
                 keys[d.key] = false;
@@ -187,13 +187,13 @@ var Dark = function(dummy = false) {
     var reloadEvents = function() {
 
         d.canvas.addEventListener("click", function(e) {
-            if(d.settings.clickEvents) e.preventDefault();
+            if(s.clickEvents) e.preventDefault();
             Dark.globallyUpdateVariables(d);
             d.mouseClicked();
         });
 
         d.canvas.addEventListener("mousedown", function(e) {
-            if(d.settings.clickEvents) e.preventDefault();
+            if(s.clickEvents) e.preventDefault();
             d.mouseIsPressed = true;
             d.mouseButton = Dark.mouseMap[e.button];
             Dark.globallyUpdateVariables(d);
@@ -201,7 +201,7 @@ var Dark = function(dummy = false) {
         });
 
         d.canvas.addEventListener("mouseup", function(e) {
-            if(d.settings.clickEvents) e.preventDefault();
+            if(s.clickEvents) e.preventDefault();
             d.mouseButton = undefined;
             d.mouseIsPressed = false;
             Dark.globallyUpdateVariables(d);
@@ -232,7 +232,7 @@ var Dark = function(dummy = false) {
         });
 
         d.canvas.addEventListener("wheel", function(e) {
-            if(d.settings.scrollEvents) e.preventDefault();
+            if(s.scrollEvents) e.preventDefault();
             lastScrollTime = performance.now();
             d.mouseScroll = o.DVector.create(e.deltaX, e.deltaY, e.deltaZ);
             Dark.globallyUpdateVariables(d);
@@ -240,7 +240,7 @@ var Dark = function(dummy = false) {
         });
 
         d.canvas.addEventListener("dblclick", function(e) {
-            if(d.settings.clickEvents) e.preventDefault();
+            if(s.clickEvents) e.preventDefault();
             Dark.globallyUpdateVariables(d);
             d.mouseDoubleClicked();
         });
@@ -258,16 +258,16 @@ var Dark = function(dummy = false) {
             if(typeof w == "number" && typeof h == "number" && w > 0 && h > 0) {
                 // Because for some reason changing width & height reset all parameters >:(
                 // It took me ~8 hours to figure this out. D:<
-                let old = d.copy(d.ctx);
+                //let old = d.copy(d.ctx);
 
                 [d.width, d.height] = [d.canvas.width, d.canvas.height] = [w, h];
 
-                for(const key in d.ctx) {
+                /*for(const key in d.ctx) {
                     const value = old[key];
                     if(typeof value !== "function" && !Dark.styleIgnore.includes(key)) {
                         d.ctx[key] = value;
                     }
-                }
+                }*/
                 Dark.globallyUpdateVariables(d);
             }
         },
@@ -279,11 +279,11 @@ var Dark = function(dummy = false) {
                 d.height = canvas.height;
 
                 let old = d.copy(d.ctx);
-                d.ctx = canvas.getContext("2d", Dark.defaultContextSettings);
+                d.ctx = canvas.getContext("2d");
 
                 loadStyle(old);
 
-                d.canvas.style.cursor = d.settings.cursor;
+                d.canvas.style.cursor = s.cursor;
                 d.canvas.tabIndex = "1";
 
                 reloadEvents();
@@ -351,34 +351,34 @@ var Dark = function(dummy = false) {
         },
 
         cursor: function(type = "default") {
-            d.settings.cursor = type;
+            s.cursor = type;
             d.canvas.style.cursor = type;
         },
 
         noCursor: function() {
-            d.settings.cursor = "none";
+            s.cursor = "none";
             d.canvas.style.cursor = "none";
         },
 
         loop: function() {
-            d.settings.looping = true;
+            s.looping = true;
         },
 
         noLoop: function() {
-            d.settings.looping = false;
+            s.looping = false;
         },
 
         frameRate: function(desiredFPS) {
-            d.settings.frameStep = 1000 / desiredFPS;
+            s.frameStep = 1000 / desiredFPS;
         },
 
         enableContextMenu: function() {
-            d.settings.contextMenu = true;
+            s.contextMenu = true;
             d.canvas.oncontextmenu = true;
         },
 
         disableContextMenu: function() {
-            d.settings.contextMenu = false;
+            s.contextMenu = false;
             d.canvas.oncontextmenu = false;
         },
 
@@ -430,23 +430,23 @@ var Dark = function(dummy = false) {
         },
 
         fill: function(...args) {
-            let c = d.settings.fill = d.color.apply(null, args);
+            let c = s.fill = d.color.apply(null, args);
             d.ctx.fillStyle = colorString(c);
         },
 
         noFill: function() {
-            d.settings.fill = 0;
+            s.fill = 0;
             d.ctx.fillStyle = "rgba(0, 0, 0, 0)";
         },
 
         stroke: function(...args) {
             // Same as fill
-            let c = d.settings.stroke = d.color.apply(null, args);
+            let c = s.stroke = d.color.apply(null, args);
             d.ctx.strokeStyle = colorString(c);
         },
 
         noStroke: function() {
-            d.settings.stroke = 0;
+            s.stroke = 0;
             d.ctx.strokeStyle = "rgba(0, 0, 0, 0)";
         },
 
@@ -475,15 +475,15 @@ var Dark = function(dummy = false) {
                     break;
                 case k.FLAT:
                     d.ctx.lineCap = "butt";
-                    d.settings.strokeCap = k.FLAT;
+                    s.strokeCap = k.FLAT;
                     break;
                 case k.ROUND:
                     d.ctx.lineCap = "round";
-                    d.settings.strokeCap = k.ROUND;
+                    s.strokeCap = k.ROUND;
                     break;
                 case k.SQUARE:
                     d.ctx.lineCap = "square";
-                    d.settings.strokeCap = k.SQUARE;
+                    s.strokeCap = k.SQUARE;
             }
         },
 
@@ -494,28 +494,28 @@ var Dark = function(dummy = false) {
                     break;
                 case k.MITER:
                     d.ctx.lineJoin = "miter";
-                    d.settings.strokeJoin = k.MITER;
+                    s.strokeJoin = k.MITER;
                     break;
                 case k.BEVEL:
                     d.ctx.lineJoin = "bevel";
-                    d.settings.strokeJoin = k.BEVEL;
+                    s.strokeJoin = k.BEVEL;
                     break;
                 case k.ROUND:
                     d.ctx.lineJoin = "round";
-                    d.settings.strokeJoin = k.ROUND;
+                    s.strokeJoin = k.ROUND;
                     break;
             }
         },
 
         strokeWeight: function(weight) {
-            if(!d.settings.smoothing) weight = d.round(weight);
-            d.settings.strokeWeight = weight;
+            if(!s.smoothing) weight = d.round(weight);
+            s.strokeWeight = weight;
             d.ctx.lineWidth = weight;
         },
 
         smooth: function() {
-            d.settings.smoothing = true;
-            d.ctx.mozImageSmoothingEnabled = true;
+            s.smoothing = true;
+            d.ctx.mozImageSmoothingEnabled = true; // antialiasing
             d.ctx.webkitImageSmoothingEnabled = true;
             d.ctx.msImageSmoothingEnabled = true;
             d.ctx.imageSmoothingEnabled = true;
@@ -523,7 +523,7 @@ var Dark = function(dummy = false) {
         },
 
         noSmooth: function() {
-            d.settings.smoothing = true;
+            s.smoothing = true;
             d.ctx.mozImageSmoothingEnabled = false;
             d.ctx.webkitImageSmoothingEnabled = false;
             d.ctx.msImageSmoothingEnabled = false;
@@ -538,13 +538,13 @@ var Dark = function(dummy = false) {
                     Dark.error("Invalid listener given");
                     break;
                 case k.KEY:
-                    d.settings.keyEvents = true;
+                    s.keyEvents = true;
                     break;
                 case k.CLICK:
-                    d.settings.clickEvents = true;
+                    s.clickEvents = true;
                     break;
                 case k.SCROLL:
-                    d.settings.scrollEvents = true;
+                    s.scrollEvents = true;
                     break;
             }
         },
@@ -556,13 +556,13 @@ var Dark = function(dummy = false) {
                     Dark.error("Invalid listener given");
                     break;
                 case k.KEY:
-                    d.settings.keyEvents = false;
+                    s.keyEvents = false;
                     break;
                 case k.CLICK:
-                    d.settings.clickEvents = false;
+                    s.clickEvents = false;
                     break;
                 case k.SCROLL:
-                    d.settings.scrollEvents = false;
+                    s.scrollEvents = false;
                     break;
             }
         },
@@ -573,10 +573,10 @@ var Dark = function(dummy = false) {
                     Dark.error("Invalid angleMode");
                     break;
                 case k.DEGREES:
-                    d.settings.angleMode = k.DEGREES;
+                    s.angleMode = k.DEGREES;
                     break;
                 case k.RADIANS:
-                    d.settings.angleMode = k.RADIANS;
+                    s.angleMode = k.RADIANS;
                     break;
             }
         },
@@ -587,13 +587,13 @@ var Dark = function(dummy = false) {
                     Dark.error("Invalid ellipseMode");
                     break;
                 case k.CENTER:
-                    d.settings.ellipseMode = k.CENTER;
+                    s.ellipseMode = k.CENTER;
                     break;
                 case k.CORNER:
-                    d.settings.ellipseMode = k.CORNER;
+                    s.ellipseMode = k.CORNER;
                     break;
                 case k.RADIUS:
-                    d.settings.ellipseMode = k.RADIUS;
+                    s.ellipseMode = k.RADIUS;
                     break;
             }
         },
@@ -604,10 +604,10 @@ var Dark = function(dummy = false) {
                     Dark.error("Invalid rectMode");
                     break;
                 case k.CORNER:
-                    d.settings.rectMode = k.CORNER;
+                    s.rectMode = k.CORNER;
                     break;
                 case k.CENTER:
-                    d.settings.rectMode = k.CENTER;
+                    s.rectMode = k.CENTER;
                     break;
             }
         },
@@ -618,10 +618,10 @@ var Dark = function(dummy = false) {
                     Dark.error("Invalid imageMode");
                     break;
                 case k.CORNER:
-                    d.settings.imageMode = k.CORNER;
+                    s.imageMode = k.CORNER;
                     break;
                 case k.CENTER:
-                    d.settings.imageMode = k.CENTER;
+                    s.imageMode = k.CENTER;
                     break;
             }
         },
@@ -632,17 +632,17 @@ var Dark = function(dummy = false) {
                     Dark.error("Invalid resizeMode");
                     break;
                 case k.WIDTH:
-                    d.settings.resizeMode = k.WIDTH;
+                    s.resizeMode = k.WIDTH;
                     break;
                 case k.HEIGHT:
-                    d.settings.resizeMode = k.HEIGHT;
+                    s.resizeMode = k.HEIGHT;
                     break;
             }
         },
 
         curveTightness: function(tightness = 0) {
-            d.settings.curveTightness = tightness;
-            d.settings.curveMatrixTightness = (tightness - 1) / 6;
+            s.curveTightness = tightness;
+            s.curveMatrixTightness = (tightness - 1) / 6;
         },
 
         // Transformations
@@ -703,7 +703,7 @@ var Dark = function(dummy = false) {
                 Dark.error("Maximum stack size reached, push() called " + d.maxStackSize + " times.");
             } else {
                 d.ctx.save();
-                d.saves.push(Object.assign({}, d.settings));
+                d.saves.push(Object.assign({}, s));
             }
         },
 
@@ -713,13 +713,13 @@ var Dark = function(dummy = false) {
                 Dark.error("No more saves to restore in pop()");
             } else {
                 d.ctx.restore();
-                Object.assign(d.settings, save);
+                Object.assign(s, save);
             }
         },
 
         reset: function() {
             d.saves.length = 0;
-            d.settings = Object.assign({}, d.defaultSettings);
+            s = Object.assign({}, d.defaultSettings);
             d.ctx.reset();
         },
 
@@ -748,12 +748,12 @@ var Dark = function(dummy = false) {
 
         // Shapes
         rect: function(x, y, width, height, r1, r2, r3, r4) {
-            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
+            if(!s.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
             [width, height] = [d.abs(width), d.abs(height)];
 
             d.ctx.beginPath();
             d.ctx.save();
-            if(d.settings.rectMode == k.CENTER) d.ctx.translate(- width / 2, - height / 2);
+            if(s.rectMode == k.CENTER) d.ctx.translate(- width / 2, - height / 2);
             // For speed, rounded rect is so much slower
             switch(arguments.length) {
                 default:
@@ -775,14 +775,14 @@ var Dark = function(dummy = false) {
         },
 
         ellipse: function(x, y, width, height) {
-            if(d.settings.ellipseMode == k.RADIUS) width /= 2, height /= 2;
+            if(s.ellipseMode == k.RADIUS) width /= 2, height /= 2;
 
-            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
+            if(!s.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
             [width, height] = [d.abs(width), d.abs(height)];
 
             d.ctx.beginPath();
             d.ctx.save();
-            if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(width / 2, height / 2);
+            if(s.ellipseMode == k.CORNER) d.ctx.translate(width / 2, height / 2);
             d.ctx.beginPath();
             d.ctx.ellipse(x, y, width / 2, height / 2, 0, 0, k.TAU, false);
             d.ctx.fill();
@@ -791,12 +791,12 @@ var Dark = function(dummy = false) {
         },
 
         arc: function(x, y, width, height, start, stop) {
-            if(d.settings.ellipseMode == k.RADIUS) width /= 2, height /= 2;
+            if(s.ellipseMode == k.RADIUS) width /= 2, height /= 2;
 
-            if(!d.settings.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
+            if(!s.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
 
             d.ctx.save();
-            if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(width / 2, height / 2);
+            if(s.ellipseMode == k.CORNER) d.ctx.translate(width / 2, height / 2);
             d.ctx.beginPath();
             d.ctx.moveTo(x, y);
             d.ctx.ellipse(x, y, width / 2, height / 2, 0, angle(start), angle(stop), false);
@@ -808,7 +808,7 @@ var Dark = function(dummy = false) {
         },
 
         line: function(x1, y1, x2, y2) {
-            if(!d.settings.smoothing) [x1, y1, x2, y2] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2)];
+            if(!s.smoothing) [x1, y1, x2, y2] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2)];
 
             d.ctx.beginPath();
             d.ctx.moveTo(x1, y1);
@@ -817,22 +817,22 @@ var Dark = function(dummy = false) {
         },
 
         point: function(x, y) {
-            if(!d.settings.smoothing) x = d.round(x), y = d.round(y);
+            if(!s.smoothing) x = d.round(x), y = d.round(y);
 
             d.ctx.save();
             d.ctx.beginPath();
-            d.ctx.fillStyle = colorString(d.settings.stroke);
-            d.ctx.arc(x, y, d.settings.strokeWeight / 2, 0, k.TAU);
+            d.ctx.fillStyle = colorString(s.stroke);
+            d.ctx.arc(x, y, s.strokeWeight / 2, 0, k.TAU);
             d.ctx.fill();
             d.ctx.restore();
         },
 
         circle: function(x, y, radius) {
-            if(!d.settings.smoothing) [x, y, radius] = [d.round(x), d.round(y), d.round(radius)];
+            if(!s.smoothing) [x, y, radius] = [d.round(x), d.round(y), d.round(radius)];
             radius = d.round(radius);
 
             d.ctx.save();
-            if(d.settings.ellipseMode == k.CORNER) d.ctx.translate(radius, radius);
+            if(s.ellipseMode == k.CORNER) d.ctx.translate(radius, radius);
             d.ctx.beginPath();
             d.ctx.arc(x, y, radius, 0, k.TAU);
             d.ctx.fill();
@@ -846,7 +846,7 @@ var Dark = function(dummy = false) {
         },
 
         triangle: function(x1, y1, x2, y2, x3, y3) {
-            if(!d.settings.smoothing) [x1, y1, x2, y2, x3, y3] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3)];
+            if(!s.smoothing) [x1, y1, x2, y2, x3, y3] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3)];
 
             d.ctx.beginPath();
             d.ctx.moveTo(x1, y1);
@@ -858,7 +858,7 @@ var Dark = function(dummy = false) {
         },
 
         quad: function(x1, y1, x2, y2, x3, y3, x4, y4) {
-            if(!d.settings.smoothing) [x1, y1, x2, y2, x3, y3, x4, y4] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3), d.round(x4), d.round(y4)];
+            if(!s.smoothing) [x1, y1, x2, y2, x3, y3, x4, y4] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3), d.round(x4), d.round(y4)];
 
             d.ctx.beginPath();
             d.ctx.moveTo(x1, y1);
@@ -895,7 +895,7 @@ var Dark = function(dummy = false) {
                             d.ctx.lineTo(pt.x, pt.y);
                             break;
                         case k.CURVE:
-                            let t = d.settings.curveMatrixTightness;
+                            let t = s.curveMatrixTightness;
 
                             let p0 = d.vertexCache[index - 3];
                             let p1 = d.vertexCache[index - 2];
@@ -937,7 +937,7 @@ var Dark = function(dummy = false) {
 
         // Kinda copied from ski, though slightly different (curveVertex)
         vertex: function(x, y) {
-            if(!d.settings.smoothing) [x, y] = [d.round(x), d.round(y)];
+            if(!s.smoothing) [x, y] = [d.round(x), d.round(y)];
 
             let vert = {
                 type: k.VERTEX,
@@ -953,7 +953,7 @@ var Dark = function(dummy = false) {
         },
 
         curveVertex: function(cx, cy) {
-            if(!d.settings.smoothing) [x, y] = [d.round(cx), d.round(cy)];
+            if(!s.smoothing) [x, y] = [d.round(cx), d.round(cy)];
 
             let vert = {
                 type: k.CURVE,
@@ -969,7 +969,7 @@ var Dark = function(dummy = false) {
         },
 
         bezierVertex: function(x1, y1, x2, y2, x3, y3) {
-            if(!d.settings.smoothing) [x1, y1, x2, y2, x3, y3] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3)];
+            if(!s.smoothing) [x1, y1, x2, y2, x3, y3] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3)];
 
             let vert = {
                 type: k.BEZIER,
@@ -1028,17 +1028,17 @@ var Dark = function(dummy = false) {
         },
 
         reloadFont: function() {
-            d.ctx.font = d.settings.font.toString();
-            d.settings.genericTextMeasure = d.ctx.measureText("0");
-            d.settings.textHeight = d.settings.genericTextMeasure.fontBoundingBoxAscent + d.settings.genericTextMeasure.fontBoundingBoxDescent;
+            d.ctx.font = s.font.toString();
+            s.genericTextMeasure = d.ctx.measureText("0");
+            s.textHeight = s.genericTextMeasure.fontBoundingBoxAscent + s.genericTextMeasure.fontBoundingBoxDescent;
         },
 
         // Text
         textSize: function(size) {
-            if(!d.settings.smoothing) size = d.round(size);
+            if(!s.smoothing) size = d.round(size);
 
-            d.settings.textSize = size;
-            d.settings.font.size = size;
+            s.textSize = size;
+            s.font.size = size;
             d.reloadFont();
         },
 
@@ -1051,15 +1051,15 @@ var Dark = function(dummy = false) {
                     break;
                 case k.LEFT:
                     d.ctx.textAlign = "left";
-                    d.settings.alignX = k.LEFT;
+                    s.alignX = k.LEFT;
                     break;
                 case k.RIGHT:
                     d.ctx.textAlign = "right";
-                    d.settings.alignX = k.RIGHT;
+                    s.alignX = k.RIGHT;
                     break;
                 case k.CENTER:
                     d.ctx.textAlign = "center";
-                    d.settings.alignX = k.CENTER;
+                    s.alignX = k.CENTER;
                     break;
             }
             switch(alignY) {
@@ -1068,19 +1068,19 @@ var Dark = function(dummy = false) {
                     break;
                 case k.BASELINE:
                     d.ctx.textBaseline = "alphabetic";
-                    d.settings.alignY = k.BASELINE;
+                    s.alignY = k.BASELINE;
                     break;
                 case k.TOP:
                     d.ctx.textBaseline = "top";
-                    d.settings.alignY = k.TOP;
+                    s.alignY = k.TOP;
                     break;
                 case k.BOTTOM:
                     d.ctx.textBaseline = "bottom";
-                    d.settings.alignY = k.BOTTOM;
+                    s.alignY = k.BOTTOM;
                     break;
                 case k.CENTER:
                     d.ctx.textBaseline = "middle";
-                    d.settings.alignY = k.CENTER;
+                    s.alignY = k.CENTER;
                     break;
             }
         },
@@ -1090,8 +1090,8 @@ var Dark = function(dummy = false) {
                 font = new o.DFont(font);
             }
             if(font instanceof o.DFont) {
-                d.settings.font = font;
-                d.settings.textSize = font.size;
+                s.font = font;
+                s.textSize = font.size;
                 d.reloadFont();
             } else {
                 Dark.error(font + " is not a DFont.");
@@ -1105,14 +1105,14 @@ var Dark = function(dummy = false) {
         textStyle: function(style) {
             switch(style) {
                 default:
-                    d.settings.font.weight = "normal";
-                    d.settings.font.style = "normal";
+                    s.font.weight = "normal";
+                    s.font.style = "normal";
                     break;
                 case k.BOLD:
-                    d.settings.font.weight = "bold";
+                    s.font.weight = "bold";
                     break;
                 case k.ITALIC:
-                    d.settings.font.style = "italic";
+                    s.font.style = "italic";
                     break;
             }
             d.reloadFont();
@@ -1123,24 +1123,32 @@ var Dark = function(dummy = false) {
         },
 
         textAscent: function() {
-            return d.settings.genericTextMeasure.fontBoundingBoxAscent;
+            return s.genericTextMeasure.fontBoundingBoxAscent;
         },
 
         textDescent: function() {
-            return d.settings.genericTextMeasure.fontBoundingBoxDescent;
+            return s.genericTextMeasure.fontBoundingBoxDescent;
         },
 
         textLeading: function(amount) {
-            d.settings.lineGap = amount;
+            s.lineGap = amount;
         },
 
         text: function(text, x, y) {
-            if(!d.settings.smoothing) [x, y] = [d.round(x), d.round(y)];
+            if(!s.smoothing) [x, y] = [d.round(x), d.round(y)];
 
             let lines = text.split("\n");
-            let off = (d.settings.alignY == k.CENTER) ? (d.settings.textHeight + d.settings.lineGap) * lines.length / 2 : 0;
+            let off = 0;
+            switch(s.alignY) {
+                case k.CENTER:
+                    off = (s.textHeight + s.lineGap) / 2 * (lines.length - 1);
+                    break;
+                case k.BOTTOM:
+                    off = (s.textHeight + s.lineGap) * (lines.length - 1);
+                    break;
+            }
             lines.forEach((line, index) => {
-                let inc = index * (d.settings.textHeight + d.settings.lineGap) - off;
+                let inc = index * (s.textHeight + s.lineGap) - off;
                 d.ctx.fillText(line, x, y + inc);
                 d.ctx.strokeText(line, x, y + inc);
             });
@@ -1180,7 +1188,7 @@ var Dark = function(dummy = false) {
                     [w, h] = [img.width, img.height];
                     break;
                 case 4:
-                    if(d.settings.resizeMode == k.HEIGHT) {
+                    if(s.resizeMode == k.HEIGHT) {
                         [w, h] = [width / img.height * img.width, width];
                     } else {
                         [w, h] = [width, width / img.width * img.height];
@@ -1190,14 +1198,13 @@ var Dark = function(dummy = false) {
                     [w, h] = [width, height];
                     break;
             }
-            if(d.settings.imageMode == k.CENTER) d.ctx.translate(- w / 2, - h / 2);
-            if(d.settings.smoothing) {
-                let copied = DImage.resize(img, w, h);
-                d.ctx.drawImage(copied.imageLoaded ? copied.image : copied.canvas, x, y, w, h);
-            } else {
-                [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
-                d.ctx.drawImage(img.imageLoaded ? img.image : img.canvas, x, y, w, h);
-            }
+            if(s.imageMode == k.CENTER) d.ctx.translate(- w / 2, - h / 2);
+            if(!s.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
+            /*let copied = img.copy();
+            copied.setDisposability(true);
+            copied.resize(w, h);
+            d.ctx.drawImage(copied.getRenderable(), x, y);*/
+            d.ctx.drawImage(img.getRenderable(), x, y);
             d.ctx.restore();
         },
 
@@ -1277,7 +1284,7 @@ var Dark = function(dummy = false) {
                 };
                 return img;
             } else {
-                return loadImage(Dark.url.host + "/" + loc);
+                return d.loadImage("/" + loc);
             }
         },
 
@@ -1393,7 +1400,7 @@ var Dark = function(dummy = false) {
             d.mouseScroll.zero3D();
         }
 
-        let run = deltaFrame > d.settings.frameStep - deltaTime / 2 && d.settings.looping;
+        let run = deltaFrame > s.frameStep - deltaTime / 2 && s.looping;
 
         // If the user left the page and just entered, make fix deltas
         if(lastHidden < time && lastHidden > lastTime) {
@@ -1430,7 +1437,7 @@ var Dark = function(dummy = false) {
     // Set defaults
     loadDefault();
 
-    d.defaultSettings = Object.assign({}, d.settings);
+    d.defaultSettings = Object.assign({}, s);
 
     if(!d.dummy) {
         // Load event listeners for document
@@ -1440,8 +1447,8 @@ var Dark = function(dummy = false) {
         d.mouse = o.DVector.zero2D();
         d.pmouse = o.DVector.zero2D();
         d.mouseScroll = o.DVector.zero3D();
-        d.settings.cursor = "auto";
-        d.settings.looping = true;
+        s.cursor = "auto";
+        s.looping = true;
 
         if(Dark.khan) Dark.imageLocationsKA.forEach(loc => d.getImage(loc));
 
@@ -1458,7 +1465,7 @@ var Dark = function(dummy = false) {
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.1";
+Dark.version = "pre-0.7.3";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1988,9 +1995,15 @@ Dark.changeable.errorCount = 0; // Since object values inside frozen object can 
 Dark.maxErrorCount = 50;
 Dark.maxStackSize = 500;
 
-Dark.defaultContextSettings = {
+/* 
+
+    I spent so, so many hours finding that this was what was causing everything to run SO slowly:
+
     willReadFrequently: true
-};
+
+    It runs 400x slower, 5fps with 50 images vs 5ps with 20,000 images
+
+*/
 
 // The current url
 Dark.url = new URL(location.href);
@@ -2102,7 +2115,8 @@ Dark.fileCacheKA = {
     "/filters/swirl.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nuniform float param;\nin vec2 uv;\nout vec4 color;\n#define radius (0.5)\nvoid main() {\n vec2 cUV = uv - vec2(0.5); // centered UV\n float len = length(cUV);\n float theta = atan(cUV.y, cUV.x) + param * smoothstep(radius, 0.0, len);\n float dist = length(cUV);\n vec4 tex = texture(sampler, vec2(dist * cos(theta), dist * sin(theta)) + vec2(0.5));\n \n color = tex;\n}",
     "/filters/contrast.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4((tex.rgb - 0.5) * param + 0.5, tex.a);\n}",
     "/filters/fisheye.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nin vec2 pos;\nout vec4 color;\nvoid main() {\n vec2 mapped = (vec2(\n pos.x * sqrt(1.0 - pos.y * pos.y * param),\n pos.y * sqrt(1.0 - pos.x * pos.x * param)\n ) + 1.0) / 2.0;\n \n vec4 tex = texture(sampler, mapped);\n color = tex;\n}",
-    "/filters/emboss.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nvoid main() {\n vec4 tex = texture(sampler, uv);\n const float kernel[9] = float[](\n -2.0, -1.0, 0.0,\n -1.0, 1.0, 1.0,\n 0.0, 1.0, 2.0\n ); \n color = vec4((\n get(-1.0, -1.0) * kernel[0] +\n get(0.0, -1.0) * kernel[1] +\n get(1.0, -1.0) * kernel[2] +\n get(-1.0, 0.0) * kernel[3] +\n get(0.0, 0.0) * kernel[4] +\n get(1.0, 0.0) * kernel[5] +\n get(-1.0, 1.0) * kernel[6] +\n get(0.0, 1.0) * kernel[7] +\n get(1.0, 1.0) * kernel[8]\n ).rgb, tex.a);\n}"
+    "/filters/emboss.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nvoid main() {\n vec4 tex = texture(sampler, uv);\n const float kernel[9] = float[](\n -2.0, -1.0, 0.0,\n -1.0, 1.0, 1.0,\n 0.0, 1.0, 2.0\n ); \n color = vec4((\n get(-1.0, -1.0) * kernel[0] +\n get(0.0, -1.0) * kernel[1] +\n get(1.0, -1.0) * kernel[2] +\n get(-1.0, 0.0) * kernel[3] +\n get(0.0, 0.0) * kernel[4] +\n get(1.0, 0.0) * kernel[5] +\n get(-1.0, 1.0) * kernel[6] +\n get(0.0, 1.0) * kernel[7] +\n get(1.0, 1.0) * kernel[8]\n ).rgb, tex.a);\n}",
+    "/filters/sobel.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nuniform float param;\nuniform float[9] kernel;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4((\n get(-1.0, -1.0) * kernel[0] +\n get(0.0, -1.0) * kernel[1] +\n get(1.0, -1.0) * kernel[2] +\n get(-1.0, 0.0) * kernel[3] +\n get(0.0, 0.0) * kernel[4] +\n get(1.0, 0.0) * kernel[5] +\n get(-1.0, 1.0) * kernel[6] +\n get(0.0, 1.0) * kernel[7] +\n get(1.0, 1.0) * kernel[8]\n ).rgb, tex.a);\n}"
 };
 
 Dark.compileListKA = [];
@@ -2723,13 +2737,18 @@ Dark.objects = (function() {
         this.darkObject = true;
 
         this.filters = {};
+        this.disposable = false;
+        this.imageSent = false;
+        this.imageLoaded = false;
+        this.image = null;
+
         if(args[0] instanceof ImageData) {
             this.imageData = args[0];
             this.source = args[1];
             this.width = args[0].width;
             this.height = args[0].height;
             this.canvas = new OffscreenCanvas(this.width, this.height);
-            this.ctx = this.canvas.getContext("2d", Dark.defaultContextSettings);
+            this.ctx = this.canvas.getContext("2d");
             this.loadPixels();
         } else if(typeof args[0] == "number" && typeof args[1] == "number") { // width & height
             this.width = args[0];
@@ -2737,13 +2756,13 @@ Dark.objects = (function() {
             this.source = args[2];
             this.imageData = new ImageData(this.width, this.height);
             this.canvas = new OffscreenCanvas(this.width, this.height);
-            this.ctx = this.canvas.getContext("2d", Dark.defaultContextSettings);
+            this.ctx = this.canvas.getContext("2d");
         } else if(args[0] instanceof OffscreenCanvas || args[0] instanceof HTMLCanvasElement) {
             this.width = args[0].width;
             this.height = args[0].height;
             this.source = args[1];
             this.canvas = args[0];
-            this.ctx = this.canvas.getContext("2d", Dark.defaultContextSettings);
+            this.ctx = this.canvas.getContext("2d");
             this.imageData = this.ctx.getImageData(0, 0, this.width, this.height);
         } else {
             this.imageData = null;
@@ -2777,11 +2796,11 @@ Dark.objects = (function() {
         [img.width, img.height, img.imageData, img.source, img.disposable] = [this.width, this.height, this.imageData, this.source, this.disposable];
         img.canvas = new OffscreenCanvas(this.width, this.height);
         img.ctx = img.canvas.getContext("2d");
-        img.ctx.drawImage(this.imageLoaded ? this.image : this.canvas, 0, 0);
+        img.ctx.drawImage(this.getRenderable(), 0, 0);
         return img;
     };
     DImage.prototype.getRenderable = function() {
-        return (this.imageLoaded ? this.image : this.canvas) ?? this.imageData;
+        return this.imageLoaded ? this.image : this.canvas;
     };
     DImage.resize = function(img, width, height) {
         let newImg = img.copy();
@@ -2789,29 +2808,30 @@ Dark.objects = (function() {
         return newImg;
     };
     DImage.prototype.resize = function(width, height) {
-        if(width == 0 || height == 0) return Dark.error("Image size must be greater than zero");
+        if(width == 0 || height == 0) return Dark.error("Image resize size must be greater than zero");
         if(this.width != width || this.height != height) {
-            if(this.source instanceof Dark) {
+            if(this.source instanceof Dark && arguments.length == 1) {
                 if(this.source.settings.resizeMode == this.source.constants.HEIGHT) {
                     [width, height] = [width / img.height * img.width, width];
                 } else {
                     [width, height] = [width, width / img.width * img.height];
                 }
             }
+            [width, height] = [Math.ceil(width), Math.ceil(height)];
 
             // Save pixels
-            let oldCanvas = new OffscreenCanvas(width, height);
+            let oldCanvas = new OffscreenCanvas(this.width, this.height);
             let oldCtx = oldCanvas.getContext("2d");
-            oldCtx.scale(width / this.width, height / this.height);
-            oldCtx.drawImage(this.image ?? this.canvas ?? this.imageData, 0, 0);
+            oldCtx.drawImage(this.getRenderable(), 0, 0);
 
             // Resize dimensions
             [this.canvas.width, this.canvas.height] = [this.width, this.height] = [width, height];
 
             // Redraw
-            this.ctx.drawImage(oldCanvas, 0, 0);
+            this.ctx.fillRect(0, 0, width, height);
+            this.ctx.drawImage(oldCanvas, 0, 0, width, height);
 
-            this.loadImage(); 
+            this.loadImage();
         }
     };
     DImage.crop = function(img, x, y, width, height) {
@@ -2823,16 +2843,26 @@ Dark.objects = (function() {
         if(width <= 0 || height <= 0) return Dark.error("The image crop area must have a size greater than zero");
         if(x + width > this.width || y + height > this.height || x < 0 || y < 0) return Dark.error("The cropped area must be within the image");
         if(this.width != width || this.height != height) {
+            if(this.source instanceof Dark && arguments.length == 3) {
+                if(this.source.settings.resizeMode == this.source.constants.HEIGHT) {
+                    [width, height] = [width / img.height * img.width, width];
+                } else {
+                    [width, height] = [width, width / img.width * img.height];
+                }
+            }
+
             // Save pixels
-            let oldCanvas = new OffscreenCanvas(width, height);
+            let oldCanvas = new OffscreenCanvas(this.width, this.height);
             let oldCtx = oldCanvas.getContext("2d");
-            oldCtx.drawImage(this.image ?? this.canvas ?? this.imageData, 0, 0);
+            oldCtx.drawImage(this.getRenderable(), 0, 0);
 
             // Resize dimensions
             [this.canvas.width, this.canvas.height] = [this.width, this.height] = [width, height];
 
             // Redraw
-            this.ctx.drawImage(oldCanvas, x + 50, y, width, height, 0, 0, width, height);
+            this.ctx.drawImage(oldCanvas, x, y, width, height, 0, 0, width, height);
+
+            this.loadImage();
         }
     };
     DImage.prototype.loadPixels = function() {
@@ -2933,7 +2963,7 @@ Dark.objects = (function() {
             f.gl.texParameteri(f.gl.TEXTURE_2D, f.gl.TEXTURE_WRAP_T, f.gl.CLAMP_TO_EDGE);
             f.gl.texParameteri(f.gl.TEXTURE_2D, f.gl.TEXTURE_MIN_FILTER, f.gl.LINEAR);
             f.gl.texParameteri(f.gl.TEXTURE_2D, f.gl.TEXTURE_MAG_FILTER, f.gl.LINEAR);
-            f.gl.texImage2D(f.gl.TEXTURE_2D, 0, f.gl.RGBA, f.gl.RGBA, f.gl.UNSIGNED_BYTE, this.image ?? this.canvas ?? this.imageData);
+            f.gl.texImage2D(f.gl.TEXTURE_2D, 0, f.gl.RGBA, f.gl.RGBA, f.gl.UNSIGNED_BYTE, this.getRenderable());
             f.gl.bindTexture(f.gl.TEXTURE_2D, null);
 
             // Bind texture
@@ -3049,14 +3079,17 @@ Dark.objects = (function() {
             this.imageSent = true;
 
             // Wait until canvas has rendered
-            requestAnimationFrame(() => {
+            let frame = requestAnimationFrame(() => {
                 // Convert to blob 
                 if(this.canvas instanceof HTMLCanvasElement) {
                     this.canvas.toBlob(this.generateImage, {type: "image/png"});
                 } else {
-                    this.canvas.convertToBlob({type: "image/png"}).then(blob => this.generateImage(blob));
+                    this.canvas.convertToBlob({type: "image/png"}).then(blob => this.generateImage(blob))
                 }
             });
+            
+            // Without this, we get a memory leak for all the unclosed animation frames! Took me hours to figure out.
+            cancelAnimationFrame(frame);
         }
     };
     DImage.get = (img, ...args) => img.get.apply(null, args);
@@ -3495,8 +3528,8 @@ Dark.objects = (function() {
         this.reset();
     };
     DTimer.prototype.start = function() {
-        if(this.start == null) {
-            this.start = performance.now();
+        if(this.begin == null) {
+            this.begin = performance.now();
         } else {
             Dark.error("DTimer.reset must be called before a new timer begins");
         }
@@ -3506,37 +3539,54 @@ Dark.objects = (function() {
             Dark.error("DTimer.start must be called before DTimer.error");
         } else {
             this.end = performance.now();
-            this.time = this.end - this.start;
+            this.time = this.end - this.begin;
         }
     };
     DTimer.prototype.reset = function() {
-        this.start = null;
+        this.begin = null;
         this.end = null;
         this.time = null;
     };
     DTimer.prototype.copy = function() {
         let timer = new DTimer();
-        [timer.start, timer.end, timer.time] = [this.start, this.end, this.time];
+        [timer.start, timer.end, timer.time] = [this.begin, this.end, this.time];
 
         return timer;
     };
     DTimer.prototype.toString = function() {
         if(this.start == null) {
-            return `From ${this.start.toFixed(2)} to ${this.end.toFixed(2)}, taking ${this.time.toFixed(2)} milliseconds`;
+            return `From ${this.begin.toFixed(2)} to ${this.end.toFixed(2)}, taking ${this.time.toFixed(2)} milliseconds`;
         } else {
             return `The timer has yet to begin`;
         }
     };
-    DTimer.prototype.getSecond = () => this.time / 1000;
-    DTimer.prototype.getMillis = () => this.time;
-    DTimer.prototype.getMicro = () => this.time * 1000;
-    DTimer.prototype.getNano = () => this.time * 1000000;
-    DTimer.prototype.getFPS = () => 1000 / this.time;
+    DTimer.prototype.getSecond = function() {
+        return this.time / 1000;
+    };
+    DTimer.prototype.getMillis = function() {
+        return this.time;
+    };
+    DTimer.prototype.getMicro = function() {
+        return this.time * 1000;
+    };
+    DTimer.prototype.getNano = function() {
+        return this.time * 1000000;
+    };
+    DTimer.prototype.getFPS = function() {
+        return 1000 / this.time;
+    };
     DTimer.start = timer => timer.start();
     DTimer.stop = timer => timer.stop();
     DTimer.reset = timer => timer.reset();
     DTimer.copy = timer => timer.copy();
     DTimer.toString = timer => timer.toString();
+
+    let DIdentification = {
+        nextID: function() {
+            return (++this.current).toString(36);
+        }
+    };
+    DIdentification.current = BigInt(Math.abs(Math.floor((Math.random() * (36 ** 10) + Date.now() ** 3) / 1e20))) << BigInt(Math.floor(Math.random() * 10));
 
     /*
     
@@ -3557,7 +3607,8 @@ Dark.objects = (function() {
         DImage: DImage,
         DMatrix: DMatrix,
         DRandom: DRandom,
-        DTimer: DTimer
+        DTimer: DTimer,
+        DIdentification: DIdentification
     };
 
 })();
