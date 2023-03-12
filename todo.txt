@@ -11,10 +11,16 @@ To add:
 * Text width and height
 * Share image cache onto main Dark
 * imageData, loadPixels & updatePixels main
-• Better global variable updating & handling
+• Better global variable updating & handling for events specifically
 * resizeMode(AUTO)
 • DColor
-• DImage.crop with only width/height
+* DImage.crop with only width/height
+• Use a different context with willReadFrequently on for filters and such so it doesn't cause global lag
+• smoothMode(SMOOTH, PIXEL)
+• Speed up crop & resize by a ton
+• DImage bitmap, bitmapLoaded & bitmapSent
+• Speed up image()
+• Cache and use frequently used images
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
@@ -33,5 +39,6 @@ Possibly to add:
 
 Bugs:
 • Dark.js mouse breaks when width / height is not the same as the style width / height
+• DTimer throwing weird errors
 
 Note: * = to add by next minor update
