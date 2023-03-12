@@ -18,8 +18,6 @@
 
         size(1000, 600);
 
-        noSmooth();
-        
         let img = loadImage("https://images.pexels.com/photos/206359/pexels-photo-206359.jpeg?cs=srgb&dl=pexels-pixabay-206359.jpg&fm=jpg");
 
         frameRate(Infinity);
@@ -27,10 +25,17 @@
         setup = function() {
             img.filter(POSTERIZE, 8);
             img.filter(VIGNETTE);
+
+            img.resize(width);
         };
 
+        let [w, h] = [600, 400];
+
         draw = function() {
-            image(img, 0, 0, width);
+            background(3, 2, 38);
+
+            let [x, y] = [constrain(mouseX, 0, width - w), constrain(mouseY, 0, height - h)];
+            image(DImage.crop(img, x, y, w, h), x, y);
 
             strokeWeight(2);
             stroke(0);
@@ -120,8 +125,9 @@
             image(screen, 800, 460, 150);
 
             if(mouseIsPressed) filter(INVERT);
-
+            
             fill(255);
+            stroke(0);
             textStyle(BOLD);
             textSize(40);
             textAlign(LEFT, TOP);
