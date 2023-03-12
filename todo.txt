@@ -37,6 +37,5 @@ Possibly to add:
 
 Bugs:
 • Dark.js mouse breaks when width / height is not the same as the style width / height
-• DTimer throwing weird errors
 
 Note: * = to add by next minor update
