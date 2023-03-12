@@ -248,7 +248,7 @@ var Dark = function(dummy = false) {
     };
 
     var colorString = function(c) {
-        return "rgba(" + d.red(c) + ", " + d.green(c) + ", " + d.blue(c) + ", " + d.alpha(c) / 255 + ")";
+        return `rgba(${d.red(c)}, ${d.green(c)}, ${d.blue(c)}, ${d.alpha(c) / 255})`;
     };
 
     bulkAdd({
@@ -1134,10 +1134,30 @@ var Dark = function(dummy = false) {
             s.lineGap = amount;
         },
 
-        text: function(text, x, y) {
+        text: function(text, x, y, width = Infinity, height = Infinity) {
             if(!s.smoothing) [x, y] = [d.round(x), d.round(y)];
 
-            let lines = text.split("\n");
+            let linesOld = [];
+            let words = text.split(" ");
+            let w = 0;
+            let curLine = "";
+            let space = d.ctx.measureText(" ").width;
+            words.forEach(word => {
+                w += d.ctx.measureText(word).width;
+                if(w > width) {
+                    linesOld.push(curLine.slice(0, -1));
+                    curLine = "";
+                    w = 0;
+                } else {
+                    curLine += word + " ";
+                    w += space;
+                }
+            });
+            linesOld.push(curLine);
+
+            let lines = [];
+            linesOld.forEach(line => lines = lines.concat(line.split("\n"))); // include newlines (\n)
+
             let off = 0;
             switch(s.alignY) {
                 case k.CENTER:
@@ -1147,10 +1167,15 @@ var Dark = function(dummy = false) {
                     off = (s.textHeight + s.lineGap) * (lines.length - 1);
                     break;
             }
-            lines.forEach((line, index) => {
-                let inc = index * (s.textHeight + s.lineGap) - off;
+
+            let h = 0;
+            lines.every((line, index) => { // for 'break' statements
+                if(h + s.textHeight > height) return false; // 'break'
+                let inc = h - off;
                 d.ctx.fillText(line, x, y + inc);
                 d.ctx.strokeText(line, x, y + inc);
+                h += s.textHeight + s.lineGap;
+                return true;
             });
         },
 
@@ -1227,6 +1252,8 @@ var Dark = function(dummy = false) {
                     result.ctx.drawImage(result.image, 0, 0, result.width, result.height);
                     result.updatePixels();
 
+                    result.sourceURL = url;
+
                     if(d.successfullyCachedImageCount == Object.keys(d.imageCache).length) d.begin();
                 };
             } else {
@@ -1250,6 +1277,8 @@ var Dark = function(dummy = false) {
                                     [result.canvas.width, result.canvas.height] = [result.width, result.height] = [img.width, img.height];
                                     result.imageData = img.imageData;
                                     result.loadPixels();
+
+                                    result.sourceURL = url;
 
                                     if(d.successfullyCachedImageCount == Object.keys(d.imageCache).length) d.begin();
                                 });
@@ -1461,11 +1490,14 @@ var Dark = function(dummy = false) {
     }
 };
 
+// I mean, it can't be denied
+Dark.darkObject = true;
+
 // List of all instances
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.3";
+Dark.version = "pre-0.7.4";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1531,36 +1563,39 @@ Dark.constants = {
     KEY: 28,
     CLICK: 29,
     SCROLL: 30,
-    PERLIN: 31, // unused
-    SIMPLEX: 32, // unused
-    WORLEY: 33, // unused
-    VALUE: 34, // unused
-    RANDOM: 35, // unused
-    INVERT: 36,
-    OPAQUE: 37,
-    GRAY: 38,
-    ERODE: 39,
-    DILATE: 40,
-    THRESHOLD: 41,
-    POSTERIZE: 42,
-    BLUR: 43,
-    SHARPEN: 44,
-    SEPIA: 45,
-    OUTLINE: 46,
-    SWIRL: 47,
-    EDGE: 48,
-    CONTRAST: 49,
-    VIGNETTE: 50,
-    BRIGHTNESS: 51,
-    BLACK: 52,
-    WHITE: 53,
-    NORMALIZE: 54,
-    BOX: 55,
-    TRANSPARENCY: 56,
-    PIXELATE: 57,
-    FISHEYE: 58,
-    EMBOSS: 59,
-    SOBEL: 60
+    LINEAR: 31, // unused
+    RADIAL: 32, // unused
+    CONIC: 33, // unused
+    PERLIN: 50, // unused
+    SIMPLEX: 51, // unused
+    WORLEY: 52, // unused
+    VALUE: 53, // unused
+    RANDOM: 54, // unused
+    INVERT: 55,
+    OPAQUE: 56,
+    GRAY: 57,
+    ERODE: 58,
+    DILATE: 59,
+    THRESHOLD: 60,
+    POSTERIZE: 61,
+    BLUR: 62,
+    SHARPEN: 63,
+    SEPIA: 64,
+    OUTLINE: 65,
+    SWIRL: 66,
+    EDGE: 67,
+    CONTRAST: 68,
+    VIGNETTE: 69,
+    BRIGHTNESS: 70,
+    BLACK: 71,
+    WHITE: 72,
+    NORMALIZE: 73,
+    BOX: 74,
+    TRANSPARENCY: 75,
+    PIXELATE: 76,
+    FISHEYE: 77,
+    EMBOSS: 78,
+    SOBEL: 79
 };
 
 Dark.filters = [
@@ -1988,10 +2023,11 @@ Dark.mouseMap = [
 ];
 
 Dark.changeable = {};
-Dark.darkObject = true;
+
+// Since object values inside frozen object can be edited
+Dark.changeable.errorCount = 0;
 
 // Constants, but not quite (can be edited)
-Dark.changeable.errorCount = 0; // Since object values inside frozen object can be edited
 Dark.maxErrorCount = 50;
 Dark.maxStackSize = 500;
 
@@ -2042,6 +2078,12 @@ Dark.rectRect = function(x1, y1, width1, height1, x2, y2, width2, height2) {
     return x1 + width1 > x2 && x1 < x2 + width2 && y1 + height1 > y2 && y1 < y2 + height2;
 };
 
+Dark.createCanvas = function(width, height) {
+    let canvas = document.createElement("canvas");
+    [canvas.width, canvas.height] = [width, height];
+    return canvas;
+};
+
 Dark.doError = function(type, err) {
     if(Dark.changeable.errorCount == Dark.maxErrorCount) {
         console.warn("Too many warnings and errors have been made, the rest will not display.");
@@ -2075,7 +2117,7 @@ Dark.observe = function(object, type, callback) {
     });
 };
 
-// Important function: sets the Dark object that has global access
+// Sets the Dark object that has global access
 Dark.setMain = function(dark) {
     if(dark instanceof Dark) {
         if(Dark.main) Dark.main.isMain = false;
@@ -2738,16 +2780,19 @@ Dark.objects = (function() {
 
         this.filters = {};
         this.disposable = false;
-        this.imageSent = false;
+        this.sent = false;
+        this.loaded = false;
         this.imageLoaded = false;
+        this.bitmapLoaded = false;
         this.image = null;
+        this.bitmap = null;
 
         if(args[0] instanceof ImageData) {
             this.imageData = args[0];
             this.source = args[1];
             this.width = args[0].width;
             this.height = args[0].height;
-            this.canvas = new OffscreenCanvas(this.width, this.height);
+            this.canvas = Dark.createCanvas(this.width, this.height);
             this.ctx = this.canvas.getContext("2d");
             this.loadPixels();
         } else if(typeof args[0] == "number" && typeof args[1] == "number") { // width & height
@@ -2755,7 +2800,7 @@ Dark.objects = (function() {
             this.height = args[1];
             this.source = args[2];
             this.imageData = new ImageData(this.width, this.height);
-            this.canvas = new OffscreenCanvas(this.width, this.height);
+            this.canvas = Dark.createCanvas(this.width, this.height);
             this.ctx = this.canvas.getContext("2d");
         } else if(args[0] instanceof OffscreenCanvas || args[0] instanceof HTMLCanvasElement) {
             this.width = args[0].width;
@@ -2794,16 +2839,17 @@ Dark.objects = (function() {
     DImage.prototype.copy = function() {
         let img = new DImage();
         [img.width, img.height, img.imageData, img.source, img.disposable] = [this.width, this.height, this.imageData, this.source, this.disposable];
-        img.canvas = new OffscreenCanvas(this.width, this.height);
+        img.canvas = Dark.createCanvas(this.width, this.height);
         img.ctx = img.canvas.getContext("2d");
         img.ctx.drawImage(this.getRenderable(), 0, 0);
         return img;
     };
     DImage.prototype.getRenderable = function() {
-        return this.imageLoaded ? this.image : this.canvas;
+        return this.loaded ? (this.image ?? this.bitmap) : this.canvas;
     };
     DImage.resize = function(img, width, height) {
         let newImg = img.copy();
+        newImg.setDisposability(true);
         newImg.resize(width, height);
         return newImg;
     };
@@ -2820,7 +2866,7 @@ Dark.objects = (function() {
             [width, height] = [Math.ceil(width), Math.ceil(height)];
 
             // Save pixels
-            let oldCanvas = new OffscreenCanvas(this.width, this.height);
+            let oldCanvas = Dark.createCanvas(this.width, this.height);
             let oldCtx = oldCanvas.getContext("2d");
             oldCtx.drawImage(this.getRenderable(), 0, 0);
 
@@ -2836,6 +2882,7 @@ Dark.objects = (function() {
     };
     DImage.crop = function(img, x, y, width, height) {
         let newImg = img.copy();
+        newImg.setDisposability(true);
         newImg.crop(x, y, width, height);
         return newImg;
     };
@@ -2852,7 +2899,7 @@ Dark.objects = (function() {
             }
 
             // Save pixels
-            let oldCanvas = new OffscreenCanvas(this.width, this.height);
+            let oldCanvas = Dark.createCanvas(this.width, this.height);
             let oldCtx = oldCanvas.getContext("2d");
             oldCtx.drawImage(this.getRenderable(), 0, 0);
 
@@ -2872,7 +2919,7 @@ Dark.objects = (function() {
         this.imageData.data.set(this.ctx.getImageData(0, 0, this.width, this.height).data);
     };
     DImage.prototype.setDisposability = function(disposable) {
-        this.disposable = disposable
+        this.disposable = disposable;
     };
     DImage.filter = function(img, type, value) {
         let newImg = img.copy();
@@ -3006,7 +3053,7 @@ Dark.objects = (function() {
     ]);
     DImage.globalVertexShader = Dark.loadFile("/filters/global.vert");
     DImage.filterShaders = [];
-    DImage.gl_canvas = new OffscreenCanvas(0, 0);
+    DImage.gl_canvas = Dark.createCanvas(0, 0);
     DImage.gl = DImage.gl_canvas.getContext("webgl2", {antialias: false});
     DImage.initializeShaders = function(arr) {
         let gl = DImage.gl;
@@ -3067,29 +3114,64 @@ Dark.objects = (function() {
         this.image.crossOrigin = "anonymous";
         this.image.addEventListener("load", () => {
             this.imageLoaded = true;
-            this.imageSent = false;
+
+            // All loaded
+            if(this.bitmapLoaded) {
+                this.loaded = true;
+                this.sent = false;
+            }
         }); // Load
+    };
+    DImage.prototype.generateBitmap = function() {
+        createImageBitmap(this.canvas).then(bitmap => {
+            this.bitmap = bitmap;
+            this.bitmapLoaded = true;
+
+            // All loaded
+            if(this.imageLoaded) {
+                this.loaded = true;
+                this.sent = false;
+            }
+        });
+    };
+    DImage.animationFrames = [];
+    DImage.awaitAnimationFrame = function() {
+        let promiseResolve;
+        let promise = new Promise(resolve => {
+            promiseResolve = resolve;
+        });
+        DImage.animationFrames.push({
+            promise: promise,
+            resolve: promiseResolve
+        });
+        return promise;
+    };
+    DImage.raf = function() {
+        DImage.animationFrames.forEach(request => request.resolve());
+        requestAnimationFrame(DImage.raf);
     };
     DImage.prototype.loadImage = function() {
         // Reset
         this.image = null;
+        this.loaded = false;
         this.imageLoaded = false;
+        this.bitmapLoaded = false;
 
-        if(!Dark.khan && !this.disposable && !this.imageSent) {
-            this.imageSent = true;
+        if(!Dark.khan && !this.disposable && !this.sent) {
+            this.sent = true;
 
             // Wait until canvas has rendered
-            let frame = requestAnimationFrame(() => {
+            DImage.awaitAnimationFrame().then(() => {
+                // Generate bitmap image
+                this.generateBitmap();
+
                 // Convert to blob 
                 if(this.canvas instanceof HTMLCanvasElement) {
-                    this.canvas.toBlob(this.generateImage, {type: "image/png"});
+                    this.canvas.toBlob((...args) => this.generateImage.apply(this, args), {type: "image/png"});
                 } else {
-                    this.canvas.convertToBlob({type: "image/png"}).then(blob => this.generateImage(blob))
+                    this.canvas.convertToBlob({type: "image/png"}).then(blob => this.generateImage(blob));
                 }
             });
-            
-            // Without this, we get a memory leak for all the unclosed animation frames! Took me hours to figure out.
-            cancelAnimationFrame(frame);
         }
     };
     DImage.get = (img, ...args) => img.get.apply(null, args);
@@ -3265,6 +3347,7 @@ Dark.objects = (function() {
             defaultShader: Dark.constants.TOP
         }
     ]);
+    requestAnimationFrame(DImage.raf);
 
     // Matrices
     let DMatrix = function(width, height, val = 0) {
@@ -3521,6 +3604,7 @@ Dark.objects = (function() {
         return new DRandom(seed);
     };
 
+    // Timer
     let DTimer = function() {
         if(!(this instanceof DTimer)) return new (Function.prototype.bind.apply(DTimer, [null].concat(...arguments)));
 
@@ -3581,12 +3665,35 @@ Dark.objects = (function() {
     DTimer.copy = timer => timer.copy();
     DTimer.toString = timer => timer.toString();
 
-    let DIdentification = {
-        nextID: function() {
-            return (++this.current).toString(36);
-        }
+    // ID Generator
+    let DIdentification = function() {
+        if(!(this instanceof DIdentification)) return new (Function.prototype.bind.apply(DIdentification, [null].concat(...arguments)));
+
+        this.darkObject = true;
+
+        this.id = (++DIdentification.current).toString(36);
     };
     DIdentification.current = BigInt(Math.abs(Math.floor((Math.random() * (36 ** 10) + Date.now() ** 3) / 1e20))) << BigInt(Math.floor(Math.random() * 10));
+
+    let DGradient = function(...args) {
+        if(!(this instanceof DGradient)) return new (Function.prototype.bind.apply(DGradient, [null].concat(...arguments)));
+
+        this.darkObject = true;
+
+        this.stops = [];
+        this.mode = Dark.constants.LINEAR;
+
+        let increment = 1 / args.length;
+        args.forEach((color, index) => this.stops.push({
+            position: increment * index,
+            value: color
+        }));
+    };
+    DGradient.prototype.toCanvasGradient = function() {
+        let gradient = Dark.utils.ctx.createLinearGradient(0, 0, 1, 0);
+        this.stops.forEach(stop => gradient.addColorStop(stop.position, `rgba(${Dark.utils.red(stop.value)}, ${Dark.utils.green(stop.value)}, ${Dark.utils.blue(stop.value)}, ${Dark.utils.alpha(stop.value) / 255})`));
+        return gradient;
+    };
 
     /*
     
@@ -3608,7 +3715,8 @@ Dark.objects = (function() {
         DMatrix: DMatrix,
         DRandom: DRandom,
         DTimer: DTimer,
-        DIdentification: DIdentification
+        DIdentification: DIdentification,
+        DGradient: DGradient
     };
 
 })();
