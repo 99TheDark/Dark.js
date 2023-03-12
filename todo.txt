@@ -12,12 +12,13 @@ To add:
 • Better global variable updating & handling for events specifically
 * resizeMode(AUTO)
 • DColor
-* smoothMode(SMOOTH, PIXEL)
 • Speed up crop & resize by a ton
 • Speed up image()
 * Cache and use frequently used images
 • Let image() take in Dark instance
 • Speed up filter getImageData functions somehow without a second context (not allowed)
+• Include spacing between letters in text
+• Wrap multiple times for words n times bigger than the space provided
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
@@ -38,4 +39,4 @@ Possibly to add:
 Bugs:
 • Dark.js mouse breaks when width / height is not the same as the style width / height
 
-Note: * = to add by next minor update
+Note: '*' means to add by next minor update versus '•' which means to add eventually
