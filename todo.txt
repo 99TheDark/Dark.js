@@ -6,21 +6,18 @@ To add:
 • DImage.noise(), use WebGL to fill the imageWidth. Might even create 4 with the RGBA
 * Image masking
 • Make DVector rotations work in 3D
-* Improve copy function
 • Make everything readonly in Dark instances
-* Text width and height
 * Share image cache onto main Dark
 * imageData, loadPixels & updatePixels main
 • Better global variable updating & handling for events specifically
 * resizeMode(AUTO)
 • DColor
-* DImage.crop with only width/height
-• Use a different context with willReadFrequently on for filters and such so it doesn't cause global lag
-• smoothMode(SMOOTH, PIXEL)
+* smoothMode(SMOOTH, PIXEL)
 • Speed up crop & resize by a ton
-• DImage bitmap, bitmapLoaded & bitmapSent
 • Speed up image()
-• Cache and use frequently used images
+* Cache and use frequently used images
+• Let image() take in Dark instance
+• Speed up filter getImageData functions somehow without a second context (not allowed)
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
@@ -36,6 +33,7 @@ Possibly to add:
 • Framerate above natural refresh rate
 • Average & Color palette splitter using median cut
 • texture() for shapes
+• DSort object
 
 Bugs:
 • Dark.js mouse breaks when width / height is not the same as the style width / height
