@@ -105,6 +105,7 @@ var Dark = function(dummy = false) {
     var loadDefault = function() {
         d.frameRate(60);
         d.smooth();
+        d.antialiasing(true);
         d.ellipseMode(k.CENTER);
         d.rectMode(k.CORNER);
         d.imageMode(k.CORNER);
@@ -515,20 +516,24 @@ var Dark = function(dummy = false) {
 
         smooth: function() {
             s.smoothing = true;
-            d.ctx.mozImageSmoothingEnabled = true; // antialiasing
-            d.ctx.webkitImageSmoothingEnabled = true;
-            d.ctx.msImageSmoothingEnabled = true;
-            d.ctx.imageSmoothingEnabled = true;
             d.ctx.imageSmoothingQuality = "high";
         },
 
         noSmooth: function() {
             s.smoothing = true;
-            d.ctx.mozImageSmoothingEnabled = false;
-            d.ctx.webkitImageSmoothingEnabled = false;
-            d.ctx.msImageSmoothingEnabled = false;
             d.ctx.imageSmoothingEnabled = false;
             d.ctx.imageSmoothingQuality = "low";
+        },
+
+        antialiasing: function(state) {
+            if(typeof state == "boolean") {
+                d.ctx.mozImageSmoothingEnabled = state;
+                d.ctx.webkitImageSmoothingEnabled = state;
+                d.ctx.msImageSmoothingEnabled = state;
+                d.ctx.imageSmoothingEnabled = state;
+            } else {
+                Dark.error("Antialiasing mode must be of boolean value");
+            }
         },
 
         preventDefault: function(listener) {
@@ -1137,26 +1142,47 @@ var Dark = function(dummy = false) {
         text: function(text, x, y, width = Infinity, height = Infinity) {
             if(!s.smoothing) [x, y] = [d.round(x), d.round(y)];
 
-            let linesOld = [];
-            let words = text.split(" ");
+            let lines = [];
+            let words = text.replaceAll("\n", " \n ").split(" ");
             let w = 0;
             let curLine = "";
             let space = d.ctx.measureText(" ").width;
-            words.forEach(word => {
-                w += d.ctx.measureText(word).width;
-                if(w > width) {
-                    linesOld.push(curLine.slice(0, -1));
-                    curLine = "";
+            words.every(word => {
+                if(word == "\n") {
+                    lines.push(curLine);
                     w = 0;
-                } else {
-                    curLine += word + " ";
-                    w += space;
+                    curLine = "";
+                    return true;
                 }
+                
+                let wordWidth = d.ctx.measureText(word).width;
+                if(wordWidth > width) {
+                    let letters = word.split("");
+                    let lw = w;
+                    letters.every((letter, index) => {
+                        lw += d.ctx.measureText(letter).width;
+                        if(lw > width) {
+                            let splitWord = [word.substring(0, index), word.substring(index)];
+                            lines.push(splitWord[0]);
+                            curLine = splitWord[1] + " ";
+                            w = d.ctx.measureText(curLine).width;
+                            return false;
+                        }
+                        return true;
+                    });
+                    return true;
+                }
+                w += wordWidth;
+                if(w > width) {
+                    lines.push(curLine.slice(0, -1));
+                    curLine = "";
+                    w = wordWidth;
+                }
+                curLine += word + " ";
+                w += space;
+                return true;
             });
-            linesOld.push(curLine);
-
-            let lines = [];
-            linesOld.forEach(line => lines = lines.concat(line.split("\n"))); // include newlines (\n)
+            lines.push(curLine);
 
             let off = 0;
             switch(s.alignY) {
@@ -1497,7 +1523,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.4";
+Dark.version = "pre-0.7.4.1";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1975,6 +2001,8 @@ Dark.ignoreGlobal = [
     "cachedImageCount",
     "successfullyCachedImageCount",
     "settings",
+    "constants",
+    "objects",
     "defaultSettings",
     "isMain",
     "canvas",
@@ -1983,6 +2011,11 @@ Dark.ignoreGlobal = [
     "loaded",
     "began",
     "randomGenerator"
+];
+
+Dark.singleDefinitions = [
+    "constants",
+    "objects"
 ];
 
 // For loading and saving styles
@@ -2216,6 +2249,18 @@ Dark.globallyUpdateVariables = function(m) {
             window[mainKey] = m[mainKey];
         }
     }
+};
+
+Dark.defineConstants = function() {
+    Dark.singleDefinitions.forEach(type => {
+        for(key in Dark[type]) {
+            Object.defineProperty(window, key, {
+                value: Dark[type][key],
+                writable: false,
+                configurable: false
+            });
+        }
+    });
 };
 
 Dark.objects = (function() {
@@ -3738,6 +3783,7 @@ Dark.compileKA();
 Dark.utils = new Dark(true); // Dummy instance for utils
 Dark.setMain(new Dark()); // Default main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
+Dark.defineConstants(); // Load constants and objects
 
 // Freeze objects
 Object.freeze(Dark);
