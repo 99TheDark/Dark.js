@@ -111,7 +111,7 @@
             textLeading(0);
             textAlign(CENTER);
             textStyle(NORMAL);
-            text("Hi\nThere\nWhat's\nUp?", 400, 425);
+            text("Hi\nThere\nWhat's\nUp?", 400, 400);
 
             stroke(0);
             strokeWeight(2);
@@ -125,12 +125,12 @@
             image(screen, 800, 460, 150);
 
             if(mouseIsPressed) filter(INVERT);
-            
+
             fill(255);
             stroke(0);
+            textAlign(LEFT, TOP);
             textStyle(BOLD);
             textSize(40);
-            textAlign(LEFT, TOP);
             text(fps.toFixed(), 35, 35);
         };
     </script>
