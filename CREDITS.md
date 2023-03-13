@@ -4,6 +4,7 @@
 - random
 - map
 - curveTangent
+- mix
 
 ## [ski.js](https://github.com/thelegendski/ski.js/):
 - Snippets of vertex system
