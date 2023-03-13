@@ -11,9 +11,15 @@ To add:
 * imageData, loadPixels & updatePixels main
 • Better global variable updating & handling for events specifically
 • DColor
-• Speed up crop & resize by a ton
-• Speed up image()
+• Speed up crop & resize by a TON
 * Cache and use frequently used images
+• matchAll function
+• mix function
+• DMatrix translate, scale, skew, rotate, x and y versions as well
+• Make loadImage more efficient and include bitmaps now
+• DMatrix.normalize
+• intersect function
+• mouseDragged event
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
@@ -27,7 +33,9 @@ Possibly to add:
 • Framerate above natural refresh rate
 • Average & Color palette splitter using median cut
 • texture() for shapes
-• DSort object
+• DSort object (sorting algorithms, static object)
+• DComplex object (complex numbers, ie a+bi)
+• DSprite object (pixel art ease of making)
 
 Bugs:
 • Dark.js mouse breaks when width / height is not the same as the style width / height
