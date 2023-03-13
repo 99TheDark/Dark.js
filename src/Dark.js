@@ -7,19 +7,18 @@ var Dark = function(dummy = false) {
 
     this.darkObject = true;
 
-    // private variables & functions
-    let lastFrame = performance.now();
-    let lastTime = performance.now();
-    let lastHidden = -1;
-    let lastScrollTime = null;
-
-    let shapeInProgress = false;
-
     // Shorter = faster typing time
     let d = this;
     let k = d.constants = Dark.constants;
     let o = d.objects = Dark.objects;
     let s = d.settings = {};
+
+    // Private variables & functions
+    let lastFrame = performance.now();
+    let lastTime = performance.now();
+    let lastHidden = -1;
+    let lastScrollTime = null;
+    let shapeInProgress = false;
 
     Dark.instances.push(d);
 
@@ -67,6 +66,8 @@ var Dark = function(dummy = false) {
     // Create canvas
     d.canvas = new OffscreenCanvas(innerWidth, innerHeight);
     d.ctx = d.canvas.getContext("2d");
+
+    let screen = null;
 
     // Add empties
     Dark.empties.forEach(emp => d[emp] = () => {});
@@ -164,7 +165,7 @@ var Dark = function(dummy = false) {
             }
         });
 
-        addEventListener("resize", function(e) {
+        addEventListener("resize", function() {
             Dark.globallyUpdateVariables(d);
             d.pageResized();
         });
@@ -209,13 +210,13 @@ var Dark = function(dummy = false) {
             d.mouseReleased();
         });
 
-        d.canvas.addEventListener("mouseenter", function(e) {
+        d.canvas.addEventListener("mouseenter", function() {
             d.mouseIsInside = true;
             Dark.globallyUpdateVariables(d);
             d.mouseIn();
         });
 
-        d.canvas.addEventListener("mouseleave", function(e) {
+        d.canvas.addEventListener("mouseleave", function() {
             d.mouseIsInside = false;
             Dark.globallyUpdateVariables(d);
             d.mouseOut();
@@ -259,16 +260,18 @@ var Dark = function(dummy = false) {
             if(typeof w == "number" && typeof h == "number" && w > 0 && h > 0) {
                 // Because for some reason changing width & height reset all parameters >:(
                 // It took me ~8 hours to figure this out. D:<
-                //let old = d.copy(d.ctx);
+                let old = d.copy(d.ctx);
 
                 [d.width, d.height] = [d.canvas.width, d.canvas.height] = [w, h];
 
-                /*for(const key in d.ctx) {
+                screen = new o.DImage(d.width, d.height, d);
+
+                for(const key in d.ctx) {
                     const value = old[key];
                     if(typeof value !== "function" && !Dark.styleIgnore.includes(key)) {
                         d.ctx[key] = value;
                     }
-                }*/
+                }
                 Dark.globallyUpdateVariables(d);
             }
         },
@@ -1148,32 +1151,41 @@ var Dark = function(dummy = false) {
             let curLine = "";
             let space = d.ctx.measureText(" ").width;
             words.every(word => {
-                if(word == "\n") {
+                if(word == "\n") { // Go to next if it's a new line
                     lines.push(curLine);
                     w = 0;
                     curLine = "";
                     return true;
                 }
-                
+
                 let wordWidth = d.ctx.measureText(word).width;
-                if(wordWidth > width) {
+                if(wordWidth > width) { // If the word is too long to be put on the next line
                     let letters = word.split("");
                     let lw = w;
-                    letters.every((letter, index) => {
-                        lw += d.ctx.measureText(letter).width;
-                        if(lw > width) {
-                            let splitWord = [word.substring(0, index), word.substring(index)];
-                            lines.push(splitWord[0]);
-                            curLine = splitWord[1] + " ";
-                            w = d.ctx.measureText(curLine).width;
-                            return false;
+                    let splitPoints = [0]; // Beginning
+                    letters.forEach((letter, index) => {
+                        let letterWidth = d.ctx.measureText(letter).width;
+                        lw += letterWidth;
+                        if(lw > width) { // Cut off
+                            splitPoints.push(index);
+                            lw = letterWidth;
                         }
-                        return true;
                     });
+                    splitPoints.push(word.length); // End
+
+                    let splitWord = [];
+                    for(let i = 1; i < splitPoints.length; i++) {
+                        splitWord.push(word.substring(splitPoints[i - 1], splitPoints[i]));
+                    }
+                    // Remove last section and send it to the final line
+                    curLine = splitWord.pop() + " ";
+                    w = d.ctx.measureText(curLine).width;
+                    splitWord.forEach(part => lines.push(part));
+
                     return true;
                 }
                 w += wordWidth;
-                if(w > width) {
+                if(w > width) { // Send to next line if too long
                     lines.push(curLine.slice(0, -1));
                     curLine = "";
                     w = wordWidth;
@@ -1183,6 +1195,9 @@ var Dark = function(dummy = false) {
                 return true;
             });
             lines.push(curLine);
+
+            // If it's waaaay to small, it will cause an empty first line, so remove it here
+            if(lines[0].length == 0) lines.shift();
 
             let off = 0;
             switch(s.alignY) {
@@ -1195,7 +1210,7 @@ var Dark = function(dummy = false) {
             }
 
             let h = 0;
-            lines.every((line, index) => { // for 'break' statements
+            lines.every(line => { // for 'break' statements
                 if(h + s.textHeight > height) return false; // 'break'
                 let inc = h - off;
                 d.ctx.fillText(line, x, y + inc);
@@ -1207,12 +1222,13 @@ var Dark = function(dummy = false) {
 
         // Images
         get: function(...args) {
-            if(args.length == 0) {
-                return new o.DImage(d.ctx.getImageData(0, 0, d.width, d.height), d);
-            } else if(args.length == 4) {
-                return new o.DImage(d.ctx.getImageData(args[0], args[1], args[2], args[3]), d);
-            } else {
-                Dark.error("get requires 0 or 4 parameters, not " + args.length);
+            switch(args.length) {
+                default:
+                    return Dark.error("get requires 0 or 4 parameters, not " + args.length);
+                case 0:
+                    return new o.DImage(d.canvas, d);
+                case 4:
+                    return new o.DImage(d.ctx.getImageData(args[0], args[1], args[2], args[3]), d);
             }
         },
 
@@ -1227,6 +1243,7 @@ var Dark = function(dummy = false) {
             [width, height] = [d.abs(width), d.abs(height)];
             d.ctx.save();
             if(img instanceof ImageData) img = new o.DImage(img, d);
+            if(img instanceof Dark) img = new o.DImage(img.canvas, img).copy();
             let w, h;
             switch(arguments.length) {
                 default:
@@ -1344,8 +1361,7 @@ var Dark = function(dummy = false) {
         },
 
         filter: function(filter, value) {
-            let screen = new o.DImage(d.canvas, d);
-            screen.setDisposability(true);
+            screen.ctx.drawImage(d.canvas, 0, 0);
             screen.filter(filter, value);
             d.ctx.putImageData(screen.imageData, 0, 0);
         },
@@ -1523,7 +1539,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.4.1";
+Dark.version = "pre-0.7.5";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1571,27 +1587,35 @@ Dark.constants = {
     CORNER: 10,
     WIDTH: 11,
     HEIGHT: 12,
-    AUTO: 13, // unused
+    NORMAL: 13,
     BOLD: 14,
     ITALIC: 15,
-    NORMAL: 16,
-    BEVEL: 17,
-    MITER: 18,
-    SQUARE: 19,
-    LEFT: 20,
-    RIGHT: 21,
-    TOP: 22,
-    BOTTOM: 23,
-    BASELINE: 24,
-    GET: 25,
-    SET: 26,
-    RADIUS: 27,
-    KEY: 28,
-    CLICK: 29,
-    SCROLL: 30,
-    LINEAR: 31, // unused
-    RADIAL: 32, // unused
-    CONIC: 33, // unused
+    BEVEL: 16,
+    MITER: 17,
+    SQUARE: 18,
+    LEFT: 19,
+    RIGHT: 20,
+    TOP: 21,
+    BOTTOM: 22,
+    BASELINE: 23,
+    GET: 24,
+    SET: 25,
+    RADIUS: 26,
+    KEY: 27,
+    CLICK: 28,
+    SCROLL: 29,
+    LINEAR: 30,
+    RADIAL: 31,
+    CONIC: 32,
+    RGB: 33, // unused
+    RGBA: 33, // unused
+    SRGB: 33, // unused
+    HSB: 34, // unused
+    HSV: 34, // unused
+    HSL: 35, // unused
+    HEX: 36, // unused
+    CMYK: 37, // unused
+    CMY: 37, // unused
     PERLIN: 50, // unused
     SIMPLEX: 51, // unused
     WORLEY: 52, // unused
@@ -2295,18 +2319,15 @@ Dark.objects = (function() {
         return new DVector(0, 0);
     };
     DVector.prototype.zero2D = function() {
-        [this.x, this.y] = [0, 0];
-
-        this.z = undefined;
-        this.is2D = true;
+        [this.x, this.y, this.z, this.is2D] = [0, 0, undefined, true];
+        return this;
     };
     DVector.zero3D = function() {
         return new DVector(0, 0, 0);
-
-        this.is2D = false;
     };
     DVector.prototype.zero3D = function() {
         [this.x, this.y, this.z] = [0, 0, 0];
+        return this;
     };
     DVector.add = function(v1, v2) {
         if(v2 instanceof DVector) {
@@ -2347,6 +2368,7 @@ Dark.objects = (function() {
             this.y += v;
             this.z += v;
         }
+        return this;
     };
     DVector.sub = function(v1, v2) {
         if(v2 instanceof DVector) {
@@ -2387,6 +2409,7 @@ Dark.objects = (function() {
             this.y -= v;
             this.z -= v;
         }
+        return this;
     };
     DVector.mult = function(v1, v2) {
         if(v2 instanceof DVector) {
@@ -2447,6 +2470,7 @@ Dark.objects = (function() {
             this.y *= v;
             this.z *= v;
         }
+        return this;
     };
     DVector.div = function(v1, v2) {
         if(v2 instanceof DVector) {
@@ -2487,6 +2511,7 @@ Dark.objects = (function() {
             this.y /= v;
             this.z /= v;
         }
+        return this;
     };
     DVector.pow = function(v1, v2) {
         if(v2 instanceof DVector) {
@@ -2513,6 +2538,7 @@ Dark.objects = (function() {
             this.y **= v;
             this.z **= v;
         }
+        return this;
     };
     DVector.angle = function(v) {
         return Dark.utils.atan2(v.y, v.x);
@@ -2553,6 +2579,7 @@ Dark.objects = (function() {
     DVector.prototype.setMag = function(mag) {
         this.normalize();
         this.mult(mag);
+        return this;
     };
     DVector.getRotation = function(v) {
         return Dark.utils.atan2(v.y, v.x);
@@ -2570,12 +2597,14 @@ Dark.objects = (function() {
     DVector.prototype.setRotation = function(ang) {
         let m = this.mag();
         [this.x, this.y] = [m * Dark.utils.cos(ang), m * Dark.utils.sin(ang)];
+        return this;
     };
     DVector.rotate = function(v, ang) {
         v.setRotation(v.getRotation() + ang);
     };
     DVector.prototype.rotate = function(ang) {
         this.setRotation(this.getRotation() + ang);
+        return this;
     };
     DVector.normalize = function(v) {
         const mag = v.mag();
@@ -2588,10 +2617,11 @@ Dark.objects = (function() {
     };
     DVector.prototype.normalize = function() {
         const mag = this.mag();
-
         if(mag != 0) {
             this.div(mag);
         }
+
+        return this;
     };
     DVector.cross = function(v1, v2) {
         return new DVector(
@@ -2601,7 +2631,7 @@ Dark.objects = (function() {
         );
     };
     DVector.prototype.cross = function(v) {
-        return this.cross(v);
+        return DVector.cross(this, v);
     };
     DVector.dot = function(v1, v2) {
         if(typeof v2 == "number") {
@@ -2631,6 +2661,7 @@ Dark.objects = (function() {
         this.x = -this.x;
         this.y = -this.y;
         this.z = -this.z;
+        return this;
     };
     DVector.limit = function(v, max) {
         if(v.mag() > max) v.mult(max / v.mag());
@@ -2638,6 +2669,7 @@ Dark.objects = (function() {
     };
     DVector.prototype.limit = function(max) {
         if(this.mag() > max) this.mult(max / this.mag());
+        return this;
     };
     DVector.lerp = function(v1, v2, percent) {
         return new DVector(
@@ -2650,6 +2682,7 @@ Dark.objects = (function() {
         this.x = Dark.utils.lerp(this.x, v.x, percent);
         this.y = Dark.utils.lerp(this.y, v.y, percent);
         this.z = Dark.utils.lerp(this.z, v.z, percent);
+        return this;
     };
     DVector.abs = function(v) {
         if(v.is2D) {
@@ -2667,6 +2700,7 @@ Dark.objects = (function() {
     };
     DVector.prototype.abs = function() {
         [this.x, this.y, this.z] = [Math.abs(this.x), Math.abs(this.y), Math.abs(this.z)];
+        return this;
     };
     DVector.dist = function(v1, v2) {
         let dx, dy, dz = 0;
@@ -2690,10 +2724,11 @@ Dark.objects = (function() {
     };
     DVector.prototype.applyTransform = function(matrix) {
         this.mult(matrix);
-    },
-        DVector.get = function(v) {
-            return v.get();
-        };
+        return this;
+    };
+    DVector.get = function(v) {
+        return v.get();
+    };
     DVector.prototype.get = function() {
         if(this.is2D) {
             return new DVector(this.x, this.y);
@@ -2714,6 +2749,8 @@ Dark.objects = (function() {
             [this.x, this.y, this.z] = args;
         }
         if(this.is2D) this.z = undefined;
+
+        return this;
     };
     DVector.toArray = function(vector) {
         return vector.toArray();
@@ -2750,6 +2787,7 @@ Dark.objects = (function() {
                 this.is2D = false;
                 break;
         }
+        return this;
     };
     DVector.prototype.toString = function() {
         if(this.is2D) return "[" + this.x + ", " + this.y + "]";
@@ -2854,6 +2892,14 @@ Dark.objects = (function() {
             this.canvas = args[0];
             this.ctx = this.canvas.getContext("2d");
             this.imageData = this.ctx.getImageData(0, 0, this.width, this.height);
+        } else if(args[0] instanceof Dark) {
+            this.width = args[0].width;
+            this.height = args[0].height;
+            this.source = args[0];
+            this.canvas = Dark.createCanvas(this.width, this.height);
+            this.ctx = this.canvas.getContext("2d");
+            this.ctx.drawImage(args[0].canvas, 0, 0);
+            this.imageData = this.ctx.getImageData(0, 0, this.width, this.height);
         } else {
             this.imageData = null;
             this.source = args[0];
@@ -2880,6 +2926,7 @@ Dark.objects = (function() {
         this.imageData.data[index + 1] = Dark.utils.green(col);
         this.imageData.data[index + 2] = Dark.utils.blue(col);
         this.imageData.data[index + 3] = Dark.utils.alpha(col);
+        return this;
     };
     DImage.prototype.copy = function() {
         let img = new DImage();
@@ -2924,6 +2971,7 @@ Dark.objects = (function() {
 
             this.loadImage();
         }
+        return this;
     };
     DImage.crop = function(img, x, y, width, height) {
         let newImg = img.copy();
@@ -2956,15 +3004,19 @@ Dark.objects = (function() {
 
             this.loadImage();
         }
+        return this;
     };
     DImage.prototype.loadPixels = function() {
         this.ctx.putImageData(this.imageData, 0, 0);
+        return this;
     };
     DImage.prototype.updatePixels = function() {
         this.imageData.data.set(this.ctx.getImageData(0, 0, this.width, this.height).data);
+        return this;
     };
     DImage.prototype.setDisposability = function(disposable) {
         this.disposable = disposable;
+        return this;
     };
     DImage.filter = function(img, type, value) {
         let newImg = img.copy();
@@ -3072,7 +3124,7 @@ Dark.objects = (function() {
             );
 
             let buffer = new Uint8ClampedArray(this.width * this.height * 4);
-            f.gl.readPixels(0, 0, this.width, this.height, f.gl.RGBA, f.gl.UNSIGNED_BYTE, buffer); // slow
+            f.gl.readPixels(0, 0, this.width, this.height, f.gl.RGBA, f.gl.UNSIGNED_BYTE, buffer);
 
             this.imageData.data.set(buffer);
             this.ctx.putImageData(this.imageData, 0, 0);
@@ -3082,6 +3134,7 @@ Dark.objects = (function() {
         } else {
             return Dark.error("Invalid filter type");
         }
+        return this;
     };
     DImage.texData = new Float32Array([ // rectangle = 2 triangles, UV mapped
         // Position, UV
@@ -3464,6 +3517,7 @@ Dark.objects = (function() {
         } else {
             this.mat[y][x] = val;
         }
+        return this;
     };
     DMatrix.dot = function(mat1, mat2, row, col) {
         if(mat1.width == mat2.height) {
@@ -3492,6 +3546,7 @@ Dark.objects = (function() {
         } else {
             Dark.error("Only DMatrices with square dimensions have identity DMatrices");
         }
+        return this;
     };
     DMatrix.add = function(mat1, mat2) {
         if(typeof mat2 == "number") {
@@ -3516,6 +3571,7 @@ Dark.objects = (function() {
     };
     DMatrix.prototype.add = function(matrix) {
         this.set(DMatrix.add(this, matrix));
+        return this;
     };
     DMatrix.sub = function(mat1, mat2) {
         if(typeof mat2 == "number") {
@@ -3540,6 +3596,7 @@ Dark.objects = (function() {
     };
     DMatrix.prototype.sub = function(matrix) {
         this.set(DMatrix.sub(this, matrix));
+        return this;
     };
     DMatrix.mult = function(mat1, mat2) {
         if(typeof mat2 == "number") {
@@ -3567,6 +3624,7 @@ Dark.objects = (function() {
         this.width = mat.width;
         this.height = mat.height;
         this.mat = mat.mat;
+        return this;
     };
     DMatrix.copy = function(matrix) {
         return new DMatrix([...matrix.mat]);
@@ -3589,6 +3647,7 @@ Dark.objects = (function() {
         } else {
             Dark.error(matrix + " is not a DOMMatrix");
         }
+        return this;
     };
     DMatrix.toDOMMatrix = function(matrix) {
         return matrix.toDOMMatrix();
@@ -3662,6 +3721,7 @@ Dark.objects = (function() {
         } else {
             Dark.error("DTimer.reset must be called before a new timer begins");
         }
+        return this;
     };
     DTimer.prototype.stop = function() {
         if(this.start == null) {
@@ -3670,11 +3730,13 @@ Dark.objects = (function() {
             this.end = performance.now();
             this.time = this.end - this.begin;
         }
+        return this;
     };
     DTimer.prototype.reset = function() {
         this.begin = null;
         this.end = null;
         this.time = null;
+        return this;
     };
     DTimer.prototype.copy = function() {
         let timer = new DTimer();
@@ -3704,9 +3766,9 @@ Dark.objects = (function() {
     DTimer.prototype.getFPS = function() {
         return 1000 / this.time;
     };
-    DTimer.start = timer => timer.start();
-    DTimer.stop = timer => timer.stop();
-    DTimer.reset = timer => timer.reset();
+    DTimer.start = timer => void (timer.start());
+    DTimer.stop = timer => void (timer.stop());
+    DTimer.reset = timer => void (timer.reset());
     DTimer.copy = timer => timer.copy();
     DTimer.toString = timer => timer.toString();
 
@@ -3733,6 +3795,23 @@ Dark.objects = (function() {
             position: increment * index,
             value: color
         }));
+    };
+    DGradient.prototype.setMode = function(mode) {
+        switch(mode) {
+            default:
+                Dark.error("Invalid DGradient mode");
+                break;
+            case Dark.constants.LINEAR:
+                this.mode = Dark.constants.LINEAR;
+                break;
+            case Dark.constants.RADIAL:
+                this.mode = Dark.constants.RADIAL;
+                break;
+            case Dark.constants.CONIC:
+                this.mode = Dark.constants.CONIC;
+                break;
+        }
+        return this;
     };
     DGradient.prototype.toCanvasGradient = function() {
         let gradient = Dark.utils.ctx.createLinearGradient(0, 0, 1, 0);
