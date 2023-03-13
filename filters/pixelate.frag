@@ -14,7 +14,7 @@ vec2 snap(vec2 point) {
 }
 
 void main() {
-    vec4 tex = texture(sampler, vec2(snap(uv)));
+    vec4 tex = texture(sampler, snap(uv));
     
     color = tex;
 }
