@@ -30,7 +30,7 @@ var Dark = function(dummy = false) {
     });
 
     d.info = {
-        id: Math.floor(Math.random() * 1000000),
+        id: new o.DIdentification().id,
         initializationTime: performance.now(),
         version: Dark.version
     };
@@ -45,6 +45,7 @@ var Dark = function(dummy = false) {
     d.successfullyCachedImageCount = 0;
     d.loaded = false;
     d.began = false;
+    d.name = "Dark.js Instance";
 
     // copy over
     d.copy = Dark.copy;
@@ -306,6 +307,10 @@ var Dark = function(dummy = false) {
             document.title = title;
         },
 
+        disableKhanImagePreload() {
+            Dark.changeable.khanImagePreload = false;
+        },
+
         // Math-y
         dist: function(...args) {
             let dx, dy, dz = 0;
@@ -336,6 +341,10 @@ var Dark = function(dummy = false) {
 
         choose: function(n, k) {
             return intFactorial(n) / (intFactorial(n - k) * intFactorial(k));
+        },
+
+        repeat: function(count, callback) {
+            for(let i = 0; i < count; i++) callback(i);
         },
 
         // Very close to ProcessingJS code
@@ -676,12 +685,16 @@ var Dark = function(dummy = false) {
             d.ctx.resetTransform();
         },
 
-        getMatrixAsDOM: function() {
-            return d.transforms[d.transforms.length - 1];
+        getDOMMatrix: function() {
+            return d.ctx.getTransform();
         },
 
         getMatrix: function() {
-            return o.DMatrix.fromDOMMatrix(d.transforms[d.transforms.length - 1]);
+            return o.DMatrix.fromDOMMatrix(d.ctx.getTransform());
+        },
+
+        setMatrix: function(matrix) {
+            d.ctx.setTransform(new o.DMatrix(matrix.toDOMMatrix()));
         },
 
         pushStyle: function() {
@@ -1268,10 +1281,6 @@ var Dark = function(dummy = false) {
             }
             if(s.imageMode == k.CENTER) d.ctx.translate(- w / 2, - h / 2);
             if(!s.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
-            /*let copied = img.copy();
-            copied.setDisposability(true);
-            copied.resize(w, h);
-            d.ctx.drawImage(copied.getRenderable(), x, y);*/
             d.ctx.drawImage(img.getRenderable(), x, y, w, h);
             d.ctx.restore();
         },
@@ -1448,7 +1457,13 @@ var Dark = function(dummy = false) {
         scaleX: x => d.scale(x, 1),
         scaleY: y => d.scale(1, y),
         skewX: x => d.skew(x, 0),
-        skewY: y => d.skew(0, y)
+        skewY: y => d.skew(0, y),
+        split: (str, delimiter) => str.split(delimiter),
+        concat: (arr1, arr2) => arr1.concat(arr2),
+        join: (arr, joiner = ", ") => arr.join(joiner),
+        append: (arr, elem) => (arr.push(elem), arr),
+        match: (string, regex) => string.match(regex),
+        nf: (num, left, right) => (num + ".").padStart(left + 1, "0") + (String(num).split(".")[1] ?? "").padEnd(right <= 0 ? 1 : right, "0")
 
     });
 
@@ -1521,7 +1536,7 @@ var Dark = function(dummy = false) {
         s.cursor = "auto";
         s.looping = true;
 
-        if(Dark.khan) Dark.imageLocationsKA.forEach(loc => d.getImage(loc));
+        if(Dark.khan && Dark.changeable.khanImagePreload) Dark.imageLocationsKA.forEach(loc => d.getImage(loc));
 
         addEventListener("load", () => {
             d.loaded = true;
@@ -1539,7 +1554,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.5";
+Dark.version = "pre-0.7.5.1";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -2034,7 +2049,8 @@ Dark.ignoreGlobal = [
     "dummy",
     "loaded",
     "began",
-    "randomGenerator"
+    "randomGenerator",
+    "name"
 ];
 
 Dark.singleDefinitions = [
@@ -2083,6 +2099,9 @@ Dark.changeable = {};
 
 // Since object values inside frozen object can be edited
 Dark.changeable.errorCount = 0;
+
+// Auto on for Khan Academy
+Dark.changeable.khanImagePreload = true;
 
 // Constants, but not quite (can be edited)
 Dark.maxErrorCount = 50;
@@ -2247,7 +2266,7 @@ Dark.loadFile = function(loc) {
 Dark.compileKA = function() {
     if(Dark.editor) {
         Dark.compileListKA.forEach(file => Dark.fileCacheKA[file.location] = file.contents);
-        console.log(Dark.format(Dark.fileCacheKA));
+        // console.log(Dark.format(Dark.fileCacheKA));
     }
 };
 
@@ -3272,6 +3291,9 @@ Dark.objects = (function() {
             });
         }
     };
+    DImage.prototype.toDataArray = function() {
+        return [...(this.imageData ?? {data: []}).data];
+    };
     DImage.get = (img, ...args) => img.get.apply(null, args);
     DImage.set = (img, ...args) => img.set.apply(null, args);
     DImage.copy = img => img.copy();
@@ -3279,6 +3301,7 @@ Dark.objects = (function() {
     DImage.loadPixels = img => img.loadPixels();
     DImage.updatePixels = img => img.updatePixels();
     DImage.setDisposability = (img, disposable) => img.setDisposability(disposable);
+    DImage.toDataArray = img => img.toDataArray();
     DImage.initializeShaders([
         {
             key: Dark.constants.INVERT,
@@ -3473,10 +3496,10 @@ Dark.objects = (function() {
             this.width = 4;
             this.height = 4;
             this.mat = [
-                width.m11, width.m21, width.m31, width.m41,
-                width.m12, width.m22, width.m32, width.m42,
-                width.m13, width.m23, width.m33, width.m43,
-                width.m14, width.m24, width.m34, width.m44
+                [width.m11, width.m21, width.m31, width.m41],
+                [width.m12, width.m22, width.m32, width.m42],
+                [width.m13, width.m23, width.m33, width.m43],
+                [width.m14, width.m24, width.m34, width.m44]
             ];
         } else {
             this.width = width;
@@ -3626,6 +3649,12 @@ Dark.objects = (function() {
         this.mat = mat.mat;
         return this;
     };
+    DMatrix.kernelWeight = function(matrix) {
+        return matrix.kernelWeight();
+    };
+    DMatrix.prototype.kernelWeight = function() {
+        return this.toArray().reduce((sum, value) => sum += value, 0);
+    };
     DMatrix.copy = function(matrix) {
         return new DMatrix([...matrix.mat]);
     };
@@ -3665,7 +3694,7 @@ Dark.objects = (function() {
         let str = "";
         for(const arr in this.mat) {
             for(const item in this.mat[arr]) {
-                str += this.mat[arr][item] + " ";
+                str += this.mat[arr][item].toFixed(1) + " ";
             }
             str = str.replace(/ $/, "\n");
         }
