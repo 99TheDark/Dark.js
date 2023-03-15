@@ -20,6 +20,7 @@ To add:
 • DMatrix.normalize
 • intersect function
 • mouseDragged event
+• Throw error on not loaded DImages on use in image-related funxtions
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
