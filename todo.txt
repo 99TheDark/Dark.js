@@ -14,13 +14,16 @@ To add:
 • Speed up crop & resize by a TON
 * Cache and use frequently used images
 • matchAll function
-• mix function
-• DMatrix translate, scale, skew, rotate, x and y versions as well
-• Make loadImage more efficient and include bitmaps now
-• DMatrix.normalize
-• intersect function
-• mouseDragged event
-• Throw error on not loaded DImages on use in image-related functions
+* DMatrix translate, scale, skew, rotate, x and y versions as well
+* Make loadImage more efficient and include bitmaps now
+* DMatrix.normalize
+* intersect function
+* mouseDragged event
+* Throw error on not loaded DImages on use in image-related functions
+* Cancel animation frame on Dark instance leave
+* link function
+• DMatrix.transpose
+• Allow DFont to take in an object or many arguments
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
