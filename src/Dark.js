@@ -29,6 +29,8 @@ var Dark = function(dummy = false) {
         set: () => {}
     });
 
+    d.key = d.keyCode = undefined;
+
     d.info = {
         id: new o.DIdentification().id,
         initializationTime: performance.now(),
@@ -131,7 +133,7 @@ var Dark = function(dummy = false) {
         for(const key in d.ctx) {
             const value = context[key];
             if(key != "canvas" && typeof value != "function") {
-                d.ctx[key] = value;
+                try {d.ctx[key] = value;} catch {};
             }
         }
     };
@@ -142,7 +144,7 @@ var Dark = function(dummy = false) {
             if(Dark.focus.target === d.canvas) {
                 if(s.keyEvents) e.preventDefault();
                 d.keyIsPressed = true;
-                d.key = Dark.special[e.keyCode] ?? e.key;
+                d.key = (Dark.special[e.keyCode] ?? e.key).toLowerCase();
                 d.keyCode = e.keyCode;
                 if(/\w/.test(String.fromCharCode(e.keyCode))) d.keyTyped();
                 keys[d.key] = true;
@@ -154,7 +156,7 @@ var Dark = function(dummy = false) {
         document.addEventListener("keyup", function(e) {
             if(Dark.focus.target === d.canvas) {
                 if(s.keyEvents) e.preventDefault();
-                d.key = Dark.special[e.keyCode] ?? e.key;
+                d.key = (Dark.special[e.keyCode] ?? e.key).toLowerCase();
                 d.keyCode = e.keyCode;
                 keys[d.key] = false;
                 d.keyIsPressed = false;
@@ -270,7 +272,7 @@ var Dark = function(dummy = false) {
                 for(const key in d.ctx) {
                     const value = old[key];
                     if(typeof value !== "function" && !Dark.styleIgnore.includes(key)) {
-                        d.ctx[key] = value;
+                        try {d.ctx[key] = value;} catch {};
                     }
                 }
                 Dark.globallyUpdateVariables(d);
@@ -347,7 +349,6 @@ var Dark = function(dummy = false) {
             for(let i = 0; i < count; i++) callback(i);
         },
 
-        // Very close to ProcessingJS code
         random: function(...args) {
             switch(args.length) {
                 default:
@@ -1038,7 +1039,6 @@ var Dark = function(dummy = false) {
             return 0.5 * ((2 * b) + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (3 * b - 3 * c + d - a) * t * t * t);
         },
 
-        // Copied from ProcessingJS
         curveTangent: function(a, b, c, d, t) {
             return 0.5 * ((c - a) + 2 * (2 * a - 5 * b + 4 * c - d) * t + 3 * (3 * b - 3 * c + d - a) * t * t);
         },
@@ -1281,7 +1281,7 @@ var Dark = function(dummy = false) {
             }
             if(s.imageMode == k.CENTER) d.ctx.translate(- w / 2, - h / 2);
             if(!s.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
-            d.ctx.drawImage(img.getRenderable(), x, y, w, h);
+            d.ctx.drawImage(img.getRenderable(), 0, 0, img.width, img.height, x, y, w, h);
             d.ctx.restore();
         },
 
@@ -1301,7 +1301,7 @@ var Dark = function(dummy = false) {
 
                     [result.canvas.width, result.canvas.height] = [result.width, result.height] = [result.image.width, result.image.height];
                     result.imageData = new ImageData(result.width, result.height);
-                    result.ctx.drawImage(result.image, 0, 0, result.width, result.height);
+                    result.ctx.drawImage(result.image, 0, 0, result.width, result.height, 0, 0, result.width, result.height);
                     result.updatePixels();
 
                     result.sourceURL = url;
@@ -1320,7 +1320,7 @@ var Dark = function(dummy = false) {
                                 .then(bitmap => {
                                     let img = new o.DImage(bitmap.width, bitmap.height, d);
 
-                                    img.ctx.drawImage(bitmap, 0, 0, img.width, img.height);
+                                    img.ctx.drawImage(bitmap, 0, 0, img.width, img.height, 0, 0, img.width, img.height);
                                     img.updatePixels();
 
                                     d.imageCache[url] = img;
@@ -1343,7 +1343,7 @@ var Dark = function(dummy = false) {
 
         getImage: function(loc) {
             if(Dark.khan) {
-                let url = "https://cdn.kastatic.org/third_party/javascript-khansrc/live-editor/build/images/" + loc + ".png";
+                let url = `https://cdn.kastatic.org/third_party/javascript-khansrc/live-editor/build/images/${loc}.png`;
                 if(Object.keys(d.imageCache).includes(url) && d.began) return d.imageCache[url];
 
                 let img = new o.DImage(1, 1, d);
@@ -1358,7 +1358,7 @@ var Dark = function(dummy = false) {
 
                     [img.canvas.width, img.canvas.height] = [img.width, img.height] = [img.image.width, img.image.height];
                     img.imageData = new ImageData(img.width, img.height);
-                    img.ctx.drawImage(img.image, 0, 0, img.width, img.height);
+                    img.ctx.drawImage(img.image, 0, 0, img.width, img.height, 0, 0, img.width, img.height);
                     img.updatePixels();
 
                     if(d.successfullyCachedImageCount == Object.keys(d.imageCache).length) d.begin();
@@ -1370,13 +1370,13 @@ var Dark = function(dummy = false) {
         },
 
         filter: function(filter, value) {
-            screen.ctx.drawImage(d.canvas, 0, 0);
+            // Tested this, fastest to include the source
+            screen.ctx.drawImage(d.canvas, 0, 0, d.width, d.height, 0, 0, d.width, d.height);
             screen.filter(filter, value);
             d.ctx.putImageData(screen.imageData, 0, 0);
         },
 
         // Quick & Mathy functions
-        // Map copied from ProcessingJS
         min: (a, b) => (a < b) ? a : b,
         max: (a, b) => (a > b) ? a : b,
         log10: num => Math.log10(num),
@@ -1462,8 +1462,12 @@ var Dark = function(dummy = false) {
         concat: (arr1, arr2) => arr1.concat(arr2),
         join: (arr, joiner = ", ") => arr.join(joiner),
         append: (arr, elem) => (arr.push(elem), arr),
+        reverse: arr => arr.reverse(),
+        expand: (arr, len) => Array(len ?? arr.length * 2).fill().map((_, i) => arr[i]),
+        shorten: arr => d.expand(arr, arr.length - 1),
         match: (string, regex) => string.match(regex),
-        nf: (num, left, right) => (num + ".").padStart(left + 1, "0") + (String(num).split(".")[1] ?? "").padEnd(right <= 0 ? 1 : right, "0")
+        nf: (num, left, right) => (num + ".").padStart(left + 1, "0") + (String(num).split(".")[1] ?? "").padEnd(right <= 0 ? 1 : right, "0"),
+        mix: (x, y, f) => x + ((y - x) * f >> 8)
 
     });
 
@@ -2208,6 +2212,8 @@ Dark.getMain = function() {
     return Dark.main;
 };
 
+window.OffscreenCanvas ??= Dark.createCanvas; // For Safari
+
 Dark.fileCacheKA = {
     "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 vertPos;\nin vec2 vertUV;\nout vec2 uv;\nout vec2 pos;\nvoid main() {\n pos = vertPos;\n uv = vertUV;\n gl_Position = vec4(vertPos, 0.0, 1.0);\n}",
     "/filters/invert.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4(1.0 - tex.rgb, tex.a);\n}",
@@ -2809,8 +2815,8 @@ Dark.objects = (function() {
         return this;
     };
     DVector.prototype.toString = function() {
-        if(this.is2D) return "[" + this.x + ", " + this.y + "]";
-        return "[" + this.x + ", " + this.y + ", " + this.z + "]";
+        if(this.is2D) return `[${this.x}, ${this.y}]`;
+        return `[${this.x}, ${this.y}, ${this.z}]`;
     };
 
     // Fonts
@@ -2857,7 +2863,7 @@ Dark.objects = (function() {
         return new DFont(str);
     };
     DFont.prototype.toString = function() {
-        return this.style + " " + this.weight + " " + this.variant + " " + this.size + "px " + this.family;
+        return `${this.style} ${this.weight} ${this.variant} ${this.size}px ${this.family}`;
     };
     DFont.weights = [
         "bold",
@@ -2917,7 +2923,7 @@ Dark.objects = (function() {
             this.source = args[0];
             this.canvas = Dark.createCanvas(this.width, this.height);
             this.ctx = this.canvas.getContext("2d");
-            this.ctx.drawImage(args[0].canvas, 0, 0);
+            this.ctx.drawImage(args[0].canvas, 0, 0, this.width, this.height, 0, 0, this.width, this.height);
             this.imageData = this.ctx.getImageData(0, 0, this.width, this.height);
         } else {
             this.imageData = null;
@@ -2952,7 +2958,7 @@ Dark.objects = (function() {
         [img.width, img.height, img.imageData, img.source, img.disposable] = [this.width, this.height, this.imageData, this.source, this.disposable];
         img.canvas = Dark.createCanvas(this.width, this.height);
         img.ctx = img.canvas.getContext("2d");
-        img.ctx.drawImage(this.getRenderable(), 0, 0);
+        img.ctx.drawImage(this.getRenderable(), 0, 0, this.width, this.height, 0, 0, this.width, this.height);
         return img;
     };
     DImage.prototype.getRenderable = function() {
@@ -2979,14 +2985,14 @@ Dark.objects = (function() {
             // Save pixels
             let oldCanvas = Dark.createCanvas(this.width, this.height);
             let oldCtx = oldCanvas.getContext("2d");
-            oldCtx.drawImage(this.getRenderable(), 0, 0);
+            oldCtx.drawImage(this.getRenderable(), 0, 0, this.width, this.height, 0, 0, this.width, this.height);
 
             // Resize dimensions
             [this.canvas.width, this.canvas.height] = [this.width, this.height] = [width, height];
 
             // Redraw
             this.ctx.fillRect(0, 0, width, height);
-            this.ctx.drawImage(oldCanvas, 0, 0, width, height);
+            this.ctx.drawImage(oldCanvas, 0, 0, width, height, 0, 0, width, height);
 
             this.loadImage();
         }
@@ -3013,7 +3019,7 @@ Dark.objects = (function() {
             // Save pixels
             let oldCanvas = Dark.createCanvas(this.width, this.height);
             let oldCtx = oldCanvas.getContext("2d");
-            oldCtx.drawImage(this.getRenderable(), 0, 0);
+            oldCtx.drawImage(this.getRenderable(), 0, 0, this.width, this.height, 0, 0, this.width, this.height);
 
             // Resize dimensions
             [this.canvas.width, this.canvas.height] = [this.width, this.height] = [width, height];
