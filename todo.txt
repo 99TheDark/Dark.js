@@ -13,17 +13,11 @@ To add:
 • DColor
 • Speed up crop & resize by a TON
 * Cache and use frequently used images
-• matchAll function
-* DMatrix translate, scale, skew, rotate, x and y versions as well
 * Make loadImage more efficient and include bitmaps now
-* DMatrix.normalize
-* intersect function
-* mouseDragged event
-* Throw error on not loaded DImages on use in image-related functions
-* Cancel animation frame on Dark instance leave
-* link function
-• DMatrix.transpose
-• Allow DFont to take in an object or many arguments
+• Make bulkAdd etc use Object.defineProperties for readonly
+• Make all static DMatrix functions use copies
+• Allow DMatrix constructor to take in many arrays opposed to a 2D array
+• DImage.split to split an image into an array of images
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
@@ -37,13 +31,14 @@ Possibly to add:
 • Framerate above natural refresh rate
 • Average & Color palette splitter using median cut
 • texture() for shapes
-• DSort object (sorting algorithms, static object)
+• DSort object (a bunch of sorting algorithms, static object)
 • DComplex object (complex numbers, ie a+bi)
 • DSprite object (pixel art ease of making)
+• Convert all Objects to classes
 
 Bugs:
 • Dark.js mouse breaks when width / height is not the same as the style width / height
 • Obscure bug with text alignment. See CoC Main. 
-• DFont KA bug with invalid typeof
+• reset just breaks everything
 
 Note: '*' means to add by next minor update versus '•' which means to add eventually
