@@ -72,18 +72,21 @@
             bezierVertex(350, 350, 350, 200, 250, 150);
             endShape();
 
-            fill(100);
+            fill(50);
             strokeWeight(2);
-            stroke(0);
+            stroke(150);
             textSize(30);
+            pushStyle();
             textStyle(BOLD);
             textAlign(LEFT, BASELINE);
             textLeading(5);
             text("Dark.js\nHi there!", 800, 50);
-
+            popStyle();
+            
             pushMatrix();
-            skew(-50);
-            translate(600, 100);
+            stroke(0);
+            skew(-1200);
+            translate(600, 250);
             rotate(-10);
             fill(0, 0, 255);
             rect(100, 100, 100, 50);
@@ -106,11 +109,9 @@
             strokeWeight(15);
             point(width / 2, height / 2 + 50);
 
+            textAlign(CENTER);
             noStroke();
             fill(100, 50, 20);
-            textLeading(0);
-            textAlign(CENTER);
-            textStyle(NORMAL);
             text("Hi\nThere\nWhat's\nUp?", 400, 400);
 
             stroke(0);
@@ -128,10 +129,13 @@
 
             fill(255);
             stroke(0);
+            strokeWeight(1);
+            pushStyle();
             textAlign(LEFT, TOP);
             textStyle(BOLD);
-            textSize(40);
+            textSize(40); 
             text(fps.toFixed(), 35, 35);
+            popStyle();
         };
     </script>
 </body>
