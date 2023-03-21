@@ -19,17 +19,28 @@ var Dark = function(dummy = false) {
     let lastHidden = -1;
     let lastScrollTime = null;
     let shapeInProgress = false;
+    let frame = null;
+    let screen = null;
 
+    // Add to instances
     Dark.instances.push(d);
 
+    // Keys
     let keys = {};
-
     d.keys = new Proxy(keys, {
         get: (target, prop) => target[prop] ?? false,
         set: () => {}
     });
 
-    d.key = d.keyCode = undefined;
+    // Default values
+    [d.width, d.height] = [innerWidth, innerHeight];
+    [d.dt, d.frameCount, d.fps] = [0, 0, 60];
+    d.mouseX = d.mouseY = d.pmouseX = d.pmouseY = 0;
+    d.key = d.keyCode = d.mouseButton = undefined;
+    d.mouseIsPressed = d.mouseIsInside = d.keyIsPressed = false;
+    d.mouse = o.DVector.zero2D();
+    d.pmouse = o.DVector.zero2D();
+    d.imageData = new ImageData(innerWidth, innerHeight);
 
     d.info = {
         id: new o.DIdentification().id,
@@ -47,30 +58,22 @@ var Dark = function(dummy = false) {
     d.successfullyCachedImageCount = 0;
     d.loaded = false;
     d.began = false;
-    d.name = "Dark.js Instance";
 
-    // copy over
-    d.copy = Dark.copy;
+    // Copy over
+    d.clone = Dark.clone;
     d.format = Dark.format;
+    d.noop = Dark.noop;
 
     // Random number generator
     d.randomGenerator = o.DRandom.create();
 
     // Is a dummy instance?
     d.dummy = dummy;
-
-    // Load in variables to their default values
-    for(const key in Dark.variables) {
-        d[key] = Dark.variables[key];
-    }
-
     d.isMain = false;
 
     // Create canvas
     d.canvas = new OffscreenCanvas(innerWidth, innerHeight);
     d.ctx = d.canvas.getContext("2d");
-
-    let screen = null;
 
     // Add empties
     Dark.empties.forEach(emp => d[emp] = () => {});
@@ -97,7 +100,7 @@ var Dark = function(dummy = false) {
 
     // Integer-only factorial, 100% accurate and faster
     var intFactorial = function(num) {
-        num = d.floor(num);
+        if(num == 0) return 1;
 
         let total = num;
         while(--num > 1) {
@@ -129,12 +132,15 @@ var Dark = function(dummy = false) {
         d.preventDefault(k.SCROLL);
     };
 
-    var loadStyle = function(context) {
+    var loadStyle = function(style) {
         for(const key in d.ctx) {
-            const value = context[key];
+            const value = style.ctx[key];
             if(key != "canvas" && typeof value != "function") {
-                try {d.ctx[key] = value;} catch {};
+                try {d.ctx[key] = value;} catch {}; // For read-only's in Safari
             }
+        }
+        for(const key in s) {
+            s[key] = style.settings[key];
         }
     };
 
@@ -234,6 +240,8 @@ var Dark = function(dummy = false) {
             d.mouseY = d.mouse.y = d.constrain(d.round(e.pageY - boundingBox.y), 0, d.height);
             Dark.globallyUpdateVariables(d);
             d.mouseMoved();
+
+            if(d.mouseIsPressed) d.mouseDragged();
         });
 
         d.canvas.addEventListener("wheel", function(e) {
@@ -263,7 +271,7 @@ var Dark = function(dummy = false) {
             if(typeof w == "number" && typeof h == "number" && w > 0 && h > 0) {
                 // Because for some reason changing width & height reset all parameters >:(
                 // It took me ~8 hours to figure this out. D:<
-                let old = d.copy(d.ctx);
+                let old = d.clone(d.ctx);
 
                 [d.width, d.height] = [d.canvas.width, d.canvas.height] = [w, h];
 
@@ -285,10 +293,13 @@ var Dark = function(dummy = false) {
                 d.width = canvas.width;
                 d.height = canvas.height;
 
-                let old = d.copy(d.ctx);
+                let old = d.clone(d.ctx);
                 d.ctx = canvas.getContext("2d");
 
-                loadStyle(old);
+                loadStyle({
+                    ctx: old,
+                    settings: {...s}
+                });
 
                 d.canvas.style.cursor = s.cursor;
                 d.canvas.tabIndex = "1";
@@ -305,12 +316,29 @@ var Dark = function(dummy = false) {
             return d.ctx;
         },
 
+        exit: function() {
+            // Set main to default if main
+            if(d.isMain) Dark.setMain(Dark.default);
+
+            // Stop draw function
+            cancelAnimationFrame(frame);
+
+            // Remove from instances array
+            Dark.instances.splice(Dark.instances.indexOf(d), 1);
+        },
+
         setTitle: function(title) {
             document.title = title;
         },
 
-        disableKhanImagePreload() {
+        disableKhanImagePreload: function() {
             Dark.changeable.khanImagePreload = false;
+        },
+
+        createGraphics: function(width, height, dummy) {
+            let graphics = new Dark(dummy);
+            graphics.size(width, height);
+            return graphics;
         },
 
         // Math-y
@@ -329,6 +357,29 @@ var Dark = function(dummy = false) {
                 Dark.error("dist requires 4 or 6 parameters, not " + args.length);
             }
             return d.sqrt(dx * dx + dy * dy + dz * dz);
+        },
+
+        intersect: function(x1, y1, x2, y2, x3, y3, x4, y4) {
+            if(x1 == x3 && y1 == y3) return true;
+            if(x2 == x4 && y2 == y4) return true;
+
+            let m1 = (y2 - y1) / (x2 - x1);
+            let m2 = (y4 - y3) / (x4 - x3);
+            if(m1 == m2) return false;
+
+            let b1 = y1 - m1 * x1;
+            let b2 = y3 - m2 * x3;
+
+            let [left1, right1] = (x1 < x2) ? [x1, x2] : [x2, x1];
+            let [left2, right2] = (x3 < x4) ? [x3, x4] : [x4, x3];
+
+            let intersection = (b2 - b1) / (m1 - m2);
+
+            if(left1 < intersection && intersection < right1 && intersection < left2 && intersection < right2) {
+                return true;
+            } else {
+                return false;
+            }
         },
 
         gamma: function(z) {
@@ -666,7 +717,7 @@ var Dark = function(dummy = false) {
         // Transformations
         pushMatrix: function() {
             if(d.transforms.length > d.maxStackSize) {
-                Dark.error("Maximum matrix stack size reached, pushMatrix() called " + d.maxStackSize + " times.");
+                Dark.error(`Maximum matrix stack size reached, pushMatrix() called ${d.maxStackSize} times.`);
             } else {
                 d.transforms.push(d.ctx.getTransform());
             }
@@ -690,6 +741,16 @@ var Dark = function(dummy = false) {
             return d.ctx.getTransform();
         },
 
+        /*
+
+        Note:
+
+        scaleX skewX 0 translateX
+        skewY scaleY 0 translateY
+        0 0 1 0
+        0 0 0 1
+
+        */
         getMatrix: function() {
             return o.DMatrix.fromDOMMatrix(d.ctx.getTransform());
         },
@@ -698,11 +759,18 @@ var Dark = function(dummy = false) {
             d.ctx.setTransform(new o.DMatrix(matrix.toDOMMatrix()));
         },
 
+        printMatrix: function() {
+            console.log(d.getMatrix().toString());
+        },
+
         pushStyle: function() {
             if(d.styles.length > d.maxStackSize) {
-                Dark.error("Maximum style stack size reached, pushStyle() called " + d.maxStackSize + " times.");
+                Dark.error(`Maximum style stack size reached, pushStyle() called ${d.maxStackSize} times.`);
             } else {
-                d.styles.push(d.copy(d.ctx));
+                d.styles.push({
+                    ctx: d.clone(d.ctx),
+                    settings: d.clone(s)
+                });
             }
         },
 
@@ -722,7 +790,7 @@ var Dark = function(dummy = false) {
 
         push: function() {
             if(d.transforms.length > d.maxStackSize) {
-                Dark.error("Maximum stack size reached, push() called " + d.maxStackSize + " times.");
+                Dark.error(`Maximum stack size reached, push() called ${d.maxStackSize} times.`);
             } else {
                 d.ctx.save();
                 d.saves.push(Object.assign({}, s));
@@ -753,18 +821,14 @@ var Dark = function(dummy = false) {
             d.ctx.rotate(angle(ang));
         },
 
-        scale: function(w, h) {
-            if(arguments.length < 2) {
-                d.ctx.scale(w, w);
-            } else {
-                d.ctx.scale(w, h);
-            }
+        scale: function(w, h = w) {
+            d.ctx.scale(w, h);
         },
 
         skew: function(h, v = 0) {
             let transform = d.ctx.getTransform();
-            transform.b = v * 0.01;
-            transform.c = h * 0.01;
+            transform.skewYSelf(h * 0.01);
+            transform.skewXSelf(v * 0.01);
             d.ctx.setTransform(transform);
         },
 
@@ -1115,7 +1179,7 @@ var Dark = function(dummy = false) {
                 s.textSize = font.size;
                 d.reloadFont();
             } else {
-                Dark.error(font + " is not a DFont.");
+                Dark.error(`${font} is not a DFont.`);
             }
         },
 
@@ -1252,7 +1316,17 @@ var Dark = function(dummy = false) {
             d.ctx.restore();
         },
 
+        loadPixels: function() {
+            d.imageData = d.ctx.getImageData(0, 0, d.width, d.height);
+        },
+
+        updatePixels: function() {
+            d.ctx.putImageData(d.imageData, 0, 0, d.width, d.height);
+        },
+
         image: function(img, x, y, width, height) {
+            if(!(!img.loadedFromSource || img.loadComplete)) Dark.error("Cannot draw the image until loaded, put inside the setup or draw function instead");
+
             [width, height] = [d.abs(width), d.abs(height)];
             d.ctx.save();
             if(img instanceof ImageData) img = new o.DImage(img, d);
@@ -1286,9 +1360,12 @@ var Dark = function(dummy = false) {
         },
 
         loadImage: function(url) {
-            let result = new o.DImage(1, 1, d);
             if(Object.keys(d.imageCache).includes(url) && d.began) return d.imageCache[url];
             d.imageCache[url] = null;
+
+            let result = new o.DImage(1, 1, d);
+            result.loadComplete = false;
+            result.loadedFromSource = true;
 
             if(Dark.khan) {
                 d.cachedImageCount++;
@@ -1305,6 +1382,7 @@ var Dark = function(dummy = false) {
                     result.updatePixels();
 
                     result.sourceURL = url;
+                    result.loadComplete = true;
 
                     if(d.successfullyCachedImageCount == Object.keys(d.imageCache).length) d.begin();
                 };
@@ -1328,9 +1406,9 @@ var Dark = function(dummy = false) {
 
                                     [result.canvas.width, result.canvas.height] = [result.width, result.height] = [img.width, img.height];
                                     result.imageData = img.imageData;
-                                    result.loadPixels();
-
                                     result.sourceURL = url;
+                                    result.loadComplete = true;
+                                    result.loadPixels();
 
                                     if(d.successfullyCachedImageCount == Object.keys(d.imageCache).length) d.begin();
                                 });
@@ -1344,7 +1422,7 @@ var Dark = function(dummy = false) {
         getImage: function(loc) {
             if(Dark.khan) {
                 let url = `https://cdn.kastatic.org/third_party/javascript-khansrc/live-editor/build/images/${loc}.png`;
-                if(Object.keys(d.imageCache).includes(url) && d.began) return d.imageCache[url];
+                if(Object.keys(d.imageCache).includes(url) && d.began) return d.imageCache[url].copy();
 
                 let img = new o.DImage(1, 1, d);
                 d.imageCache[url] = null;
@@ -1466,8 +1544,12 @@ var Dark = function(dummy = false) {
         expand: (arr, len) => Array(len ?? arr.length * 2).fill().map((_, i) => arr[i]),
         shorten: arr => d.expand(arr, arr.length - 1),
         match: (string, regex) => string.match(regex),
+        matchAll: (string, regex) => [...string.matchAll(regex)].map(e => e.index),
         nf: (num, left, right) => (num + ".").padStart(left + 1, "0") + (String(num).split(".")[1] ?? "").padEnd(right <= 0 ? 1 : right, "0"),
-        mix: (x, y, f) => x + ((y - x) * f >> 8)
+        mix: (x, y, f) => x + ((y - x) * f >> 8),
+        link: (url, target) => open(url, target ?? "_blank"),
+        isArray: arr => Array.isArray(arr) || ArrayBuffer.isView(arr),
+        cutoff: (str, len = 20) => str.length > len ? `${str.substring(0, len)}...` : str
 
     });
 
@@ -1475,7 +1557,7 @@ var Dark = function(dummy = false) {
     d.raf = function(time) {
         if(Dark.startTime > d.info.initializationTime) {
             Dark.warn("Deleting old Dark.js instance.");
-            Dark.instances.splice(Dark.instances.indexOf(d), 1);
+            d.exit();
             return;
         }
 
@@ -1508,7 +1590,7 @@ var Dark = function(dummy = false) {
 
         Dark.globallyUpdateVariables(d);
 
-        requestAnimationFrame(d.raf);
+        frame = requestAnimationFrame(d.raf);
     };
 
     // Start draw & do setup
@@ -1520,7 +1602,7 @@ var Dark = function(dummy = false) {
             d.setup();
 
             // Start draw function
-            requestAnimationFrame(d.raf);
+            frame = requestAnimationFrame(d.raf);
         }
     };
 
@@ -1534,8 +1616,6 @@ var Dark = function(dummy = false) {
         loadEvents();
 
         // Setup later options
-        d.mouse = o.DVector.zero2D();
-        d.pmouse = o.DVector.zero2D();
         d.mouseScroll = o.DVector.zero3D();
         s.cursor = "auto";
         s.looping = true;
@@ -1558,7 +1638,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.5.1";
+Dark.version = "pre-0.7.7";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1576,8 +1656,13 @@ Dark.empties = [
     "mouseIn",
     "mouseOut",
     "mouseDoubleClicked",
+    "mouseDragged",
     "pageResized"
 ];
+
+Dark.editable = Dark.empties.concat([
+    "imageData"
+]);
 
 // Constants
 Dark.constants = {
@@ -1586,7 +1671,7 @@ Dark.constants = {
     HALF_PI: Math.PI / 2,
     QUARTER_PI: Math.PI / 4,
     E: Math.E,
-    PHI: Math.PHI,
+    PHI: (1 + Math.sqrt(5)) / 2,
     TAU: Math.PI * 2,
     EPSILON: Number.EPSILON,
     RED_MASK: 0b11111111000000001111111111111111,
@@ -2069,27 +2154,6 @@ Dark.styleIgnore = [
     "height"
 ];
 
-// All variables
-Dark.variables = { // TODO: Change to array and load
-    width: innerWidth,
-    height: innerHeight,
-    dt: 0,
-    frameCount: 0,
-    fps: 60,
-    key: undefined,
-    keyCode: undefined,
-    keyIsPressed: false,
-    mouseIsPressed: false,
-    mouseIsInside: false,
-    mouseX: 0,
-    mouseY: 0,
-    pmouseX: 0,
-    pmouseY: 0,
-    mouse: undefined,
-    pmouse: undefined,
-    mouseButton: undefined
-};
-
 // Maps the KeyEvent.button value to a string name that is usable
 Dark.mouseMap = [
     "left",
@@ -2100,6 +2164,7 @@ Dark.mouseMap = [
 ];
 
 Dark.changeable = {};
+Dark.cache = {};
 
 // Since object values inside frozen object can be edited
 Dark.changeable.errorCount = 0;
@@ -2110,6 +2175,7 @@ Dark.changeable.khanImagePreload = true;
 // Constants, but not quite (can be edited)
 Dark.maxErrorCount = 50;
 Dark.maxStackSize = 500;
+Dark.maxSearchDepth = 10;
 
 /* 
 
@@ -2130,34 +2196,126 @@ Dark.khan = Dark.url.host == "www.kasandbox.org";
 // If editing
 Dark.editor = Dark.url.host == "127.0.0.1:4444";
 
-// Debugging, very handy function
-Dark.copy = function(e) {
-    if(typeof e == "object" || typeof e == "function") {
+// Searching and changing deep values
+Dark.setDeep = function(obj, keyArr, val) {
+    let final = keyArr.pop();
+    let point = obj;
+    keyArr.forEach(sub => point = point[sub]);
+    point[final] = val;
+    return obj;
+};
+
+Dark.getDeep = function(obj, keyArr) {
+    let point = obj;
+    keyArr.forEach(sub => point = point[sub]);
+    return point;
+};
+
+// It's always good to be able to deep clone something
+Dark.clone = function(e, depth = 0, path = [], tree = []) { // Not working!!! aghhhh
+    if(depth == 0) clone.paths = [];
+
+    if(depth > Dark.maxSearchDepth) return e;
+
+    if(typeof e == "object" || typeof e == "function" /*Object(e) === e*/) {
+        tree = [...tree];
+        tree.push(e);
+
         let obj = {};
         for(const key in e) {
-            obj[key] = e[key];
+            let val = e[key];
+            let curPath = path.concat(key);
+            if(tree.includes(val)) {
+                // Looping
+                Dark.clone.paths.push({
+                    path: curPath,
+                    point: tree.slice(0, tree.indexOf(val))
+                });
+            } else if(isArray(val)) {
+                // Array cloning
+                let cloned = Dark.clone(val, depth + 1, curPath, tree);
+                cloned.length = Object.keys(cloned).length;
+                obj[key] = Array.from(cloned);
+            } else if(typeof val == "object" && val != null && val.constructor.toString().slice(val.constructor.name.length + 12) != "{ [native code] }") {
+                if(val.constructor === Object) {
+                    // Deep object cloning
+                    obj[key] = Dark.clone(val, depth + 1, curPath, tree);
+                } else {
+                    // Quick object cloning
+                    let instantiated = Object.create(val.constructor.prototype);
+                    for(const cloneKey in val) instantiated[cloneKey] = val[cloneKey];
+                    obj[key] = instantiated;
+                }
+            } else {
+                // Pointing
+                obj[key] = val;
+            }
         }
-        if(typeof e == "function" && Object.keys(obj).length == 0) return e;
+        if(depth == 0) {
+            // Sort loops by depth
+            Dark.clone.paths.sort((a, b) => a.path.length - b.path.length);
+            Dark.clone.paths.forEach(path => Dark.setDeep(obj, path.path, Dark.getDeep(obj, path.point)));
+        }
         return obj;
     } else {
-        Dark.warn("\"" + e + "\" is not an object!");
+        // Basic value like boolean, number or string
         return e;
     }
-};
+};;
 
 Dark.format = function(obj) {
-    let copied = Dark.copy(obj);
+    let copied = Dark.clone(obj);
     if(typeof copied == "object") {
-        return JSON.stringify(Dark.copy(obj), null, "    ");
+        return JSON.stringify(Dark.clone(obj), Dark.bigintChecker, "    ");
     } else {
-        return obj + "";
+        return String(obj);
     }
 };
 
+Dark.tree = function(e, depth = 0, tree = []) {
+    if(tree.includes(e)) return;
+    tree = tree.concat([e]);
+
+    if(depth > Dark.maxSearchDepth) return e;
+
+    if(e != null && Object.keys(e).length && (typeof e == "object" || typeof e == "function")) {
+        if(Dark.utils.isArray(e)) {
+            let arr = [];
+            e.forEach(item => {
+                let subTree = Dark.tree(item, depth + 1, tree);
+                if(subTree != undefined) arr.push(item);
+            });
+            return arr;
+        } else {
+            let obj = {};
+            for(const key in e) {
+                let subTree = Dark.tree(e[key], depth + 1, tree);
+                if(subTree != undefined) obj[key] = subTree;
+            }
+            return obj;
+        }
+    } else {
+        return;
+    }
+};
+
+Dark.formatTree = function(obj) {
+    let tree = Dark.tree(obj);
+    return tree;
+};
+
+Dark.bigintChecker = function(_, obj) {
+    return typeof obj == "bigint" ? obj.toString() : obj;
+};
+
+Dark.noop = function() {};
+
+// Collisions
 Dark.rectRect = function(x1, y1, width1, height1, x2, y2, width2, height2) {
     return x1 + width1 > x2 && x1 < x2 + width2 && y1 + height1 > y2 && y1 < y2 + height2;
 };
 
+// Canvas has a much, much faster conversion to ImageBitmap and Image than OffscreenCanvas, plus Safari… :/
 Dark.createCanvas = function(width, height) {
     let canvas = document.createElement("canvas");
     [canvas.width, canvas.height] = [width, height];
@@ -2204,7 +2362,7 @@ Dark.setMain = function(dark) {
         Dark.main = dark;
         dark.isMain = true;
     } else {
-        Dark.error(dark + " is not an instance of Dark");
+        Dark.error(`${dark} is not an instance of Dark`);
     }
 };
 
@@ -2250,7 +2408,7 @@ Dark.loadFile = function(loc) {
     if(Dark.khan) {
         return Dark.fileCacheKA[loc];
     } else {
-        if(!Dark.editor) loc = "https://cdn.jsdelivr.net/gh/99TheDark/Dark.js@" + Dark.version + "/filters/" + loc;
+        if(!Dark.editor) loc = `https://cdn.jsdelivr.net/gh/99TheDark/Dark.js@${Dark.version}/filters/${loc}`;
         let result = null;
         let xhr = new XMLHttpRequest();
         xhr.open("GET", loc, false);
@@ -2281,14 +2439,14 @@ Dark.globallyUpdateVariables = function(m) {
     if(!m.isMain) return; // If it isn't the main instance 
 
     // Update empties so they can be defined
-    Dark.empties.forEach(function(key) {
+    Dark.editable.forEach(function(key) {
         if(window[key]) m[key] = window[key];
     });
     // Update global variables
     for(const mainKey in m) {
         // Skip if it should be ingored
         if(Dark.ignoreGlobal.includes(mainKey)) continue;
-        if(Dark.empties.includes(mainKey)) continue;
+        if(Dark.editable.includes(mainKey)) continue;
         // Else set
         if(typeof m[mainKey] == "object" && !m[mainKey].darkObject && mainKey != "keys") {
             for(const key in m[mainKey]) {
@@ -2820,16 +2978,49 @@ Dark.objects = (function() {
     };
 
     // Fonts
-    let DFont = function(str) {
+    let DFont = function(...args) {
         if(!(this instanceof DFont)) return new (Function.prototype.bind.apply(DFont, [null].concat(...arguments)));
 
         this.darkObject = true;
 
-        this.style = "normal";
-        this.variant = "normal";
-        this.weight = "normal";
-        this.size = 16;
-        this.family = "Arial";
+        if(args.length > 1) {
+            // Order: family, size, weight, style, variant
+            this.family = args[0] ?? DFont.defaults.family;
+            this.size = args[1] ?? DFont.defaults.size;
+            this.weight = args[2] ?? DFont.defaults.weight;
+            this.style = args[3] ?? DFont.defaults.style;
+            this.variant = args[4] ?? DFont.defaults.variant;
+        } else if(typeof args[0] == "string") {
+            this.parse(args[0]);
+        } else if(typeof args[0] == "object") {
+            if(Array.isArray(args)) {
+                let arr = args[0];
+                this.family = arr[0] ?? DFont.defaults.family;
+                this.size = arr[1] ?? DFont.defaults.size;
+                this.weight = arr[2] ?? DFont.defaults.weight;
+                this.style = arr[3] ?? DFont.defaults.style;
+                this.variant = arr[4] ?? DFont.defaults.variant;
+            } else {
+                let obj = args[0];
+                this.family = obj.family ?? DFont.defaults.family;
+                this.size = obj.size ?? DFont.defaults.size;
+                this.weight = obj.weight ?? DFont.defaults.weight;
+                this.style = obj.style ?? DFont.defaults.style;
+                this.variant = obj.variant ?? DFont.defaults.variant;
+            }
+        } else {
+            Dark.error("Invalid input to DFont");
+        }
+    };
+    DFont.parse = function(str) {
+        return new DFont(str);
+    };
+    DFont.prototype.parse = function(str) {
+        this.style = DFont.defaults.style;
+        this.variant = DFont.defaults.variant;
+        this.weight = DFont.defaults.weight;
+        this.size = DFont.defaults.size;
+        this.family = DFont.defaults.family;
 
         let params = str.split(" ");
         for(const i in params) {
@@ -2859,9 +3050,6 @@ Dark.objects = (function() {
             }
         }
     };
-    DFont.parse = function(str) {
-        return new DFont(str);
-    };
     DFont.prototype.toString = function() {
         return `${this.style} ${this.weight} ${this.variant} ${this.size}px ${this.family}`;
     };
@@ -2879,6 +3067,13 @@ Dark.objects = (function() {
         "800",
         "900"
     ];
+    DFont.defaults = {
+        family: "Arial",
+        size: 16,
+        weight: "normal",
+        style: "normal",
+        variant: "normal"
+    };
 
     // Images
     let DImage = function(...args) {
@@ -2894,6 +3089,7 @@ Dark.objects = (function() {
         this.bitmapLoaded = false;
         this.image = null;
         this.bitmap = null;
+        this.loadedFromSource = false;
 
         if(args[0] instanceof ImageData) {
             this.imageData = args[0];
@@ -2955,7 +3151,7 @@ Dark.objects = (function() {
     };
     DImage.prototype.copy = function() {
         let img = new DImage();
-        [img.width, img.height, img.imageData, img.source, img.disposable] = [this.width, this.height, this.imageData, this.source, this.disposable];
+        [img.width, img.height, img.imageData, img.source, img.disposable, img.sourceURL, img.loadComplete, img.loadedFromSource] = [this.width, this.height, this.imageData, this.source, this.disposable, this.sourceURL, this.loadComplete, this.loadedFromSource];
         img.canvas = Dark.createCanvas(this.width, this.height);
         img.ctx = img.canvas.getContext("2d");
         img.ctx.drawImage(this.getRenderable(), 0, 0, this.width, this.height, 0, 0, this.width, this.height);
@@ -3185,7 +3381,7 @@ Dark.objects = (function() {
         if(!gl) return Dark.warn("Your browser does not support WebGL2.");
 
         arr.forEach(function(obj) {
-            let shader = Dark.loadFile("/filters/" + obj.shader + ".frag");
+            let shader = Dark.loadFile(`/filters/${obj.shader}.frag`);
 
             let fragmentSource = shader;
 
@@ -3564,17 +3760,118 @@ Dark.objects = (function() {
     };
     DMatrix.identity = function(size) {
         let mat = new DMatrix(size, size);
-        for(let i = 0; i < size; i++) {
-            mat.set(i, i, 1);
-        }
+        for(let i = 0; i < size; i++) mat.set(i, i, 1);
         return mat;
     };
     DMatrix.prototype.identity = function() {
         if(this.width == this.height) {
-            this.mat = DMatrix.identity(this.width).mat; // this.width or this.height
+            this.mat = DMatrix.identity(this.width).mat; // this.width or this.height, both work
         } else {
             Dark.error("Only DMatrices with square dimensions have identity DMatrices");
         }
+        return this;
+    };
+    DMatrix.transpose = function(matrix) {
+        matrix.transpose();
+    };
+    DMatrix.prototype.transpose = function() {
+        this.mat = Array(this.width).fill().map((_, x) => Array(this.height).fill().map((_, y) => this.mat[y][x]));
+        [this.width, this.height] = [this.height, this.width];
+        return this;
+    };
+    DMatrix.normalize = function(matrix) {
+        matrix.normalize();
+    };
+    DMatrix.prototype.normalize = function() {
+        let weight = this.getWeight();
+        this.mat = this.mat.map(arr => arr.map(e => e / weight));
+        return this;
+    };
+    DMatrix.round = function(matrix, place) {
+        matrix.round(place);
+    };
+    DMatrix.prototype.round = function(place = 0) {
+        let val = 10 ** place;
+        this.mat = this.mat.map(arr => arr.map(e => Math.round(e * val) / val));
+        return this;
+    };
+    DMatrix.translate = function(matrix, x, y) {
+        matrix.translate(x, y);
+    };
+    DMatrix.prototype.translate = function(x, y) {
+        let mat = this.toDOMMatrix();
+        mat.translateSelf(x, y);
+        this.fromDOMMatrix(mat);
+        return this;
+    };
+    DMatrix.rotate = function(matrix, angle) {
+        matrix.rotate(angle);
+    };
+    DMatrix.prototype.rotate = function(angle) {
+        let mat = this.toDOMMatrix();
+        mat.rotateSelf(angle);
+        this.fromDOMMatrix(mat);
+        return this;
+    };
+    DMatrix.scale = function(matrix, w, h) {
+        matrix.scale(w, h);
+    };
+    DMatrix.prototype.scale = function(w, h = w) {
+        let mat = this.toDOMMatrix();
+        mat.scaleSelf(w, h);
+        this.fromDOMMatrix(mat);
+        return this;
+    };
+    DMatrix.skew = function(matrix, h, v) {
+        matrix.skew(h, v);
+    };
+    DMatrix.prototype.skew = function(h, v = 0) {
+        let mat = this.toDOMMatrix();
+        mat.skewYSelf(h * 0.01);
+        mat.skewXSelf(v * 0.01);
+        this.fromDOMMatrix(mat);
+        return this;
+    };
+    DMatrix.translateX = function(matrix, x) {
+        matrix.translateX(x);
+    };
+    DMatrix.prototype.translateX = function(x) {
+        this.translate(x, 0);
+        return this;
+    };
+    DMatrix.translateY = function(matrix, y) {
+        matrix.translateY(y);
+    };
+    DMatrix.prototype.translateY = function(y) {
+        this.translate(0, y);
+        return this;
+    };
+    DMatrix.scaleX = function(matrix, x) {
+        matrix.scaleX(x);
+    };
+    DMatrix.prototype.scaleX = function(x) {
+        this.scale(x, 1);
+        return this;
+    };
+    DMatrix.scaleY = function(matrix, y) {
+        matrix.scaleY(y);
+    };
+    DMatrix.prototype.scaleY = function(y) {
+        this.scale(y, 1);
+        return this;
+    };
+    DMatrix.skewX = function(matrix, x) {
+        matrix.skewX(x);
+    };
+    DMatrix.prototype.skewX = function(x) {
+        this.skew(x, 0);
+        return this;
+    };
+    DMatrix.skewY = function(matrix, y) {
+        matrix.skewY(y);
+    };
+    DMatrix.prototype.skewY = function(y) {
+        this.skew(0, y);
         return this;
     };
     DMatrix.add = function(mat1, mat2) {
@@ -3655,10 +3952,10 @@ Dark.objects = (function() {
         this.mat = mat.mat;
         return this;
     };
-    DMatrix.kernelWeight = function(matrix) {
-        return matrix.kernelWeight();
+    DMatrix.getWeight = function(matrix) {
+        return matrix.getWeight();
     };
-    DMatrix.prototype.kernelWeight = function() {
+    DMatrix.prototype.getWeight = function() {
         return this.toArray().reduce((sum, value) => sum += value, 0);
     };
     DMatrix.copy = function(matrix) {
@@ -3671,7 +3968,7 @@ Dark.objects = (function() {
         if(matrix instanceof DOMMatrix) {
             return new DMatrix(matrix);
         } else {
-            Dark.error(matrix + " is not a DOMMatrix");
+            Dark.error(`${matrix} is not a DOMMatrix`);
         }
     };
     DMatrix.prototype.fromDOMMatrix = function(matrix) {
@@ -3680,7 +3977,7 @@ Dark.objects = (function() {
             this.height = 4;
             this.mat = new DMatrix(matrix).mat;
         } else {
-            Dark.error(matrix + " is not a DOMMatrix");
+            Dark.error(`${matrix} is not a DOMMatrix`);
         }
         return this;
     };
@@ -3688,7 +3985,14 @@ Dark.objects = (function() {
         return matrix.toDOMMatrix();
     };
     DMatrix.prototype.toDOMMatrix = function() {
-        return new DOMMatrix(this.toArray());
+        return new DOMMatrix([
+            this.get(0, 0),
+            this.get(0, 1),
+            this.get(1, 0),
+            this.get(1, 1),
+            this.get(3, 0),
+            this.get(3, 1)
+        ]);
     };
     DMatrix.prototype.toArray2D = function() {
         return [...this.mat];
@@ -3700,7 +4004,7 @@ Dark.objects = (function() {
         let str = "";
         for(const arr in this.mat) {
             for(const item in this.mat[arr]) {
-                str += this.mat[arr][item].toFixed(1) + " ";
+                str += this.mat[arr][item].toFixed(2) + " ";
             }
             str = str.replace(/ $/, "\n");
         }
@@ -3783,7 +4087,7 @@ Dark.objects = (function() {
         if(this.start == null) {
             return `From ${this.begin.toFixed(2)} to ${this.end.toFixed(2)}, taking ${this.time.toFixed(2)} milliseconds`;
         } else {
-            return `The timer has yet to begin`;
+            return "The timer has yet to begin";
         }
     };
     DTimer.prototype.getSecond = function() {
@@ -3868,6 +4172,7 @@ Dark.objects = (function() {
     */
 
     return {
+        Dark: Dark,
         DVector: DVector,
         DFont: DFont,
         DImage: DImage,
@@ -3894,8 +4199,10 @@ Dark.startTime = performance.now();
 // Compile for Khan Academy since all files are blocked :(
 Dark.compileKA();
 
+Dark.default = new Dark(); // Default Dark instance
+
 Dark.utils = new Dark(true); // Dummy instance for utils
-Dark.setMain(new Dark()); // Default main
+Dark.setMain(Dark.default); // Set default to main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
 Dark.defineConstants(); // Load constants and objects
 
