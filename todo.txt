@@ -39,6 +39,7 @@ Possibly to add:
 Bugs:
 • Dark.js mouse breaks when width / height is not the same as the style width / height
 • Obscure bug with text alignment. See CoC Main. 
+• KA DFont instanceof breaking
 • reset just breaks everything
 
 Note: '*' means to add by next minor update versus '•' which means to add eventually
