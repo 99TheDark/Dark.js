@@ -16,5 +16,5 @@ Once this is done, I will probably make a Github Pages site with documentation &
 
 ### And of course, check out the amazing libraries this is based off of.
 
-<sup>3900 lines and counting.</sup><br>
-<sub>Minified: 72.3KB</sub>
+<sup>4200 lines and counting.</sup><br>
+<sub>Minified: 77.6KB</sub>
