@@ -1677,7 +1677,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.7";
+Dark.version = "pre-0.7.8";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
