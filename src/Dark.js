@@ -81,7 +81,12 @@ var Dark = function(dummy = false) {
     // Helper functions
     var bulkAdd = function(obj) {
         for(const key in obj) {
-            d[key] = obj[key];
+            Object.defineProperty(d, key, {
+                value: obj[key],
+                writable: false,
+                configurable: false,
+                enumerable: true
+            });
         }
     };
 
@@ -112,6 +117,7 @@ var Dark = function(dummy = false) {
     var loadDefault = function() {
         d.frameRate(60);
         d.smooth();
+        d.loop();
         d.antialiasing(true);
         d.ellipseMode(k.CENTER);
         d.rectMode(k.CORNER);
@@ -453,6 +459,8 @@ var Dark = function(dummy = false) {
 
         // Color
         color: function(r, g, b, a) {
+            if(d.isArray(r)) return color.apply(null, [...r]);
+
             let l = arguments.length;
             if(l == 0) return -1;
             if(l == 1 || l == 2) {
@@ -809,8 +817,8 @@ var Dark = function(dummy = false) {
 
         reset: function() {
             d.saves.length = 0;
-            s = Object.assign({}, d.defaultSettings);
-            d.ctx.reset();
+            s = {...d.defaultSettings};
+            d.setCanvas(d.canvas);
         },
 
         translate: function(x, y) {
@@ -1304,14 +1312,22 @@ var Dark = function(dummy = false) {
                     return Dark.error("get requires 0 or 4 parameters, not " + args.length);
                 case 0:
                     return new o.DImage(d.canvas, d);
+                case 2:
+                    return d.color(d.ctx.getImageData(args[0], args[1], 1, 1).data);
+                case 3:
+                    if(s.resizeMode == k.HEIGHT) {
+                        return d.get(args[0], args[1], args[2] / d.height * d.width, args[2]);
+                    } else {
+                        return d.get(args[0], args[1], args[2], args[2] / d.width * d.height);
+                    }
                 case 4:
                     return new o.DImage(d.ctx.getImageData(args[0], args[1], args[2], args[3]), d);
             }
         },
 
-        set: function(x, y, col) {
+        set: function(x, y, ...args) {
             d.ctx.save();
-            d.ctx.fillStyle = colorString(col);
+            d.ctx.fillStyle = colorString(d.color.apply(null, args)); // Slightly faster than d.color(...args)
             d.ctx.fillRect(x, y, 1, 1);
             d.ctx.restore();
         },
@@ -1325,7 +1341,7 @@ var Dark = function(dummy = false) {
         },
 
         image: function(img, x, y, width, height) {
-            if(!(!img.loadedFromSource || img.loadComplete)) Dark.error("Cannot draw the image until loaded, put inside the setup or draw function instead");
+            img.checkLoad();
 
             [width, height] = [d.abs(width), d.abs(height)];
             d.ctx.save();
@@ -1361,14 +1377,16 @@ var Dark = function(dummy = false) {
 
         loadImage: function(url) {
             if(Object.keys(d.imageCache).includes(url) && d.began) return d.imageCache[url];
+
             d.imageCache[url] = null;
+            d.cachedImageCount++;
 
             let result = new o.DImage(1, 1, d);
             result.loadComplete = false;
             result.loadedFromSource = true;
+            result.sent = true;
 
             if(Dark.khan) {
-                d.cachedImageCount++;
                 result.image = new Image();
                 result.image.src = url;
                 result.image.crossOrigin = "anonymous";
@@ -1387,35 +1405,56 @@ var Dark = function(dummy = false) {
                     if(d.successfullyCachedImageCount == Object.keys(d.imageCache).length) d.begin();
                 };
             } else {
-                d.cachedImageCount++;
-                fetch(url)
-                    .then(response => response.blob())
-                    .then(blob => {
+                Promise.all([
+                    new Promise((resolve, reject) => {
                         result.image = new Image();
-                        result.image.src = URL.createObjectURL(blob);
+                        result.image.src = url;
+                        result.image.crossOrigin = "anonymous";
+
                         result.image.onload = () => {
-                            createImageBitmap(blob)
-                                .then(bitmap => {
-                                    let img = new o.DImage(bitmap.width, bitmap.height, d);
-
-                                    img.ctx.drawImage(bitmap, 0, 0, img.width, img.height, 0, 0, img.width, img.height);
-                                    img.updatePixels();
-
-                                    d.imageCache[url] = img;
-                                    d.successfullyCachedImageCount++;
-
-                                    [result.canvas.width, result.canvas.height] = [result.width, result.height] = [img.width, img.height];
-                                    result.imageData = img.imageData;
-                                    result.sourceURL = url;
-                                    result.loadComplete = true;
-                                    result.loadPixels();
-
-                                    if(d.successfullyCachedImageCount == Object.keys(d.imageCache).length) d.begin();
-                                });
+                            result.imageLoaded = true;
+                            resolve();
                         };
+
+                        result.image.onerror = reject;
+                    }),
+                    new Promise((resolve, reject) => {
+                        fetch(url)
+                            .then(response => response.blob())
+                            .then(blob => createImageBitmap(blob)
+                                .then(bitmap => {
+                                    result.bitmap = bitmap;
+                                    result.bitmapLoaded = true;
+
+                                    resolve();
+                                })
+                            )
+                            .catch(err => reject(err))
                     })
-                    .catch(e => Dark.error(e));
+                ])
+                    .then(() => {
+                        result.loaded = true;
+                        result.sent = false;
+                        result.loadComplete = true;
+                        result.sourceURL = url;
+
+                        d.imageCache[url] = result;
+                        d.successfullyCachedImageCount++;
+
+                        [result.canvas.width, result.canvas.height] = [result.width, result.height] = [result.image.width, result.image.height];
+
+                        result.imageData = new ImageData(result.width, result.height);
+                        result.ctx.drawImage(
+                            result.getRenderable(), 0, 0,
+                            result.width, result.height, 0, 0, result.width, result.height
+                        );
+                        result.updatePixels();
+
+                        if(d.successfullyCachedImageCount == Object.keys(d.imageCache).length) d.begin();
+                    })
+                    .catch(err => Dark.error(err));
             }
+
             return result;
         },
 
@@ -2217,7 +2256,7 @@ Dark.clone = function(e, depth = 0, path = [], tree = []) { // Not working!!! ag
 
     if(depth > Dark.maxSearchDepth) return e;
 
-    if(typeof e == "object" || typeof e == "function" /*Object(e) === e*/) {
+    if(typeof e == "object" || typeof e == "function") {
         tree = [...tree];
         tree.push(e);
 
@@ -2336,7 +2375,7 @@ Dark.warn = function(warning) {
 };
 
 Dark.error = function(error) {
-    Dark.doError("error", new Error(error));
+    Dark.doError("error", error instanceof Error ? error : new Error(error));
 };
 
 Dark.observe = function(object, type, callback) {
@@ -3160,6 +3199,11 @@ Dark.objects = (function() {
     DImage.prototype.getRenderable = function() {
         return this.loaded ? (this.image ?? this.bitmap) : this.canvas;
     };
+    DImage.prototype.checkLoad = function() {
+        let valid = !this.loadedFromSource || this.loadComplete;
+        if(!valid) Dark.error("Cannot draw the image until loaded, put inside the setup or draw function instead");
+        return valid;
+    };
     DImage.resize = function(img, width, height) {
         let newImg = img.copy();
         newImg.setDisposability(true);
@@ -3685,15 +3729,22 @@ Dark.objects = (function() {
             this.mat = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
             this.set(width);
         } else if(Array.isArray(width)) {
+            this.mat = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
             if(Array.isArray(width[0])) {
-                this.width = width[0].length;
-                this.height = width.length;
+                if(arguments.length == 1) {
+                    this.width = width[0].length;
+                    this.height = width.length;
+                    this.set(width);
+                } else {
+                    this.width = arguments.length;
+                    this.height = width[0].length;
+                    this.set([...arguments]);
+                }
             } else {
                 this.width = height;
                 this.height = val;
+                this.set(width);
             }
-            this.mat = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
-            this.set(width);
         } else if(width instanceof DOMMatrix) {
             this.width = 4;
             this.height = 4;
@@ -3772,7 +3823,9 @@ Dark.objects = (function() {
         return this;
     };
     DMatrix.transpose = function(matrix) {
-        matrix.transpose();
+        let newMatrix = matrix.copy();
+        newMatrix.transpose();
+        return newMatrix;
     };
     DMatrix.prototype.transpose = function() {
         this.mat = Array(this.width).fill().map((_, x) => Array(this.height).fill().map((_, y) => this.mat[y][x]));
@@ -3780,7 +3833,9 @@ Dark.objects = (function() {
         return this;
     };
     DMatrix.normalize = function(matrix) {
-        matrix.normalize();
+        let newMatrix = matrix.copy();
+        newMatrix.normalize();
+        return newMatrix;
     };
     DMatrix.prototype.normalize = function() {
         let weight = this.getWeight();
@@ -3788,7 +3843,9 @@ Dark.objects = (function() {
         return this;
     };
     DMatrix.round = function(matrix, place) {
-        matrix.round(place);
+        let newMatrix = matrix.copy();
+        newMatrix.round(place);
+        return newMatrix;
     };
     DMatrix.prototype.round = function(place = 0) {
         let val = 10 ** place;
@@ -3796,7 +3853,9 @@ Dark.objects = (function() {
         return this;
     };
     DMatrix.translate = function(matrix, x, y) {
-        matrix.translate(x, y);
+        let newMatrix = matrix.copy();
+        newMatrix.translate(x, y);
+        return newMatrix;
     };
     DMatrix.prototype.translate = function(x, y) {
         let mat = this.toDOMMatrix();
@@ -3805,7 +3864,9 @@ Dark.objects = (function() {
         return this;
     };
     DMatrix.rotate = function(matrix, angle) {
-        matrix.rotate(angle);
+        let newMatrix = matrix.copy();
+        newMatrix.rotate(angle);
+        return newMatrix;
     };
     DMatrix.prototype.rotate = function(angle) {
         let mat = this.toDOMMatrix();
@@ -3814,7 +3875,9 @@ Dark.objects = (function() {
         return this;
     };
     DMatrix.scale = function(matrix, w, h) {
-        matrix.scale(w, h);
+        let newMatrix = matrix.copy();
+        newMatrix.scale(w, h);
+        return newMatrix;
     };
     DMatrix.prototype.scale = function(w, h = w) {
         let mat = this.toDOMMatrix();
@@ -3823,7 +3886,9 @@ Dark.objects = (function() {
         return this;
     };
     DMatrix.skew = function(matrix, h, v) {
-        matrix.skew(h, v);
+        let newMatrix = matrix.copy();
+        newMatrix.skew(h, v);
+        return newMatrix;
     };
     DMatrix.prototype.skew = function(h, v = 0) {
         let mat = this.toDOMMatrix();
@@ -3833,14 +3898,18 @@ Dark.objects = (function() {
         return this;
     };
     DMatrix.translateX = function(matrix, x) {
-        matrix.translateX(x);
+        let newMatrix = matrix.copy();
+        newMatrix.translateX(x);
+        return newMatrix;
     };
     DMatrix.prototype.translateX = function(x) {
         this.translate(x, 0);
         return this;
     };
     DMatrix.translateY = function(matrix, y) {
-        matrix.translateY(y);
+        let newMatrix = matrix.copy();
+        newMatrix.translateY(y);
+        return newMatrix;
     };
     DMatrix.prototype.translateY = function(y) {
         this.translate(0, y);
@@ -3848,27 +3917,36 @@ Dark.objects = (function() {
     };
     DMatrix.scaleX = function(matrix, x) {
         matrix.scaleX(x);
+        let newMatrix = matrix.copy();
+        newMatrix.scaleX(x);
+        return newMatrix;
     };
     DMatrix.prototype.scaleX = function(x) {
         this.scale(x, 1);
         return this;
     };
     DMatrix.scaleY = function(matrix, y) {
-        matrix.scaleY(y);
+        let newMatrix = matrix.copy();
+        newMatrix.scaleY(y);
+        return newMatrix;
     };
     DMatrix.prototype.scaleY = function(y) {
         this.scale(y, 1);
         return this;
     };
     DMatrix.skewX = function(matrix, x) {
-        matrix.skewX(x);
+        let newMatrix = matrix.copy();
+        newMatrix.skewX(x);
+        return newMatrix;
     };
     DMatrix.prototype.skewX = function(x) {
         this.skew(x, 0);
         return this;
     };
     DMatrix.skewY = function(matrix, y) {
-        matrix.skewY(y);
+        let newMatrix = matrix.copy();
+        newMatrix.skewY(y);
+        return newMatrix;
     };
     DMatrix.prototype.skewY = function(y) {
         this.skew(0, y);
@@ -4104,6 +4182,11 @@ Dark.objects = (function() {
     };
     DTimer.prototype.getFPS = function() {
         return 1000 / this.time;
+    };
+    DTimer.time = function(func) {
+        let start = performance.now();
+        func();
+        return performance.now() - start;
     };
     DTimer.start = timer => void (timer.start());
     DTimer.stop = timer => void (timer.stop());
