@@ -37,5 +37,6 @@ Bugs:
 • Dark.js mouse breaks when width / height is not the same as the style width / height
 • Obscure bug with text alignment. See Clash of Code final project (#PaperNukes). 
 • KA DFont instanceof breaking
+• KA DImage.checkLoad not working for who even knows why
 
 Note: '*' means to add by next minor update versus '•' which means to add eventually
