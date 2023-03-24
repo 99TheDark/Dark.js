@@ -6,18 +6,15 @@ To add:
 • DImage.noise(), use WebGL to fill the imageWidth. Might even create 4 with the RGBA
 * Image masking
 • Make DVector rotations work in 3D
-• Make everything readonly in Dark instances
 * Share image cache onto main Dark
-* imageData, loadPixels & updatePixels main
-• Better global variable updating & handling for events specifically
+* Cache and use frequently used images
 • DColor
 • Speed up crop & resize by a TON
-* Cache and use frequently used images
-* Make loadImage more efficient and include bitmaps now
-• Make bulkAdd etc use Object.defineProperties for readonly
-• Make all static DMatrix functions use copies
-• Allow DMatrix constructor to take in many arrays opposed to a 2D array
 • DImage.split to split an image into an array of images
+• Seperate static functions and updating functions (like sign vs angleMode)
+• Only update events code when changed
+• Better ID generator to make the values seem more realistic
+• Replace DMatrix stuff with ...args so using width placeholder becomes less confusing
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
@@ -38,8 +35,7 @@ Possibly to add:
 
 Bugs:
 • Dark.js mouse breaks when width / height is not the same as the style width / height
-• Obscure bug with text alignment. See CoC Main. 
+• Obscure bug with text alignment. See Clash of Code final project (#PaperNukes). 
 • KA DFont instanceof breaking
-• reset just breaks everything
 
 Note: '*' means to add by next minor update versus '•' which means to add eventually
