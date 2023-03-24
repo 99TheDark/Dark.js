@@ -2,8 +2,7 @@ To add:
 * Gradient fill & stroke
 • Colorspaces
 • blendColor
-• Noise (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
-• DImage.noise(), use WebGL to fill the imageWidth. Might even create 4 with the RGBA
+• DImage.noise(x, y, width, height) / DImage.noise(x, y, z, width, height, depth) (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
 * Image masking
 • Make DVector rotations work in 3D
 * Share image cache onto main Dark
