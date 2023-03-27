@@ -31,6 +31,8 @@
 
         let [w, h] = [600, 400];
 
+        let warp = false;
+
         draw = function() {
             background(3, 2, 38);
 
@@ -136,7 +138,11 @@
             textSize(40); 
             text(fps.toFixed(), 35, 35);
             popStyle();
+
+            if(warp) filter(FISHEYE, (sin(now() / 10) + 1) / 2);
         };
+
+        keyPressed = () => warp = !warp;
     </script>
 </body>
 
