@@ -119,6 +119,7 @@ var Dark = function(dummy = false) {
         d.smooth();
         d.loop();
         d.antialiasing(true);
+        d.disableContextMenu();
         d.ellipseMode(k.CENTER);
         d.rectMode(k.CORNER);
         d.imageMode(k.CORNER);
@@ -1192,7 +1193,7 @@ var Dark = function(dummy = false) {
         },
 
         createFont: function(txt) {
-            return DFont.parse(txt);
+            return o.DFont.parse(txt);
         },
 
         textStyle: function(style) {
@@ -1677,7 +1678,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.8";
+Dark.version = "pre-0.7.8.1";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -3679,9 +3680,9 @@ Dark.objects = (function() {
             key: Dark.constants.FISHEYE,
             shader: "fisheye",
             param: {
-                min: -1,
+                min: 0,
                 max: 1,
-                default: -1
+                default: 1
             }
         }, {
             key: Dark.constants.EMBOSS,
