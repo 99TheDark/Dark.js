@@ -8,12 +8,12 @@ To add:
 * Share image cache onto main Dark
 * Cache and use frequently used images
 • DColor
-• Speed up crop & resize by a TON
 • DImage.split to split an image into an array of images
 • Seperate static functions and updating functions (like sign vs angleMode)
 • Only update events code when changed
 • Better ID generator to make the values seem more realistic
 • Replace DMatrix stuff with ...args so using width placeholder becomes less confusing
+* Swap arc to use ctx.arc
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
@@ -29,13 +29,12 @@ Possibly to add:
 • texture() for shapes
 • DSort object (a bunch of sorting algorithms, static object)
 • DComplex object (complex numbers, ie a+bi)
-• DSprite object (pixel art ease of making)
 • Convert all Objects to classes
 
 Bugs:
 • Dark.js mouse breaks when width / height is not the same as the style width / height
 • Obscure bug with text alignment. See Clash of Code final project (#PaperNukes). 
-• KA DFont instanceof breaking
-• KA DImage.checkLoad not working for who even knows why
+• KA DImage.checkLoad doesn't exist for who knows why
+• window.Dark exist somehow before it's defined on KA
 
 Note: '*' means to add by next minor update versus '•' which means to add eventually
