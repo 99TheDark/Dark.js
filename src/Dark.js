@@ -1,9 +1,5 @@
 "use strict"; // For ES6+ strict error mode
 
-var windowID = "Dark.js version 0.7.8.4 bugtest";
-window["abc"] = 5;
-console.log(window);
-
 if(window.Dark) throw "There is more than one Dark.js import"; // Stop multiple imports
 
 var Dark = function(dummy = false) {
@@ -1682,7 +1678,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.8.4";
+Dark.version = "pre-0.7.8.5";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -2481,9 +2477,10 @@ Dark.compileKA = function() {
 // Update variables to window for main instance
 Dark.globallyUpdateVariables = function(m) {
     if(!m.isMain) return; // If it isn't the main instance 
-
+    if(m.frameCount == 0) console.log(m);
     // Update empties so they can be defined
-    Dark.editable.forEach(function(key) {
+    Dark.editable.forEach(key => {
+        if(m.frameCount == 0) console.log(key);
         if(window[key]) m[key] = window[key];
     });
     // Update global variables
@@ -2497,6 +2494,7 @@ Dark.globallyUpdateVariables = function(m) {
                 window[key] = m[mainKey][key];
             }
         } else {
+            if(m.frameCount == 0) console.log(mainKey);
             window[mainKey] = m[mainKey];
         }
     }
