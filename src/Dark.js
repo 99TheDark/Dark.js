@@ -1677,7 +1677,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.8.11";
+Dark.version = "pre-0.7.8.12";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -2182,9 +2182,15 @@ Dark.ignoreGlobal = [
 ];
 
 Dark.singleDefinitions = [
-    "constants",
-    "objects"
-];
+    "DVector",
+    "DFont",
+    "DImage",
+    "DMatrix",
+    "DRandom",
+    "DTimer",
+    "DIdentification",
+    "DGradient"
+].concat(Object.keys(Dark.constants));
 
 // For loading and saving styles
 Dark.styleIgnore = [
