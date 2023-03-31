@@ -1,6 +1,6 @@
 "use strict"; // For ES6+ strict error mode
 
-if(window.Dark) throw "There is more than one Dark.js import"; // Stop multiple imports
+if(parent.Dark) throw "There is more than one Dark.js import"; // Stop multiple imports
 
 var Dark = function(dummy = false) {
     if(!(this instanceof Dark)) throw "Dark can only be called with the new operator"; // Dark() = bad, new Dark() = good
@@ -1678,7 +1678,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.8.1";
+Dark.version = "pre-0.7.8.2";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -2253,7 +2253,7 @@ Dark.getDeep = function(obj, keyArr) {
 
 // It's always good to be able to deep clone something
 Dark.clone = function(e, depth = 0, path = [], tree = []) { // Not working!!! aghhhh
-    if(depth == 0) clone.paths = [];
+    if(depth == 0) Dark.clone.paths = [];
 
     if(depth > Dark.maxSearchDepth) return e;
 
@@ -2271,7 +2271,7 @@ Dark.clone = function(e, depth = 0, path = [], tree = []) { // Not working!!! ag
                     path: curPath,
                     point: tree.slice(0, tree.indexOf(val))
                 });
-            } else if(isArray(val)) {
+            } else if(Dark.utils.isArray(val)) {
                 // Array cloning
                 let cloned = Dark.clone(val, depth + 1, curPath, tree);
                 cloned.length = Object.keys(cloned).length;
@@ -2410,7 +2410,7 @@ Dark.getMain = function() {
     return Dark.main;
 };
 
-window.OffscreenCanvas ??= Dark.createCanvas; // For Safari
+parent.OffscreenCanvas ??= Dark.createCanvas; // For Safari
 
 Dark.fileCacheKA = {
     "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 vertPos;\nin vec2 vertUV;\nout vec2 uv;\nout vec2 pos;\nvoid main() {\n pos = vertPos;\n uv = vertUV;\n gl_Position = vec4(vertPos, 0.0, 1.0);\n}",
@@ -2436,7 +2436,7 @@ Dark.fileCacheKA = {
     "/filters/blur.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nuniform float param;\nin vec2 uv;\nout vec4 color;\n#define len (param * 2.0 + 1.0)\n#define count (len * len)\n#define TAU (6.2831853071795864769252867665590057683943)\nvoid main() { \n vec4 total = vec4(0.0);\n float matrixTotal = 0.0;\n for(float y = -param; y <= param; y++) {\n for(float x = -param; x <= param; x++) {\n vec4 tex = texture(sampler, uv + vec2(x, y) / size);\n float gaussian = exp(- (x * x + y * y) / (2.0 * param * param)) / (TAU * param * param);\n matrixTotal += gaussian;\n total += vec4(tex.rgb * gaussian, tex.a);\n }\n }\n color = total / matrixTotal;\n}",
     "/filters/swirl.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nuniform float param;\nin vec2 uv;\nout vec4 color;\n#define radius (0.5)\nvoid main() {\n vec2 cUV = uv - vec2(0.5); // centered UV\n float len = length(cUV);\n float theta = atan(cUV.y, cUV.x) + param * smoothstep(radius, 0.0, len);\n float dist = length(cUV);\n vec4 tex = texture(sampler, vec2(dist * cos(theta), dist * sin(theta)) + vec2(0.5));\n \n color = tex;\n}",
     "/filters/contrast.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nout vec4 color;\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4((tex.rgb - 0.5) * param + 0.5, tex.a);\n}",
-    "/filters/fisheye.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nin vec2 uv;\nin vec2 pos;\nout vec4 color;\nvoid main() {\n vec2 mapped = (vec2(\n pos.x * sqrt(1.0 - pos.y * pos.y * param),\n pos.y * sqrt(1.0 - pos.x * pos.x * param)\n ) + 1.0) / 2.0;\n \n vec4 tex = texture(sampler, mapped);\n color = tex;\n}",
+    "/filters/fisheye.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform float param;\nuniform vec2 size;\nin vec2 uv;\nin vec2 pos;\nout vec4 color;\n#define R2 1.414213562373095048801688\nvoid main() {\n float shifted = 2.0 - param;\n float squareness = shifted * shifted * shifted * shifted;\n vec2 c = pos * size / min(size.x, size.y) / squareness;\n float xsq = c.x * c.x;\n float ysq = c.y * c.y;\n vec2 worldMap = vec2(\n 0.5 * (sqrt(2.0 + xsq - ysq + 2.0 * c.x * R2) - sqrt(2.0 + xsq - ysq - 2.0 * c.x * R2)),\n 0.5 * (sqrt(2.0 - xsq + ysq + 2.0 * c.y * R2) - sqrt(2.0 - xsq + ysq - 2.0 * c.y * R2))\n ) * squareness;\n vec2 mapped = (worldMap + 1.0) / 2.0;\n \n if(abs(worldMap.x) <= 1.0 && abs(worldMap.y) <= 1.0) {\n color = texture(sampler, mapped);\n } else {\n color = vec4(vec3(0.0), 1.0);\n }\n}",
     "/filters/emboss.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nvoid main() {\n vec4 tex = texture(sampler, uv);\n const float kernel[9] = float[](\n -2.0, -1.0, 0.0,\n -1.0, 1.0, 1.0,\n 0.0, 1.0, 2.0\n ); \n color = vec4((\n get(-1.0, -1.0) * kernel[0] +\n get(0.0, -1.0) * kernel[1] +\n get(1.0, -1.0) * kernel[2] +\n get(-1.0, 0.0) * kernel[3] +\n get(0.0, 0.0) * kernel[4] +\n get(1.0, 0.0) * kernel[5] +\n get(-1.0, 1.0) * kernel[6] +\n get(0.0, 1.0) * kernel[7] +\n get(1.0, 1.0) * kernel[8]\n ).rgb, tex.a);\n}",
     "/filters/sobel.frag": "# version 300 es\nprecision lowp float;\nuniform sampler2D sampler;\nuniform vec2 size;\nuniform float param;\nuniform float[9] kernel;\nin vec2 uv;\nout vec4 color;\nvec4 get(float x, float y) {\n return texture(sampler, uv + vec2(x, y) / size);\n}\nvoid main() {\n vec4 tex = texture(sampler, uv);\n color = vec4((\n get(-1.0, -1.0) * kernel[0] +\n get(0.0, -1.0) * kernel[1] +\n get(1.0, -1.0) * kernel[2] +\n get(-1.0, 0.0) * kernel[3] +\n get(0.0, 0.0) * kernel[4] +\n get(1.0, 0.0) * kernel[5] +\n get(-1.0, 1.0) * kernel[6] +\n get(0.0, 1.0) * kernel[7] +\n get(1.0, 1.0) * kernel[8]\n ).rgb, tex.a);\n}"
 };
@@ -2480,7 +2480,7 @@ Dark.globallyUpdateVariables = function(m) {
 
     // Update empties so they can be defined
     Dark.editable.forEach(function(key) {
-        if(window[key]) m[key] = window[key];
+        if(parent[key]) m[key] = parent[key];
     });
     // Update global variables
     for(const mainKey in m) {
@@ -2490,10 +2490,10 @@ Dark.globallyUpdateVariables = function(m) {
         // Else set
         if(typeof m[mainKey] == "object" && !m[mainKey].darkObject && mainKey != "keys") {
             for(const key in m[mainKey]) {
-                window[key] = m[mainKey][key];
+                parent[key] = m[mainKey][key];
             }
         } else {
-            window[mainKey] = m[mainKey];
+            parent[mainKey] = m[mainKey];
         }
     }
 };
@@ -2501,7 +2501,7 @@ Dark.globallyUpdateVariables = function(m) {
 Dark.defineConstants = function() {
     Dark.singleDefinitions.forEach(type => {
         for(key in Dark[type]) {
-            Object.defineProperty(window, key, {
+            Object.defineProperty(parent, key, {
                 value: Dark[type][key],
                 writable: false,
                 configurable: false
@@ -4280,15 +4280,15 @@ document.addEventListener("click", e => {
 // For KA
 Dark.startTime = performance.now();
 
-// Compile for Khan Academy since all files are blocked :(
-Dark.compileKA();
-
 Dark.default = new Dark(); // Default Dark instance
 
 Dark.utils = new Dark(true); // Dummy instance for utils
 Dark.setMain(Dark.default); // Set default to main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
 Dark.defineConstants(); // Load constants and objects
+
+// Compile for Khan Academy since all files are blocked :(
+Dark.compileKA();
 
 // Freeze objects
 Object.freeze(Dark);
