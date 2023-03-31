@@ -4,8 +4,12 @@
 
     console.log(window);
     console.log(win);
+    console.log(window === win);
+    console.log(win.Dark);
 
     if(win.Dark) return;
+
+    console.log("continue");
 
     var Dark = function(dummy = false) {
         // Dark() = bad, new Dark() = good
