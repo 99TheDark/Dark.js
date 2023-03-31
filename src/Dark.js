@@ -1,7 +1,5 @@
 "use strict"; // For ES6+ strict error mode
 
-if(window.Dark) Dark.multiple = true;
-
 var Dark = function(dummy = false) {
     // Dark() = bad, new Dark() = good
     if(!(this instanceof Dark)) throw "Dark can only be called with the new operator";
@@ -1679,7 +1677,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.8.14";
+Dark.version = "pre-0.7.8.15";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -2184,9 +2182,9 @@ Dark.ignoreGlobal = [
 ];
 
 Dark.singleDefinitions = [
-    [
-        ["objects"],
-        [
+    {
+        path: ["objects"],
+        properties: [
             "DVector",
             "DFont",
             "DImage",
@@ -2196,11 +2194,11 @@ Dark.singleDefinitions = [
             "DIdentification",
             "DGradient"
         ]
-    ],
-    [
-        ["constants"],
-        Object.keys(Dark.constants)
-    ]
+    },
+    {
+        path: ["constants"],
+        properties: Object.keys(Dark.constants)
+    }
 ];
 
 // For loading and saving styles
@@ -2514,15 +2512,17 @@ Dark.globallyUpdateVariables = function(m) {
 };
 
 Dark.defineConstants = function() {
-    Dark.singleDefinitions.forEach(path => {
-        let obj = Dark.getDeep(Dark, path[0]);
+    Dark.singleDefinitions.forEach(loc => {
+        let obj = Dark.getDeep(Dark, loc.path);
 
-        path[1].forEach(key => {
-            Object.defineProperty(window, key, {
-                value: obj[key],
-                writable: false,
-                configurable: false
-            });
+        loc.properties.forEach(key => {
+            try {
+                Object.defineProperty(window, key, {
+                    value: obj[key],
+                    writable: false,
+                    configurable: false
+                });
+            } catch {};
         });
     });
 };
@@ -4301,8 +4301,7 @@ Dark.utils = new Dark(true); // Dummy instance for utils
 Dark.default = new Dark(); // Default Dark instance
 Dark.setMain(Dark.default); // Set default to main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
-
-if(!Dark.multiple) Dark.defineConstants(); // Load constants and objects
+Dark.defineConstants(); // Load constants and objects
 
 // Compile for Khan Academy since all files are blocked :(
 Dark.compileKA();
