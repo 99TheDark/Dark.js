@@ -1,5 +1,7 @@
 "use strict"; // For ES6+ strict error mode
 
+window.DarkJSisFirstTimeRunningTemporaryVariable = !window.Dark;
+
 var Dark = function(dummy = false) {
     // Dark() = bad, new Dark() = good
     if(!(this instanceof Dark)) throw "Dark can only be called with the new operator";
@@ -1670,6 +1672,9 @@ var Dark = function(dummy = false) {
     }
 };
 
+Dark.first = window.DarkJSisFirstTimeRunningTemporaryVariable;
+window.DarkJSisFirstTimeRunningTemporaryVariable = undefined;
+
 // I mean, it can't be denied
 Dark.darkObject = true;
 
@@ -1677,7 +1682,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.8.12";
+Dark.version = "pre-0.7.8.13";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -4300,7 +4305,7 @@ Dark.default = new Dark(); // Default Dark instance
 Dark.setMain(Dark.default); // Set default to main
 Dark.globallyUpdateVariables(Dark.main); // First load of variables
 
-if(window.Dark) Dark.defineConstants(); // Load constants and objects
+if(Dark.first) Dark.defineConstants(); // Load constants and objects
 
 // Compile for Khan Academy since all files are blocked :(
 Dark.compileKA();
