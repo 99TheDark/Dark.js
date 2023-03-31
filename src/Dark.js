@@ -2,6 +2,9 @@
 
 (win => {
 
+    console.log(window);
+    console.log(win);
+
     if(win.Dark) return;
 
     var Dark = function(dummy = false) {
@@ -4293,8 +4296,5 @@
 
     // Freeze objects
     Object.freeze(Dark);
-
-    console.log(window);
-    console.log(win);
 
 })(window);
