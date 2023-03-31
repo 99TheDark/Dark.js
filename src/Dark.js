@@ -1,6 +1,7 @@
 "use strict"; // For ES6+ strict error mode
 
-var windowID = "Dark.js version 0.7.8.3 bugtest"
+var windowID = "Dark.js version 0.7.8.4 bugtest";
+window["abc"] = 5;
 console.log(window);
 
 if(window.Dark) throw "There is more than one Dark.js import"; // Stop multiple imports
@@ -1681,7 +1682,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.8.3";
+Dark.version = "pre-0.7.8.4";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
