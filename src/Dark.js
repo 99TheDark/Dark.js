@@ -1,8 +1,8 @@
 "use strict"; // For ES6+ strict error mode
 
-(() => {
+(win => {
 
-    if(window.Dark) return;
+    if(win.Dark) return;
 
     var Dark = function(dummy = false) {
         // Dark() = bad, new Dark() = good
@@ -1681,7 +1681,7 @@
     Dark.instances = [];
 
     // Current version
-    Dark.version = "pre-0.7.8.6";
+    Dark.version = "pre-0.7.8.7";
 
     // Empty functions that can be changed by the user
     Dark.empties = [
@@ -2045,7 +2045,7 @@
         "cute/WallBlock",
         "cute/WallBlockTall",
         "cute/WaterBlock",
-        "cute/WindowTall",
+        "cute/winTall",
         "cute/WoodBlock",
         "space/background",
         "space/beetleship",
@@ -2413,7 +2413,7 @@
         return Dark.main;
     };
 
-    let off = window.OffscreenCanvas ?? Dark.createCanvas; // For Safari
+    let off = win.OffscreenCanvas ?? Dark.createCanvas; // For Safari
 
     Dark.fileCacheKA = {
         "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 vertPos;\nin vec2 vertUV;\nout vec2 uv;\nout vec2 pos;\nvoid main() {\n pos = vertPos;\n uv = vertUV;\n gl_Position = vec4(vertPos, 0.0, 1.0);\n}",
@@ -2482,7 +2482,7 @@
         if(!m.isMain) return; // If it isn't the main instance 
         // Update empties so they can be defined
         Dark.editable.forEach(key => {
-            if(window[key]) m[key] = window[key];
+            if(win[key]) m[key] = win[key];
         });
         // Update global variables
         for(const mainKey in m) {
@@ -2492,10 +2492,10 @@
             // Else set
             if(typeof m[mainKey] == "object" && !m[mainKey].darkObject && mainKey != "keys") {
                 for(const key in m[mainKey]) {
-                    window[key] = m[mainKey][key];
+                    win[key] = m[mainKey][key];
                 }
             } else {
-                window[mainKey] = m[mainKey];
+                win[mainKey] = m[mainKey];
             }
         }
     };
@@ -2503,7 +2503,7 @@
     Dark.defineConstants = function() {
         Dark.singleDefinitions.forEach(type => {
             for(key in Dark[type]) {
-                Object.defineProperty(window, key, {
+                Object.defineProperty(win, key, {
                     value: Dark[type][key],
                     writable: false,
                     configurable: false
@@ -4282,9 +4282,8 @@
     // For KA
     Dark.startTime = performance.now();
 
-    Dark.default = new Dark(); // Default Dark instance
-
     let u = Dark.utils = new Dark(true); // Dummy instance for utils
+    Dark.default = new Dark(); // Default Dark instance
     Dark.setMain(Dark.default); // Set default to main
     Dark.globallyUpdateVariables(Dark.main); // First load of variables
     Dark.defineConstants(); // Load constants and objects
@@ -4295,4 +4294,7 @@
     // Freeze objects
     Object.freeze(Dark);
 
-})();
+    console.log(window);
+    console.log(win);
+
+})(win);
