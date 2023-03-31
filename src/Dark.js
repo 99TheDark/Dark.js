@@ -1,6 +1,9 @@
 "use strict"; // For ES6+ strict error mode
 
-if(parent.Dark) throw "There is more than one Dark.js import"; // Stop multiple imports
+var windowID = "Dark.js version 0.7.8.3 bugtest"
+console.log(window);
+
+if(window.Dark) throw "There is more than one Dark.js import"; // Stop multiple imports
 
 var Dark = function(dummy = false) {
     if(!(this instanceof Dark)) throw "Dark can only be called with the new operator"; // Dark() = bad, new Dark() = good
@@ -1678,7 +1681,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.8.2";
+Dark.version = "pre-0.7.8.3";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -2410,7 +2413,7 @@ Dark.getMain = function() {
     return Dark.main;
 };
 
-parent.OffscreenCanvas ??= Dark.createCanvas; // For Safari
+window.OffscreenCanvas ??= Dark.createCanvas; // For Safari
 
 Dark.fileCacheKA = {
     "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 vertPos;\nin vec2 vertUV;\nout vec2 uv;\nout vec2 pos;\nvoid main() {\n pos = vertPos;\n uv = vertUV;\n gl_Position = vec4(vertPos, 0.0, 1.0);\n}",
@@ -2480,7 +2483,7 @@ Dark.globallyUpdateVariables = function(m) {
 
     // Update empties so they can be defined
     Dark.editable.forEach(function(key) {
-        if(parent[key]) m[key] = parent[key];
+        if(window[key]) m[key] = window[key];
     });
     // Update global variables
     for(const mainKey in m) {
@@ -2490,10 +2493,10 @@ Dark.globallyUpdateVariables = function(m) {
         // Else set
         if(typeof m[mainKey] == "object" && !m[mainKey].darkObject && mainKey != "keys") {
             for(const key in m[mainKey]) {
-                parent[key] = m[mainKey][key];
+                window[key] = m[mainKey][key];
             }
         } else {
-            parent[mainKey] = m[mainKey];
+            window[mainKey] = m[mainKey];
         }
     }
 };
@@ -2501,7 +2504,7 @@ Dark.globallyUpdateVariables = function(m) {
 Dark.defineConstants = function() {
     Dark.singleDefinitions.forEach(type => {
         for(key in Dark[type]) {
-            Object.defineProperty(parent, key, {
+            Object.defineProperty(window, key, {
                 value: Dark[type][key],
                 writable: false,
                 configurable: false
