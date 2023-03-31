@@ -2182,15 +2182,24 @@ Dark.ignoreGlobal = [
 ];
 
 Dark.singleDefinitions = [
-    "DVector",
-    "DFont",
-    "DImage",
-    "DMatrix",
-    "DRandom",
-    "DTimer",
-    "DIdentification",
-    "DGradient"
-].concat(Object.keys(Dark.constants));
+    [
+        ["objects"],
+        [
+            "DVector",
+            "DFont",
+            "DImage",
+            "DMatrix",
+            "DRandom",
+            "DTimer",
+            "DIdentification",
+            "DGradient"
+        ]
+    ],
+    [
+        ["constants"],
+        Object.keys(Dark.constants)
+    ]
+];
 
 // For loading and saving styles
 Dark.styleIgnore = [
@@ -2503,14 +2512,16 @@ Dark.globallyUpdateVariables = function(m) {
 };
 
 Dark.defineConstants = function() {
-    Dark.singleDefinitions.forEach(type => {
-        for(key in Dark[type]) {
+    Dark.singleDefinitions.forEach(path => {
+        let obj = Dark.getDeep(Dark, path[0]);
+
+        path[1].forEach(key => {
             Object.defineProperty(window, key, {
-                value: Dark[type][key],
+                value: obj[key],
                 writable: false,
                 configurable: false
             });
-        }
+        });
     });
 };
 
