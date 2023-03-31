@@ -2045,7 +2045,7 @@
         "cute/WallBlock",
         "cute/WallBlockTall",
         "cute/WaterBlock",
-        "cute/winTall",
+        "cute/WindowTall",
         "cute/WoodBlock",
         "space/background",
         "space/beetleship",
@@ -4297,4 +4297,4 @@
     console.log(window);
     console.log(win);
 
-})(win);
+})(window);
