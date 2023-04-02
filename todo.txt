@@ -1,5 +1,5 @@
 To add:
-* Gradient fill & stroke
+• Gradient fill & stroke
 • Colorspaces
 • blendColor
 • DImage.noise(x, y, width, height) / DImage.noise(x, y, z, width, height, depth) (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
@@ -10,11 +10,11 @@ To add:
 • DColor
 • DImage.split to split an image into an array of images
 • Seperate static functions and updating functions (like sign vs angleMode)
-• Only update events code when changed
-• Better ID generator to make the values seem more realistic
-* Replace DMatrix stuff with ...args so using width placeholder becomes less confusing
+• Only update events code when changed using object.defineProperty
 * Swap arc to use ctx.arc
 * Optimize 1x1 points
+• textAlign(LEFT, HANGING); (the hanging part)
+• Allow min & max to take in more than two inputs
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
@@ -34,8 +34,6 @@ Possibly to add:
 
 Bugs:
 • Dark.js mouse breaks when width / height is not the same as the style width / height
-• Obscure bug with text alignment. See Clash of Code final project (#PaperNukes). 
-• KA DImage.checkLoad doesn't exist for who knows why
-• window.Dark exists somehow before it's defined on KA
+• get() not working on KA
 
 Note: '*' means to add by next minor update versus '•' which means to add eventually
