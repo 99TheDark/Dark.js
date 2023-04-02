@@ -1,5 +1,7 @@
 "use strict"; // For ES6+ strict error mode
 
+if(window.Dark) Dark = undefined;
+
 var Dark = function(dummy = false) {
     // Dark() = bad, new Dark() = good
     if(!(this instanceof Dark)) throw "Dark can only be called with the new operator";
@@ -53,7 +55,6 @@ var Dark = function(dummy = false) {
     d.vertices = [];
     d.vertexCache = [];
     d.imageCache = {};
-    d.cachedImageCount = 0;
     d.successfullyCachedImageCount = 0;
     d.loaded = false;
     d.began = false;
@@ -132,7 +133,7 @@ var Dark = function(dummy = false) {
         d.stroke(0);
         d.strokeWeight(1);
         d.textFont("12px Arial");
-        d.textLeading(5);
+        d.textLeading(0);
         d.preventDefault(k.KEY);
         d.allowDefault(k.CLICK);
         d.preventDefault(k.SCROLL);
@@ -267,7 +268,7 @@ var Dark = function(dummy = false) {
     };
 
     var colorString = function(c) {
-        return `rgba(${d.red(c)}, ${d.green(c)}, ${d.blue(c)}, ${d.alpha(c) / 255})`;
+        return `rgba(${d.red(c)}, ${d.green(c)}, ${d.blue(c)}, ${d.alpha(c) * Dark.precomputed.BYTE})`;
     };
 
     bulkAdd({
@@ -338,7 +339,7 @@ var Dark = function(dummy = false) {
         },
 
         disableKhanImagePreload: function() {
-            Dark.changeable.khanImagePreload = false;
+            Dark.externals.khanImagePreload = false;
         },
 
         createGraphics: function(width, height, dummy) {
@@ -1379,7 +1380,6 @@ var Dark = function(dummy = false) {
             if(Object.keys(d.imageCache).includes(url) && d.began) return d.imageCache[url];
 
             d.imageCache[url] = null;
-            d.cachedImageCount++;
 
             let result = new o.DImage(1, 1, d);
             result.loadComplete = false;
@@ -1421,14 +1421,12 @@ var Dark = function(dummy = false) {
                     new Promise((resolve, reject) => {
                         fetch(url)
                             .then(response => response.blob())
-                            .then(blob => createImageBitmap(blob)
-                                .then(bitmap => {
-                                    result.bitmap = bitmap;
-                                    result.bitmapLoaded = true;
-
-                                    resolve();
-                                })
-                            )
+                            .then(blob => createImageBitmap(blob))
+                            .then(bitmap => {
+                                result.bitmap = bitmap;
+                                result.bitmapLoaded = true;
+                                resolve();
+                            })
                             .catch(err => reject(err))
                     })
                 ])
@@ -1465,7 +1463,6 @@ var Dark = function(dummy = false) {
 
                 let img = new o.DImage(1, 1, d);
                 d.imageCache[url] = null;
-                d.cachedImageCount++;
                 img.image = new Image();
                 img.image.src = url;
                 img.image.crossOrigin = "anonymous";
@@ -1659,13 +1656,14 @@ var Dark = function(dummy = false) {
         s.cursor = "auto";
         s.looping = true;
 
-        if(Dark.khan && Dark.changeable.khanImagePreload) Dark.imageLocationsKA.forEach(loc => d.getImage(loc));
-
         addEventListener("load", () => {
             d.loaded = true;
             Dark.globallyUpdateVariables(d);
+
+            if(Dark.khan && Dark.externals.khanImagePreload) Dark.imageLocationsKA.forEach(loc => d.getImage(loc));
             d.preload();
-            if(!d.began && d.successfullyCachedImageCount == d.cachedImageCount) d.begin();
+
+            if(!d.began && d.successfullyCachedImageCount == d.imageCache.length) d.begin();
         });
     }
 };
@@ -1677,7 +1675,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.8.15";
+Dark.version = "pre-0.7.9";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1756,9 +1754,12 @@ Dark.constants = {
     HSB: 34, // unused
     HSV: 34, // unused
     HSL: 35, // unused
+    HSLA: 35,
     HEX: 36, // unused
     CMYK: 37, // unused
     CMY: 37, // unused
+    HWB: 38, // unused
+    LCH: 39, // unused
     PERLIN: 50, // unused
     SIMPLEX: 51, // unused
     WORLEY: 52, // unused
@@ -2165,7 +2166,6 @@ Dark.ignoreGlobal = [
     "saves",
     "vertexCache",
     "imageCache",
-    "cachedImageCount",
     "successfullyCachedImageCount",
     "settings",
     "constants",
@@ -2217,14 +2217,20 @@ Dark.mouseMap = [
     "forward"
 ];
 
-Dark.changeable = {};
-Dark.cache = {};
+Dark.externals = {};
+Dark.cache = {
+    images: []
+};
+
+Dark.precomputed = {
+    BYTE: 1 / 255
+};
 
 // Since object values inside frozen object can be edited
-Dark.changeable.errorCount = 0;
+Dark.externals.errorCount = 0;
 
 // Auto on for Khan Academy
-Dark.changeable.khanImagePreload = true;
+Dark.externals.khanImagePreload = true;
 
 // Constants, but not quite (can be edited)
 Dark.maxErrorCount = 50;
@@ -2377,12 +2383,12 @@ Dark.createCanvas = function(width, height) {
 };
 
 Dark.doError = function(type, err) {
-    if(Dark.changeable.errorCount == Dark.maxErrorCount) {
+    if(Dark.externals.errorCount == Dark.maxErrorCount) {
         console.warn("Too many warnings and errors have been made, the rest will not display.");
-    } else if(Dark.changeable.errorCount < Dark.maxErrorCount) {
+    } else if(Dark.externals.errorCount < Dark.maxErrorCount) {
         console[type](err);
     }
-    Dark.changeable.errorCount++;
+    Dark.externals.errorCount++;
 };
 
 Dark.warn = function(warning) {
@@ -2412,8 +2418,8 @@ Dark.observe = function(object, type, callback) {
 // Sets the Dark object that has global access
 Dark.setMain = function(dark) {
     if(dark instanceof Dark) {
-        if(Dark.main) Dark.main.isMain = false;
-        Dark.main = dark;
+        if(Dark.externals.main) Dark.externals.main.isMain = false;
+        Dark.externals.main = dark;
         dark.isMain = true;
     } else {
         Dark.error(`${dark} is not an instance of Dark`);
@@ -2421,7 +2427,7 @@ Dark.setMain = function(dark) {
 };
 
 Dark.getMain = function() {
-    return Dark.main;
+    return Dark.externals.main;
 };
 
 window.OffscreenCanvas ?? Dark.createCanvas; // For Safari
@@ -2527,7 +2533,9 @@ Dark.defineConstants = function() {
     });
 };
 
-Dark.objects = (function() {
+Dark.objects = (() => {
+
+    let k = Dark.constants;
 
     // Vectors
     let DVector = function(x, y, z) {
@@ -3568,22 +3576,22 @@ Dark.objects = (function() {
     DImage.toDataArray = img => img.toDataArray();
     DImage.initializeShaders([
         {
-            key: Dark.constants.INVERT,
+            key: k.INVERT,
             shader: "invert"
         }, {
-            key: Dark.constants.OPAQUE,
+            key: k.OPAQUE,
             shader: "opaque"
         }, {
-            key: Dark.constants.GRAY,
+            key: k.GRAY,
             shader: "grayscale"
         }, {
-            key: Dark.constants.ERODE,
+            key: k.ERODE,
             shader: "erode"
         }, {
-            key: Dark.constants.DILATE,
+            key: k.DILATE,
             shader: "dilate"
         }, {
-            key: Dark.constants.THRESHOLD,
+            key: k.THRESHOLD,
             shader: "threshold",
             param: {
                 min: 0,
@@ -3591,7 +3599,7 @@ Dark.objects = (function() {
                 default: 0.5
             }
         }, {
-            key: Dark.constants.POSTERIZE,
+            key: k.POSTERIZE,
             shader: "posterize",
             param: {
                 min: 2,
@@ -3599,7 +3607,7 @@ Dark.objects = (function() {
                 default: 255
             }
         }, {
-            key: Dark.constants.BLUR,
+            key: k.BLUR,
             shader: "blur",
             param: {
                 min: 0,
@@ -3607,27 +3615,27 @@ Dark.objects = (function() {
                 default: 1
             }
         }, {
-            key: Dark.constants.SHARPEN,
+            key: k.SHARPEN,
             shader: "sharpen"
         }, {
-            key: Dark.constants.SEPIA,
+            key: k.SEPIA,
             shader: "sepia"
         }, {
-            key: Dark.constants.OUTLINE,
+            key: k.OUTLINE,
             shader: "outline"
         }, {
-            key: Dark.constants.SWIRL,
+            key: k.SWIRL,
             shader: "swirl",
             param: {
-                min: 0,
+                min: -12,
                 max: 12,
                 default: 4
             }
         }, {
-            key: Dark.constants.EDGE,
+            key: k.EDGE,
             shader: "edge"
         }, {
-            key: Dark.constants.CONTRAST,
+            key: k.CONTRAST,
             shader: "contrast",
             param: {
                 min: 0,
@@ -3635,7 +3643,7 @@ Dark.objects = (function() {
                 default: 3
             }
         }, {
-            key: Dark.constants.VIGNETTE,
+            key: k.VIGNETTE,
             shader: "vignette",
             param: {
                 min: 0,
@@ -3643,7 +3651,7 @@ Dark.objects = (function() {
                 default: 0.5
             }
         }, {
-            key: Dark.constants.BRIGHTNESS,
+            key: k.BRIGHTNESS,
             shader: "brightness",
             param: {
                 min: -1,
@@ -3651,7 +3659,7 @@ Dark.objects = (function() {
                 default: 0
             }
         }, {
-            key: Dark.constants.BLACK,
+            key: k.BLACK,
             shader: "black",
             param: {
                 min: 0,
@@ -3659,7 +3667,7 @@ Dark.objects = (function() {
                 default: 0
             }
         }, {
-            key: Dark.constants.WHITE,
+            key: k.WHITE,
             shader: "white",
             param: {
                 min: 0,
@@ -3667,10 +3675,10 @@ Dark.objects = (function() {
                 default: 1
             }
         }, {
-            key: Dark.constants.NORMALIZE,
+            key: k.NORMALIZE,
             shader: "normalize"
         }, {
-            key: Dark.constants.BOX,
+            key: k.BOX,
             shader: "box",
             param: {
                 min: 0,
@@ -3678,7 +3686,7 @@ Dark.objects = (function() {
                 default: 1
             }
         }, {
-            key: Dark.constants.TRANSPARENCY,
+            key: k.TRANSPARENCY,
             shader: "transparency",
             param: {
                 min: 0,
@@ -3686,7 +3694,7 @@ Dark.objects = (function() {
                 default: 0
             }
         }, {
-            key: Dark.constants.PIXELATE,
+            key: k.PIXELATE,
             shader: "pixelate",
             param: {
                 min: 1,
@@ -3694,7 +3702,7 @@ Dark.objects = (function() {
                 default: 1
             }
         }, {
-            key: Dark.constants.FISHEYE,
+            key: k.FISHEYE,
             shader: "fisheye",
             param: {
                 min: 0,
@@ -3702,80 +3710,81 @@ Dark.objects = (function() {
                 default: 1
             }
         }, {
-            key: Dark.constants.EMBOSS,
+            key: k.EMBOSS,
             shader: "emboss"
         }, {
-            key: Dark.constants.SOBEL,
+            key: k.SOBEL,
             shader: "sobel",
             multikernel: Object.fromEntries([
-                [Dark.constants.TOP, [
+                [k.TOP, [
                     1.0, 2.0, 1.0,
                     0.0, 0.0, 0.0,
                     -1.0, -2.0, -1.0
                 ]],
-                [Dark.constants.BOTTOM, [
+                [k.BOTTOM, [
                     -1.0, -2.0, -1.0,
                     0.0, 0.0, 0.0,
                     1.0, 2.0, 1.0
                 ]],
-                [Dark.constants.LEFT, [
+                [k.LEFT, [
                     1.0, 0.0, -1.0,
                     2.0, 0.0, -2.0,
                     1.0, 0.0, -1.0
                 ]],
-                [Dark.constants.RIGHT, [
+                [k.RIGHT, [
                     -1.0, 0.0, 1.0,
                     -2.0, 0.0, 2.0,
                     -1.0, 0.0, 1.0
                 ]]
             ]),
-            defaultShader: Dark.constants.TOP
+            defaultShader: k.TOP
         }
     ]);
     requestAnimationFrame(DImage.raf);
 
     // Matrices
-    let DMatrix = function(width, height, val = 0) {
+    let DMatrix = function(...args) {
         if(!(this instanceof DMatrix)) return new (Function.prototype.bind.apply(DMatrix, [null].concat(...arguments)));
 
         this.darkObject = true;
 
         // https://stackoverflow.com/questions/53992415/how-to-fill-multidimensional-array-in-javascript
-        if(width instanceof DMatrix) {
-            this.width = width.width;
-            this.height = width.height;
+        if(args[0] instanceof DMatrix) {
+            this.width = args[0].width;
+            this.height = args[0].height;
             this.mat = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
-            this.set(width);
-        } else if(Array.isArray(width)) {
+            this.set(args[0]);
+        } else if(Array.isArray(args[0])) {
             this.mat = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
-            if(Array.isArray(width[0])) {
+            if(Array.isArray(args[0][0])) {
                 if(arguments.length == 1) {
-                    this.width = width[0].length;
-                    this.height = width.length;
-                    this.set(width);
+                    this.width = args[0][0].length;
+                    this.height = args[0].length;
+                    this.set(args[0]);
                 } else {
                     this.width = arguments.length;
-                    this.height = width[0].length;
+                    this.height = args[0][0].length;
                     this.set([...arguments]);
                 }
             } else {
-                this.width = height;
-                this.height = val;
-                this.set(width);
+                this.width = args[1];
+                this.height = args[2];
+                this.set(args[0]);
             }
-        } else if(width instanceof DOMMatrix) {
+        } else if(args[0] instanceof DOMMatrix) {
+            let mat = args[0];
             this.width = 4;
             this.height = 4;
             this.mat = [
-                [width.m11, width.m21, width.m31, width.m41],
-                [width.m12, width.m22, width.m32, width.m42],
-                [width.m13, width.m23, width.m33, width.m43],
-                [width.m14, width.m24, width.m34, width.m44]
+                [mat.m11, mat.m21, mat.m31, mat.m41],
+                [mat.m12, mat.m22, mat.m32, mat.m42],
+                [mat.m13, mat.m23, mat.m33, mat.m43],
+                [mat.m14, mat.m24, mat.m34, mat.m44]
             ];
         } else {
-            this.width = width;
-            this.height = height;
-            this.mat = Array(height).fill(null).map(() => Array(width).fill(val));
+            this.width = args[0];
+            this.height = args[1];
+            this.mat = Array(args[1]).fill(null).map(() => Array(args[0]).fill(args[2]));
         }
     };
     DMatrix.prototype.get = function(x, y) {
@@ -4218,9 +4227,26 @@ Dark.objects = (function() {
 
         this.darkObject = true;
 
-        this.id = (++DIdentification.current).toString(36);
+        DIdentification.current = BigInt(
+            Math.abs(
+                Math.floor(
+                    DIdentification.random.next() * 3452547895345 + Date.now() ** 3 + performance.now()
+                )
+            )
+        ) * BigInt(
+            Math.floor(
+                DIdentification.random.next() * 1000
+            )
+        ) << BigInt(
+            Math.floor(
+                DIdentification.random.next() * 20
+            )
+        );
+
+        this.id = DIdentification.current.toString(36).substring(0, 20);
     };
-    DIdentification.current = BigInt(Math.abs(Math.floor((Math.random() * (36 ** 10) + Date.now() ** 3) / 1e20))) << BigInt(Math.floor(Math.random() * 10));
+    DIdentification.current = Math.round((3457892375 * Date.now()) / 50435);
+    DIdentification.random = new DRandom();
 
     let DGradient = function(...args) {
         if(!(this instanceof DGradient)) return new (Function.prototype.bind.apply(DGradient, [null].concat(...arguments)));
@@ -4228,7 +4254,7 @@ Dark.objects = (function() {
         this.darkObject = true;
 
         this.stops = [];
-        this.mode = Dark.constants.LINEAR;
+        this.mode = k.LINEAR;
 
         let increment = 1 / args.length;
         args.forEach((color, index) => this.stops.push({
@@ -4241,36 +4267,88 @@ Dark.objects = (function() {
             default:
                 Dark.error("Invalid DGradient mode");
                 break;
-            case Dark.constants.LINEAR:
-                this.mode = Dark.constants.LINEAR;
+            case k.LINEAR:
+                this.mode = k.LINEAR;
                 break;
-            case Dark.constants.RADIAL:
-                this.mode = Dark.constants.RADIAL;
+            case k.RADIAL:
+                this.mode = k.RADIAL;
                 break;
-            case Dark.constants.CONIC:
-                this.mode = Dark.constants.CONIC;
+            case k.CONIC:
+                this.mode = k.CONIC;
                 break;
         }
         return this;
     };
     DGradient.prototype.toCanvasGradient = function() {
         let gradient = Dark.utils.ctx.createLinearGradient(0, 0, 1, 0);
-        this.stops.forEach(stop => gradient.addColorStop(stop.position, `rgba(${Dark.utils.red(stop.value)}, ${Dark.utils.green(stop.value)}, ${Dark.utils.blue(stop.value)}, ${Dark.utils.alpha(stop.value) / 255})`));
+
+        let r = Dark.utils.red(stop.value) * Dark.precomputed.BYTE;
+        let g = Dark.utils.green(stop.value) * Dark.precomputed.BYTE;
+        let b = Dark.utils.blue(stop.value) * Dark.precomputed.BYTE;
+        let a = Dark.utils.alpha(stop.value) * Dark.precomputed.BYTE;
+
+        this.stops.forEach(stop => gradient.addColorStop(stop.position, `rgba(${r}, ${g}, ${b}, ${a})`));
         return gradient;
     };
 
-    /*
-    
-    DColor feature ideas:
- 
-    convert(color, colorSpace1, colorSpace2);
-    mode
-    setRed(value);
-    setGreen(value);
-    setBlue(value);
-    setAlpha(value);
- 
-    */
+    let DColor = function(input, space) {
+        if(!(this instanceof DColor)) return new (Function.prototype.bind.apply(DColor, [null].concat(...arguments)));
+
+        this.space = space;
+
+        switch(space) {
+            case k.RGB:
+                [this.red, this.green, this.blue, this.alpha] = input;
+                break;
+            case k.HSV:
+                [this.hue, this.saturation, this.value, this.alpha] = input;
+                break;
+        }
+    };
+
+    DColor.convert = function(col, space) {
+        if(col.space == space) return col;
+
+        if(col.space == k.RGB && space == k.HSV) return DColor.RGBtoHSV(col);
+    };
+    DColor.RGBtoHSV = function(col) {
+        let r = col.red * Dark.precomputed.BYTE;
+        let g = col.green * Dark.precomputed.BYTE;
+        let b = col.blue * Dark.precomputed.BYTE;
+        let a = col.alpha * Dark.precomputed.BYTE;
+
+        let min = Math.min(r, Math.min(g, b));
+        let max = Math.max(r, Math.max(g, b));
+        let range = max - min;
+
+        let hue, saturation, value;
+
+        if(range == 0) {
+            hue = 0;
+        } else switch(max) {
+            case r:
+                hue = (60 * (g - b) / range + 360) % 360;
+                break;
+            case g:
+                hue = (60 * (b - r) / range + 120) % 360;
+                break;
+            case b:
+                hue = (60 * (r - g) / range + 240) % 360;
+                break;
+        }
+
+        if(max == 0) {
+            saturation = 0;
+        } else {
+            saturation = range / max * 100;
+        }
+
+        value = max * 100;
+
+        return new DColor([hue, saturation, value, a], k.HSV);
+    };
+
+    // console.log(DColor.convert(DColor.convert(new DColor([57, 188, 214, 255], k.RGB), k.HSV)), k.RGB);
 
     return {
         Dark: Dark,
@@ -4300,11 +4378,12 @@ Dark.startTime = performance.now();
 Dark.utils = new Dark(true); // Dummy instance for utils
 Dark.default = new Dark(); // Default Dark instance
 Dark.setMain(Dark.default); // Set default to main
-Dark.globallyUpdateVariables(Dark.main); // First load of variables
 Dark.defineConstants(); // Load constants and objects
+
+Dark.globallyUpdateVariables(Dark.externals.main); // First load of variables
 
 // Compile for Khan Academy since all files are blocked :(
 Dark.compileKA();
 
-// Freeze objects
+// Freeze Dark object
 Object.freeze(Dark);
