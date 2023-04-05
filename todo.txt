@@ -3,18 +3,15 @@ To add:
 • Colorspaces
 • blendColor
 • DImage.noise(x, y, width, height) / DImage.noise(x, y, z, width, height, depth) (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
-* Image masking
+* Image masking (Using GLSL)
 • Make DVector rotations work in 3D
-* Share image cache onto main Dark
 * Cache and use frequently used images
 • DColor
 • DImage.split to split an image into an array of images
 • Seperate static functions and updating functions (like sign vs angleMode)
-• Only update events code when changed using object.defineProperty
-* Swap arc to use ctx.arc
-* Optimize 1x1 points
-• textAlign(LEFT, HANGING); (the hanging part)
+• Only update events code when changed using object.defineProperty(get, set)
 • Allow min & max to take in more than two inputs
+• filter(SOBEL, ALL) using max(sobel left, sobel right, sobel bottom, sobel top)
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
@@ -22,7 +19,6 @@ Possibly to add:
 • println-like console
 • Font library for Google Fonts (Like https://www.khanacademy.org/computer-programming/i/6162502356762624)
 • Audio
-• Local storage, cookies, etc easy support
 • Cursor lock function — lockCursor() & unlockCursor()
 • Contours (negative shapes)
 • Framerate above natural refresh rate
