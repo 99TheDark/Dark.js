@@ -5,17 +5,14 @@ To add:
 • DImage.noise(x, y, width, height) / DImage.noise(x, y, z, width, height, depth) (See https://github.com/thomcc/quick-noise.js/blob/master/quick-noise.js)
 * Image masking (Using GLSL)
 • Make DVector rotations work in 3D
-* Cache and use frequently used images
-• DColor
 • DImage.split to split an image into an array of images
-• Seperate static functions and updating functions (like sign vs angleMode)
-• Only update events code when changed using object.defineProperty(get, set)
-• Allow min & max to take in more than two inputs
-• filter(SOBEL, ALL) using max(sobel left, sobel right, sobel bottom, sobel top)
+* Seperate static functions and changeable functions (like sign vs rotate)
+• Switch from loading OffscreenCanvas onto the window to a Dark property
+• Mask DImage.initializeShaders and such cache all shaders including filters
 
 Possibly to add:
 • Store shapes in variables, maybe DShape
-• Transformations from point for ease of use (maybe to DShape)
+• Transformations from point for ease of use (maybe with DShape)
 • println-like console
 • Font library for Google Fonts (Like https://www.khanacademy.org/computer-programming/i/6162502356762624)
 • Audio
@@ -30,6 +27,7 @@ Possibly to add:
 
 Bugs:
 • Dark.js mouse breaks when width / height is not the same as the style width / height
-• get() not working on KA
+• Dark not defined on FireFox Khan Academy
+• Bold text doesn't work on Safari
 
 Note: '*' means to add by next minor update versus '•' which means to add eventually
