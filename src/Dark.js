@@ -1,6 +1,6 @@
 "use strict"; // For ES6+ strict error mode
 
-if(window.Dark) Dark = undefined;
+if(window.Dark) Dark = undefined; // For Khan Academy
 
 var Dark = function(dummy = false) {
     // Dark() = bad, new Dark() = good
@@ -13,6 +13,7 @@ var Dark = function(dummy = false) {
     let k = d.constants = Dark.constants;
     let o = d.objects = Dark.objects;
     let i = d.imageCache = Dark.cache.images;
+    let f = d.fontCache = Dark.cache.fonts;
     let p = d.precomputed = Dark.precomputed;
     let s = d.settings = {};
 
@@ -32,7 +33,7 @@ var Dark = function(dummy = false) {
     let keys = {};
     d.keys = new Proxy(keys, {
         get: (target, prop) => target[prop] ?? false,
-        set: () => {}
+        set: Dark.noop
     });
 
     // Default values
@@ -56,6 +57,8 @@ var Dark = function(dummy = false) {
     d.styles = [];
     d.vertices = [];
     d.vertexCache = [];
+    d.editable = {};
+
     d.loaded = false;
     d.began = false;
 
@@ -76,7 +79,19 @@ var Dark = function(dummy = false) {
     d.ctx = d.canvas.getContext("2d");
 
     // Add empties
-    Dark.empties.forEach(emp => d[emp] = () => {});
+    Dark.empties.forEach(emp => {
+        d.editable[emp] = function() {};
+
+        Object.defineProperty(d, emp, {
+            get() {
+                return d.editable[emp];
+            },
+            set(func) {
+                if(typeof func == "function") d.editable[emp] = func;
+            },
+            configurable: true
+        });
+    });
 
     // Helper functions
     var bulkAdd = function(obj) {
@@ -101,6 +116,13 @@ var Dark = function(dummy = false) {
     var cacheVert = function(vert) {
         d.vertices.push(vert);
         vert.points.forEach(v => d.vertexCache.push(o.DVector.create(v.x, v.y)));
+    };
+
+    var isReady = function() {
+        return (
+            i.successes == Object.keys(i.items).length &&
+            f.successes == Object.keys(f.items).length
+        );
     };
 
     // Integer-only factorial, 100% accurate and faster
@@ -267,6 +289,16 @@ var Dark = function(dummy = false) {
 
     };
 
+    var loadBegin = function() {
+        d.loaded = true;
+        Dark.globallyUpdateVariables(d);
+
+        if(Dark.khan && Dark.externals.khanImagePreload) Dark.imageLocationsKA.forEach(loc => d.getImage(loc));
+        d.preload();
+
+        if(!d.began && isReady()) d.begin();
+    };
+
     var colorString = function(c) {
         return `rgba(${d.red(c)}, ${d.green(c)}, ${d.blue(c)}, ${d.alpha(c) * p.BYTE})`;
     };
@@ -274,10 +306,10 @@ var Dark = function(dummy = false) {
     bulkAdd({
 
         // Setup functions & getters
-        size: function(w = innerWidth, h = innerHeight) {
+        size(w = innerWidth, h = innerHeight) {
             if(typeof w == "number" && typeof h == "number" && w > 0 && h > 0) {
                 // Because for some reason changing width & height reset all parameters >:(
-                // It took me ~8 hours to figure this out. D:<
+                // It took me ~8 hours to figure this out...
                 let old = d.clone(d.ctx);
 
                 [d.width, d.height] = [d.canvas.width, d.canvas.height] = [w, h];
@@ -294,7 +326,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        setCanvas: function(canvas) {
+        setCanvas(canvas) {
             if(canvas instanceof HTMLCanvasElement) {
                 d.canvas = canvas;
                 d.width = canvas.width;
@@ -315,15 +347,15 @@ var Dark = function(dummy = false) {
             }
         },
 
-        getCanvas: function() {
+        getCanvas() {
             return d.canvas;
         },
 
-        getContext: function() {
+        getContext() {
             return d.ctx;
         },
 
-        exit: function() {
+        exit() {
             // Set main to default if main
             if(d.isMain) Dark.setMain(Dark.default);
 
@@ -334,22 +366,22 @@ var Dark = function(dummy = false) {
             Dark.instances.splice(Dark.instances.indexOf(d), 1);
         },
 
-        setTitle: function(title) {
+        setTitle(title) {
             document.title = title;
         },
 
-        disableKhanImagePreload: function() {
+        disableKhanImagePreload() {
             Dark.externals.khanImagePreload = false;
         },
 
-        createGraphics: function(width, height, dummy) {
+        createGraphics(width, height, dummy = false) {
             let graphics = new Dark(dummy);
             graphics.size(width, height);
             return graphics;
         },
 
         // Math-y
-        dist: function(...args) {
+        dist(...args) {
             let dx, dy, dz = 0;
             if(args.length = 6) {
                 // x1, y1, x2, y2
@@ -366,7 +398,7 @@ var Dark = function(dummy = false) {
             return d.sqrt(dx * dx + dy * dy + dz * dz);
         },
 
-        intersect: function(x1, y1, x2, y2, x3, y3, x4, y4) {
+        intersect(x1, y1, x2, y2, x3, y3, x4, y4) {
             if(x1 == x3 && y1 == y3) return true;
             if(x2 == x4 && y2 == y4) return true;
 
@@ -389,25 +421,41 @@ var Dark = function(dummy = false) {
             }
         },
 
-        gamma: function(z) {
+        gamma(z) {
             // Stirling's Approximation
             return d.sqrt(k.TAU / z) * (((z + 1 / (12 * z + 1 / (10 * z))) / k.E) ** z);
         },
 
         // Not very accurate, pretty good up to the hundreths
-        factorial: function(num) {
+        factorial(num) {
             return Number.isInteger(num) ? intFactorial(num) : gamma(num + 1);
         },
 
-        choose: function(n, k) {
+        choose(n, k) {
             return intFactorial(n) / (intFactorial(n - k) * intFactorial(k));
         },
 
-        repeat: function(count, callback) {
+        repeat(count, callback) {
             for(let i = 0; i < count; i++) callback(i);
         },
 
-        random: function(...args) {
+        minimum(...args) {
+            if(args.length == 1 && d.isArray(args[0])) args = args[0];
+
+            let minVal = args[0];
+            args.forEach(num => num < minVal && (minVal = num));
+            return minVal;
+        },
+
+        maximum(...args) {
+            if(args.length == 1 && d.isArray(args[0])) args = args[0];
+
+            let maxVal = args[0];
+            args.forEach(num => num > maxVal && (maxVal = num));
+            return maxVal;
+        },
+
+        random(...args) {
             switch(args.length) {
                 default:
                     return d.randomGenerator.next() * (args[1] - args[0]) + args[0];
@@ -418,48 +466,48 @@ var Dark = function(dummy = false) {
             }
         },
 
-        randomSeed: function(seed) {
+        randomSeed(seed) {
             if(seed != d.randomGenerator.seed) d.randomGenerator = o.DRandom.create(seed);
         },
 
-        cursor: function(type = "default") {
+        cursor(type = "default") {
             s.cursor = type;
             d.canvas.style.cursor = type;
         },
 
-        noCursor: function() {
+        noCursor() {
             s.cursor = "none";
             d.canvas.style.cursor = "none";
         },
 
-        loop: function() {
+        loop() {
             s.looping = true;
         },
 
-        noLoop: function() {
+        noLoop() {
             s.looping = false;
         },
 
-        frameRate: function(desiredFPS) {
+        frameRate(desiredFPS) {
             s.frameStep = 1000 / desiredFPS;
         },
 
-        enableContextMenu: function() {
+        enableContextMenu() {
             s.contextMenu = true;
             d.canvas.oncontextmenu = true;
         },
 
-        disableContextMenu: function() {
+        disableContextMenu() {
             s.contextMenu = false;
             d.canvas.oncontextmenu = false;
         },
 
-        fullscreen: function() {
+        fullscreen() {
             d.canvas.requestFullscreen();
         },
 
         // Color
-        color: function(r, g, b, a) {
+        color(r, g, b, a) {
             if(d.isArray(r)) return color.apply(null, [...r]);
 
             let l = arguments.length;
@@ -484,7 +532,7 @@ var Dark = function(dummy = false) {
             return (a << 24) + (r << 16) + (g << 8) + (b);
         },
 
-        randomColor: function() {
+        randomColor() {
             return color(d.randomGenerator.next() * 255, d.randomGenerator.next() * 255, d.randomGenerator.next() * 255);
         },
 
@@ -494,7 +542,7 @@ var Dark = function(dummy = false) {
         blue: color => color & 255,
         alpha: color => (color >> 24) & 255,
 
-        lerpColor: function(c1, c2, percent) {
+        lerpColor(c1, c2, percent) {
             return color(
                 d.lerp(d.red(c1), d.red(c2), percent),
                 d.lerp(d.green(c1), d.green(c2), percent),
@@ -503,28 +551,28 @@ var Dark = function(dummy = false) {
             );
         },
 
-        fill: function(...args) {
+        fill(...args) {
             let c = s.fill = d.color.apply(null, args);
             d.ctx.fillStyle = colorString(c);
         },
 
-        noFill: function() {
+        noFill() {
             s.fill = 0;
             d.ctx.fillStyle = "rgba(0, 0, 0, 0)";
         },
 
-        stroke: function(...args) {
+        stroke(...args) {
             // Same as fill
             let c = s.stroke = d.color.apply(null, args);
             d.ctx.strokeStyle = colorString(c);
         },
 
-        noStroke: function() {
+        noStroke() {
             s.stroke = 0;
             d.ctx.strokeStyle = "rgba(0, 0, 0, 0)";
         },
 
-        background: function(...args) {
+        background(...args) {
             d.ctx.save();
             d.ctx.resetTransform();
             let c = d.color.apply(null, args);
@@ -534,7 +582,7 @@ var Dark = function(dummy = false) {
             d.ctx.restore();
         },
 
-        clear: function() {
+        clear() {
             d.ctx.save();
             d.ctx.resetTransform();
             d.ctx.clearRect(0, 0, d.width, d.height);
@@ -542,7 +590,7 @@ var Dark = function(dummy = false) {
         },
 
         // Drawing modes
-        strokeCap: function(mode) {
+        strokeCap(mode) {
             switch(mode) {
                 default:
                     Dark.error("Invalid strokeCap type");
@@ -561,7 +609,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        strokeJoin: function(mode = k.MITER) {
+        strokeJoin(mode = k.MITER) {
             switch(mode) {
                 default:
                     Dark.error("Invalid strokeJoin type");
@@ -581,24 +629,24 @@ var Dark = function(dummy = false) {
             }
         },
 
-        strokeWeight: function(weight) {
+        strokeWeight(weight) {
             if(!s.smoothing) weight = d.round(weight);
             s.strokeWeight = weight;
             d.ctx.lineWidth = weight;
         },
 
-        smooth: function() {
+        smooth() {
             s.smoothing = true;
             d.ctx.imageSmoothingQuality = "high";
         },
 
-        noSmooth: function() {
+        noSmooth() {
             s.smoothing = true;
             d.ctx.imageSmoothingEnabled = false;
             d.ctx.imageSmoothingQuality = "low";
         },
 
-        antialiasing: function(state) {
+        antialiasing(state) {
             if(typeof state == "boolean") {
                 d.ctx.mozImageSmoothingEnabled = state;
                 d.ctx.webkitImageSmoothingEnabled = state;
@@ -609,7 +657,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        preventDefault: function(listener) {
+        preventDefault(listener) {
             if(arguments.length == 0) Dark.error("No listener type given");
             switch(listener) {
                 default:
@@ -627,7 +675,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        allowDefault: function(listener) {
+        allowDefault(listener) {
             if(arguments.length == 0) Dark.error("No listener type given");
             switch(listener) {
                 default:
@@ -645,7 +693,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        angleMode: function(mode) {
+        angleMode(mode) {
             switch(mode) {
                 default:
                     Dark.error("Invalid angleMode");
@@ -659,7 +707,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        ellipseMode: function(mode = k.CENTER) {
+        ellipseMode(mode = k.CENTER) {
             switch(mode) {
                 default:
                     Dark.error("Invalid ellipseMode");
@@ -676,7 +724,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        rectMode: function(mode = k.CORNER) {
+        rectMode(mode = k.CORNER) {
             switch(mode) {
                 default:
                     Dark.error("Invalid rectMode");
@@ -690,7 +738,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        imageMode: function(mode = k.CORNER) {
+        imageMode(mode = k.CORNER) {
             switch(mode) {
                 default:
                     Dark.error("Invalid imageMode");
@@ -704,7 +752,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        resizeMode: function(mode = k.WIDTH) {
+        resizeMode(mode = k.WIDTH) {
             switch(mode) {
                 default:
                     Dark.error("Invalid resizeMode");
@@ -718,13 +766,13 @@ var Dark = function(dummy = false) {
             }
         },
 
-        curveTightness: function(tightness = 0) {
+        curveTightness(tightness = 0) {
             s.curveTightness = tightness;
             s.curveMatrixTightness = (tightness - 1) * p.SIXTH;
         },
 
         // Transformations
-        pushMatrix: function() {
+        pushMatrix() {
             if(d.transforms.length > d.maxStackSize) {
                 Dark.error(`Maximum matrix stack size reached, pushMatrix() called ${d.maxStackSize} times.`);
             } else {
@@ -732,7 +780,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        popMatrix: function() {
+        popMatrix() {
             let transform = d.transforms.pop();
             if(!transform) {
                 Dark.error("No more transforms to restore in popMatrix()");
@@ -741,12 +789,12 @@ var Dark = function(dummy = false) {
             }
         },
 
-        resetMatrix: function() {
+        resetMatrix() {
             d.transforms.length = 0;
             d.ctx.resetTransform();
         },
 
-        getDOMMatrix: function() {
+        getDOMMatrix() {
             return d.ctx.getTransform();
         },
 
@@ -760,19 +808,19 @@ var Dark = function(dummy = false) {
         0 0 0 1
  
         */
-        getMatrix: function() {
+        getMatrix() {
             return o.DMatrix.fromDOMMatrix(d.ctx.getTransform());
         },
 
-        setMatrix: function(matrix) {
+        setMatrix(matrix) {
             d.ctx.setTransform(new o.DMatrix(matrix.toDOMMatrix()));
         },
 
-        printMatrix: function() {
+        printMatrix() {
             console.log(d.getMatrix().toString());
         },
 
-        pushStyle: function() {
+        pushStyle() {
             if(d.styles.length > d.maxStackSize) {
                 Dark.error(`Maximum style stack size reached, pushStyle() called ${d.maxStackSize} times.`);
             } else {
@@ -783,7 +831,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        popStyle: function() {
+        popStyle() {
             let style = d.styles.pop();
             if(!style) {
                 Dark.error("No more styles to restore in popStyle()");
@@ -792,12 +840,12 @@ var Dark = function(dummy = false) {
             }
         },
 
-        resetStyle: function() {
+        resetStyle() {
             d.styles.length = 0;
             loadDefault();
         },
 
-        push: function() {
+        push() {
             if(d.transforms.length > d.maxStackSize) {
                 Dark.error(`Maximum stack size reached, push() called ${d.maxStackSize} times.`);
             } else {
@@ -806,7 +854,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        pop: function() {
+        pop() {
             let save = d.saves.pop();
             if(!save) {
                 Dark.error("No more saves to restore in pop()");
@@ -816,25 +864,25 @@ var Dark = function(dummy = false) {
             }
         },
 
-        reset: function() {
+        reset() {
             d.saves.length = 0;
             s = {...d.defaultSettings};
             d.setCanvas(d.canvas);
         },
 
-        translate: function(x, y) {
+        translate(x, y) {
             d.ctx.translate(x, y);
         },
 
-        rotate: function(ang) {
+        rotate(ang) {
             d.ctx.rotate(angle(ang));
         },
 
-        scale: function(w, h = w) {
+        scale(w, h = w) {
             d.ctx.scale(w, h);
         },
 
-        skew: function(h, v = 0) {
+        skew(h, v = 0) {
             let transform = d.ctx.getTransform();
             transform.skewYSelf(h * 0.01);
             transform.skewXSelf(v * 0.01);
@@ -842,7 +890,7 @@ var Dark = function(dummy = false) {
         },
 
         // Shapes
-        rect: function(x, y, width, height, r1, r2, r3, r4) {
+        rect(x, y, width, height, r1, r2, r3, r4) {
             if(!s.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
             [width, height] = [d.abs(width), d.abs(height)];
 
@@ -869,7 +917,7 @@ var Dark = function(dummy = false) {
             d.ctx.restore();
         },
 
-        ellipse: function(x, y, width, height) {
+        ellipse(x, y, width, height) {
             if(s.ellipseMode == k.RADIUS) width /= 2, height /= 2;
 
             if(!s.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
@@ -885,7 +933,7 @@ var Dark = function(dummy = false) {
             d.ctx.restore();
         },
 
-        arc: function(x, y, width, height, start, stop) {
+        arc(x, y, width, height, start, stop) {
             if(s.ellipseMode == k.RADIUS) width /= 2, height /= 2;
 
             if(!s.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
@@ -902,7 +950,7 @@ var Dark = function(dummy = false) {
             d.ctx.restore();
         },
 
-        line: function(x1, y1, x2, y2) {
+        line(x1, y1, x2, y2) {
             if(!s.smoothing) [x1, y1, x2, y2] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2)];
 
             d.ctx.beginPath();
@@ -911,7 +959,7 @@ var Dark = function(dummy = false) {
             d.ctx.stroke();
         },
 
-        point: function(x, y) {
+        point(x, y) {
             if(!s.smoothing) x = d.round(x), y = d.round(y);
 
             d.ctx.save();
@@ -926,7 +974,7 @@ var Dark = function(dummy = false) {
             d.ctx.restore();
         },
 
-        circle: function(x, y, radius) {
+        circle(x, y, radius) {
             if(!s.smoothing) [x, y, radius] = [d.round(x), d.round(y), d.round(radius)];
             radius = d.round(radius);
 
@@ -939,12 +987,12 @@ var Dark = function(dummy = false) {
             d.ctx.restore();
         },
 
-        square: function(...args) {
+        square(...args) {
             args.splice(3, 0, args[2]); // side is index 2
             rect.apply(null, args);
         },
 
-        triangle: function(x1, y1, x2, y2, x3, y3) {
+        triangle(x1, y1, x2, y2, x3, y3) {
             if(!s.smoothing) [x1, y1, x2, y2, x3, y3] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3)];
 
             d.ctx.beginPath();
@@ -956,7 +1004,7 @@ var Dark = function(dummy = false) {
             d.ctx.stroke();
         },
 
-        quad: function(x1, y1, x2, y2, x3, y3, x4, y4) {
+        quad(x1, y1, x2, y2, x3, y3, x4, y4) {
             if(!s.smoothing) [x1, y1, x2, y2, x3, y3, x4, y4] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3), d.round(x4), d.round(y4)];
 
             d.ctx.beginPath();
@@ -969,7 +1017,7 @@ var Dark = function(dummy = false) {
             d.ctx.stroke();
         },
 
-        beginShape: function() {
+        beginShape() {
             if(shapeInProgress) {
                 Dark.error("Cannot begin a new shape before the previous shape has ended");
             } else {
@@ -981,7 +1029,7 @@ var Dark = function(dummy = false) {
         },
 
         // https://www.cs.umd.edu/~reastman/slides/L19P01ParametricCurves.pdf
-        endShape: function(type = k.OPEN) {
+        endShape(type = k.OPEN) {
             if(d.vertices.length < 2 || d.vertices[0].type == k.BEZIER) return;
             d.ctx.beginPath();
             d.vertices.forEach(function(vert, index) {
@@ -1035,7 +1083,7 @@ var Dark = function(dummy = false) {
         },
 
         // Kinda copied from ski, though slightly different (curveVertex)
-        vertex: function(x, y) {
+        vertex(x, y) {
             if(!s.smoothing) [x, y] = [d.round(x), d.round(y)];
 
             let vert = {
@@ -1051,7 +1099,7 @@ var Dark = function(dummy = false) {
             cacheVert(vert);
         },
 
-        curveVertex: function(cx, cy) {
+        curveVertex(cx, cy) {
             if(!s.smoothing) [x, y] = [d.round(cx), d.round(cy)];
 
             let vert = {
@@ -1067,7 +1115,7 @@ var Dark = function(dummy = false) {
             cacheVert(vert);
         },
 
-        bezierVertex: function(x1, y1, x2, y2, x3, y3) {
+        bezierVertex(x1, y1, x2, y2, x3, y3) {
             if(!s.smoothing) [x1, y1, x2, y2, x3, y3] = [d.round(x1), d.round(y1), d.round(x2), d.round(y2), d.round(x3), d.round(y3)];
 
             let vert = {
@@ -1089,14 +1137,14 @@ var Dark = function(dummy = false) {
             cacheVert(vert);
         },
 
-        bezier: function(x1, y1, cx1, cy1, cx2, cy2, x2, y2) {
+        bezier(x1, y1, cx1, cy1, cx2, cy2, x2, y2) {
             beginShape();
             vertex(x1, y1);
             bezierVertex(cx1, cy1, cx2, cy2, x2, y2);
             endShape();
         },
 
-        curve: function(x1, y1, x2, y2, x3, y3, x4, y4) {
+        curve(x1, y1, x2, y2, x3, y3, x4, y4) {
             beginShape();
             vertex(x1, y1);
             vertex(x2, y2);
@@ -1106,33 +1154,33 @@ var Dark = function(dummy = false) {
         },
 
         // https://en.wikipedia.org/wiki/B%C3%A9zier_curve
-        bezierPoint: function(a, b, c, d, t) {
+        bezierPoint(a, b, c, d, t) {
             let i = 1 - t;
             return i * i * i * a + 3 * i * i * t * b + 3 * i * t * t * c + t * t * t * d;
         },
 
         // https://www.mvps.org/directx/articles/catmull/
-        curvePoint: function(a, b, c, d, t) {
+        curvePoint(a, b, c, d, t) {
             return 0.5 * ((2 * b) + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (3 * b - 3 * c + d - a) * t * t * t);
         },
 
-        curveTangent: function(a, b, c, d, t) {
+        curveTangent(a, b, c, d, t) {
             return 0.5 * ((c - a) + 2 * (2 * a - 5 * b + 4 * c - d) * t + 3 * (3 * b - 3 * c + d - a) * t * t);
         },
 
-        bezierTangent: function(a, b, c, d, t) {
+        bezierTangent(a, b, c, d, t) {
             let i = 1 - t;
             return 3 * i * i * (b - a) + 6 * i * t * (c - b) + 3 * t * t * (d - c);
         },
 
-        reloadFont: function() {
+        reloadFont() {
             d.ctx.font = s.font.toString();
             s.genericTextMeasure = d.ctx.measureText("0");
             s.textHeight = s.genericTextMeasure.fontBoundingBoxAscent + s.genericTextMeasure.fontBoundingBoxDescent;
         },
 
         // Text
-        textSize: function(size) {
+        textSize(size) {
             if(!s.smoothing) size = d.round(size);
 
             s.textSize = size;
@@ -1140,7 +1188,7 @@ var Dark = function(dummy = false) {
             d.reloadFont();
         },
 
-        textAlign: function(alignX, alignY) {
+        textAlign(alignX, alignY) {
             let l = arguments.length;
 
             if(l == 0) alignX = k.LEFT, alignY = k.BASELINE;
@@ -1188,7 +1236,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        textFont: function(font) {
+        textFont(font) {
             if(typeof font == "string") {
                 font = new o.DFont(font);
             }
@@ -1201,11 +1249,11 @@ var Dark = function(dummy = false) {
             }
         },
 
-        createFont: function(txt) {
+        createFont(txt) {
             return o.DFont.parse(txt);
         },
 
-        textStyle: function(style) {
+        textStyle(style) {
             switch(style) {
                 default:
                     s.font.weight = "normal";
@@ -1221,23 +1269,23 @@ var Dark = function(dummy = false) {
             d.reloadFont();
         },
 
-        textWidth: function(text) {
+        textWidth(text) {
             return d.ctx.measureText(text).width;
         },
 
-        textAscent: function() {
+        textAscent() {
             return s.genericTextMeasure.fontBoundingBoxAscent;
         },
 
-        textDescent: function() {
+        textDescent() {
             return s.genericTextMeasure.fontBoundingBoxDescent;
         },
 
-        textLeading: function(amount) {
+        textLeading(amount) {
             s.lineGap = amount;
         },
 
-        text: function(text, x, y, width = Infinity, height = Infinity) {
+        text(text, x, y, width = Infinity, height = Infinity) {
             if(!s.smoothing) [x, y] = [d.round(x), d.round(y)];
 
             let lines = [];
@@ -1315,8 +1363,53 @@ var Dark = function(dummy = false) {
             });
         },
 
+        loadFont(name) {
+            if(Object.keys(f.items).includes(name) && d.began) return f.items[name];
+
+            if(Dark.khan) return new o.DFont(name);
+
+            f.items[name] = null;
+
+            let font = new o.DFont();
+            font.family = name;
+
+            fetch(`https://fonts.googleapis.com/css2?family=${name.replace(/\s/g, "+")}`)
+                .then(file => file.text())
+                .then(text => {
+                    let fonturls = [];
+                    for(let i = 0; i < Dark.maxLoopSaftey; i++) {
+                        let start = text.indexOf("url(");
+                        let end = text.indexOf(") format");
+
+                        if(start == -1 || end == -1) break;
+
+                        start += 4;
+
+                        fonturls.push(text.substring(start, end));
+
+                        text = text.substring(end + 8);
+                    }
+
+                    fonturls.forEach(loc => {
+                        let fontface = new FontFace(name, `url(${loc})`);
+                        fontface.load();
+                        document.fonts.add(fontface);  
+                    });
+
+                    f.successes++;
+
+                    if(isReady()) d.begin();
+                })
+                .catch(() => {
+                    console.warn(`'${name}' is not a valid font`);
+                    f.successes++;
+                });
+            
+            return font;
+        },
+
         // Images
-        get: function(...args) {
+        get(...args) {
             switch(args.length) {
                 default:
                     return Dark.error("get requires 0 or 4 parameters, not " + args.length);
@@ -1335,25 +1428,28 @@ var Dark = function(dummy = false) {
             }
         },
 
-        set: function(x, y, ...args) {
+        set(x, y, ...args) {
             d.ctx.save();
             d.ctx.fillStyle = colorString(d.color.apply(null, args)); // Slightly faster than d.color(args)
             d.ctx.fillRect(x, y, 1, 1);
             d.ctx.restore();
         },
 
-        loadPixels: function() {
+        loadPixels() {
             d.imageData = d.ctx.getImageData(0, 0, d.width, d.height);
         },
 
-        updatePixels: function() {
+        updatePixels() {
             d.ctx.putImageData(d.imageData, 0, 0, d.width, d.height);
         },
 
-        image: function(img, x, y, width, height) {
+        image(img, x, y, width, height) {
+            if(img.failed) return;
+
             img.checkLoad();
 
             [width, height] = [d.abs(width), d.abs(height)];
+
             d.ctx.save();
             if(img instanceof ImageData) img = new o.DImage(img, d);
             if(img instanceof Dark) img = new o.DImage(img.canvas, img).copy();
@@ -1381,11 +1477,12 @@ var Dark = function(dummy = false) {
             }
             if(s.imageMode == k.CENTER) d.ctx.translate(- w / 2, - h / 2);
             if(!s.smoothing) [x, y, width, height] = [d.round(x), d.round(y), d.round(width), d.round(height)];
+
             d.ctx.drawImage(img.getRenderable(), 0, 0, img.width, img.height, x, y, w, h);
             d.ctx.restore();
         },
 
-        loadImage: function(url) {
+        loadImage(url) {
             if(Object.keys(i.items).includes(url) && d.began) return i.items[url];
 
             i.items[url] = null;
@@ -1411,7 +1508,7 @@ var Dark = function(dummy = false) {
                     result.sourceURL = url;
                     result.loadComplete = true;
 
-                    if(i.successes == Object.keys(i.items).length) d.begin();
+                    if(isReady()) d.begin();
                 };
             } else {
                 Promise.all([
@@ -1436,7 +1533,7 @@ var Dark = function(dummy = false) {
                                 result.bitmapLoaded = true;
                                 resolve();
                             })
-                            .catch(err => reject(err))
+                            .catch(() => reject(Dark.warn(`Invalid image URL '${url}'`)));
                     })
                 ])
                     .then(() => {
@@ -1457,15 +1554,18 @@ var Dark = function(dummy = false) {
                         );
                         result.updatePixels();
 
-                        if(i.successes == Object.keys(i.items).length) d.begin();
+                        if(isReady()) d.begin();
                     })
-                    .catch(err => Dark.error(err));
+                    .catch(() => {
+                        i.successes++;
+                        result.failed = true;
+                    });
             }
 
             return result;
         },
 
-        getImage: function(loc) {
+        getImage(loc) {
             if(Dark.khan) {
                 let url = `https://cdn.kastatic.org/third_party/javascript-khansrc/live-editor/build/images/${loc}.png`;
                 if(Object.keys(i.items).includes(url) && d.began) return i.items[url].copy();
@@ -1484,7 +1584,7 @@ var Dark = function(dummy = false) {
                     img.ctx.drawImage(img.image, 0, 0, img.width, img.height, 0, 0, img.width, img.height);
                     img.updatePixels();
 
-                    if(i.successes == Object.keys(i.items).length) d.begin();
+                    if(isReady()) d.begin();
                 };
                 return img;
             } else {
@@ -1492,7 +1592,7 @@ var Dark = function(dummy = false) {
             }
         },
 
-        filter: function(filter, value) {
+        filter(filter, value) {
             // Tested this, fastest to include the source
             screen.ctx.drawImage(d.canvas, 0, 0, d.width, d.height, 0, 0, d.width, d.height);
             screen.filter(filter, value);
@@ -1665,15 +1765,7 @@ var Dark = function(dummy = false) {
         s.cursor = "auto";
         s.looping = true;
 
-        addEventListener("load", () => {
-            d.loaded = true;
-            Dark.globallyUpdateVariables(d);
-
-            if(Dark.khan && Dark.externals.khanImagePreload) Dark.imageLocationsKA.forEach(loc => d.getImage(loc));
-            d.preload();
-
-            if(!d.began && i.successes == i.items.length) d.begin();
-        });
+        if(Dark.externals.windowLoaded) loadBegin(); else addEventListener("load", loadBegin);
     }
 };
 
@@ -1684,7 +1776,7 @@ Dark.darkObject = true;
 Dark.instances = [];
 
 // Current version
-Dark.version = "pre-0.7.10";
+Dark.version = "pre-0.7.11";
 
 // Empty functions that can be changed by the user
 Dark.empties = [
@@ -1716,6 +1808,7 @@ Dark.constants = {
     PI: Math.PI,
     HALF_PI: Math.PI / 2,
     QUARTER_PI: Math.PI / 4,
+    EIGHTH_PI: Math.PI / 8,
     E: Math.E,
     PHI: (1 + Math.sqrt(5)) / 2,
     TAU: Math.PI * 2,
@@ -2199,8 +2292,8 @@ Dark.ignoreGlobal = [
     "loaded",
     "began",
     "randomGenerator",
-    "name",
-    "precomputed"
+    "precomputed",
+    "editable"
 ];
 
 Dark.singleDefinitions = [
@@ -2244,6 +2337,10 @@ Dark.cache = {
     images: {
         successes: 0,
         items: {}
+    },
+    fonts: {
+        successes: 0,
+        items: {}
     }
 };
 
@@ -2251,7 +2348,8 @@ Dark.precomputed = {
     BYTE: 1 / 255,
     SIXTH: 1 / 6,
     DEGREES: 180 / Math.PI,
-    RADIANS: Math.PI / 180
+    RADIANS: Math.PI / 180,
+    CIRCLE: 360
 };
 
 // Since object values inside frozen object can be edited
@@ -2264,6 +2362,7 @@ Dark.externals.khanImagePreload = true;
 Dark.maxErrorCount = 50;
 Dark.maxStackSize = 500;
 Dark.maxSearchDepth = 10;
+Dark.maxLoopSaftey = 100;
 
 /* 
  
@@ -2299,13 +2398,31 @@ Dark.getDeep = function(obj, keyArr) {
     return point;
 };
 
+Dark.isNative = function(obj) {
+    if(obj == null) return false;
+    if(typeof obj != "function") return false;
+    return obj.constructor.toString().slice(obj.constructor.name.length + 12) == "{ [native code] }";
+};
+
+Dark.objectLike = function(obj) {
+    if(obj == null) return false;
+    if(typeof obj == "object") return true;
+    if(typeof obj == "function" && Object.keys(obj).length != 0) return true;
+
+    return false;
+};
+
 // It's always good to be able to deep clone something
-Dark.clone = function(e, depth = 0, path = [], tree = []) { // Not working!!! aghhhh
-    if(depth == 0) Dark.clone.paths = [];
+Dark.clone = function(e, depth = 0, path = [], tree = []) {
+    if(depth == 0) {
+        if(Dark.objectLike(e) && e.constructor !== Object && !Dark.utils.isArray(e)) return Dark.clone([e])[0];
+
+        Dark.clone.paths = [];
+    }
 
     if(depth > Dark.maxSearchDepth) return e;
 
-    if(typeof e == "object" || typeof e == "function") {
+    if(Dark.objectLike(e)) {
         tree = [...tree];
         tree.push(e);
 
@@ -2324,7 +2441,7 @@ Dark.clone = function(e, depth = 0, path = [], tree = []) { // Not working!!! ag
                 let cloned = Dark.clone(val, depth + 1, curPath, tree);
                 cloned.length = Object.keys(cloned).length;
                 obj[key] = Array.from(cloned);
-            } else if(typeof val == "object" && val != null && val.constructor.toString().slice(val.constructor.name.length + 12) != "{ [native code] }") {
+            } else if(typeof val == "object" && val != null && !Dark.isNative) {
                 if(val.constructor === Object) {
                     // Deep object cloning
                     obj[key] = Dark.clone(val, depth + 1, curPath, tree);
@@ -2370,6 +2487,9 @@ Dark.bigintChecker = function(_, obj) {
 
 Dark.noop = function() {};
 
+Dark.externals.windowLoaded = false;
+addEventListener("load", () => Dark.externals.windowLoaded = true);
+
 // Collisions
 Dark.rectRect = function(x1, y1, width1, height1, x2, y2, width2, height2) {
     return x1 + width1 > x2 && x1 < x2 + width2 && y1 + height1 > y2 && y1 < y2 + height2;
@@ -2404,11 +2524,11 @@ Dark.observe = function(object, type, callback) {
         Dark.error("Invalid type, must be either GET or SET");
     }
     object = new Proxy(object, {
-        get: function(target, prop) { // also reciever
+        get(target, prop) { // also reciever
             if(type == Dark.constants.GET) callback(prop);
             return target[prop];
         },
-        set: function(target, prop, value) {
+        set(target, prop, value) {
             if(type == Dark.constants.SET) callback(prop, value);
             target[prop] = value;
         }
@@ -2430,7 +2550,7 @@ Dark.getMain = function() {
     return Dark.externals.main;
 };
 
-window.OffscreenCanvas ?? Dark.createCanvas; // For Safari
+window.OffscreenCanvas ??= Dark.createCanvas; // For Safari
 
 Dark.fileCacheKA = {
     "/filters/global.vert": "# version 300 es\nprecision lowp float;\nin vec2 vertPos;\nin vec2 vertUV;\nout vec2 uv;\nout vec2 pos;\nvoid main() {\n pos = vertPos;\n uv = vertUV;\n gl_Position = vec4(vertPos, 0.0, 1.0);\n}",
@@ -2540,6 +2660,7 @@ Dark.defineConstants = function() {
 Dark.objects = (() => {
 
     let k = Dark.constants;
+    let p = Dark.precomputed;
 
     // Vectors
     let DVector = function(x, y, z) {
@@ -2580,6 +2701,13 @@ Dark.objects = (() => {
     DVector.prototype.zero3D = function() {
         [this.x, this.y, this.z] = [0, 0, 0];
         return this;
+    };
+    DVector.prototype.reset = function() {
+        if(this.is2D) {
+            [this.x, this.y] = [0, 0];
+        } else {
+            [this.x, this.y, this.z] = [0, 0, 0];
+        }
     };
     DVector.add = function(v1, v2) {
         if(v2 instanceof DVector) {
@@ -3052,6 +3180,8 @@ Dark.objects = (() => {
 
         this.darkObject = true;
 
+        this.loadedFromSource = false;
+
         if(args.length > 1) {
             // Order: family, size, weight, style, variant
             this.family = args[0] ?? DFont.defaults.family;
@@ -3077,8 +3207,17 @@ Dark.objects = (() => {
                 this.style = obj.style ?? DFont.defaults.style;
                 this.variant = obj.variant ?? DFont.defaults.variant;
             }
+        } else if(args.length == 0) {
+            this.loadedFromSource = true;
+            this.loaded = false;
+
+            this.family = DFont.defaults.family;
+            this.size = DFont.defaults.size;
+            this.weight = DFont.defaults.weight;
+            this.style = DFont.defaults.style;
+            this.variant = DFont.defaults.variant;
         } else {
-            Dark.error("Invalid input to DFont");
+            Dark.error("Invalid DFont input");
         }
     };
     DFont.parse = function(str) {
@@ -3159,6 +3298,7 @@ Dark.objects = (() => {
         this.image = null;
         this.bitmap = null;
         this.loadedFromSource = false;
+        this.failed = false;
 
         if(args[0] instanceof ImageData) {
             this.imageData = args[0];
@@ -3578,7 +3718,7 @@ Dark.objects = (() => {
     DImage.updatePixels = img => img.updatePixels();
     DImage.setDisposability = (img, disposable) => img.setDisposability(disposable);
     DImage.toDataArray = img => img.toDataArray();
-    DImage.initializeShaders([
+    DImage.shaderSettings = [
         {
             key: k.INVERT,
             shader: "invert"
@@ -3721,24 +3861,24 @@ Dark.objects = (() => {
             shader: "sobel",
             multikernel: Object.fromEntries([
                 [k.TOP, [
-                    1.0, 2.0, 1.0,
-                    0.0, 0.0, 0.0,
-                    -1.0, -2.0, -1.0
+                    1, 2, 1,
+                    0, 0, 0,
+                    -1, -2, -1
                 ]],
                 [k.BOTTOM, [
-                    -1.0, -2.0, -1.0,
-                    0.0, 0.0, 0.0,
-                    1.0, 2.0, 1.0
+                    -1, -2, -1,
+                    0, 0, 0,
+                    1, 2, 1
                 ]],
                 [k.LEFT, [
-                    1.0, 0.0, -1.0,
-                    2.0, 0.0, -2.0,
-                    1.0, 0.0, -1.0
+                    1, 0, -1,
+                    2, 0, -2,
+                    1, 0, -1
                 ]],
                 [k.RIGHT, [
-                    -1.0, 0.0, 1.0,
-                    -2.0, 0.0, 2.0,
-                    -1.0, 0.0, 1.0
+                    -1, 0, 1,
+                    -2, 0, 2,
+                    -1, 0, 1
                 ]]
             ]),
             defaultShader: k.TOP
@@ -3775,7 +3915,8 @@ Dark.objects = (() => {
                 default: 50
             }
         }
-    ]);
+    ];
+    DImage.initializeShaders(DImage.shaderSettings);
     requestAnimationFrame(DImage.raf);
 
     // Matrices
@@ -4318,10 +4459,10 @@ Dark.objects = (() => {
     DGradient.prototype.toCanvasGradient = function() {
         let gradient = Dark.utils.ctx.createLinearGradient(0, 0, 1, 0);
 
-        let r = Dark.utils.red(stop.value) * Dark.precomputed.BYTE;
-        let g = Dark.utils.green(stop.value) * Dark.precomputed.BYTE;
-        let b = Dark.utils.blue(stop.value) * Dark.precomputed.BYTE;
-        let a = Dark.utils.alpha(stop.value) * Dark.precomputed.BYTE;
+        let r = Dark.utils.red(stop.value) * p.BYTE;
+        let g = Dark.utils.green(stop.value) * p.BYTE;
+        let b = Dark.utils.blue(stop.value) * p.BYTE;
+        let a = Dark.utils.alpha(stop.value) * p.BYTE;
 
         this.stops.forEach(stop => gradient.addColorStop(stop.position, `rgba(${r}, ${g}, ${b}, ${a})`));
         return gradient;
@@ -4348,16 +4489,15 @@ Dark.objects = (() => {
         if(col.space == k.RGB && space == k.HSV) return DColor.RGBtoHSV(col);
     };
     DColor.RGBtoHSV = function(col) {
-        let r = col.red * Dark.precomputed.BYTE;
-        let g = col.green * Dark.precomputed.BYTE;
-        let b = col.blue * Dark.precomputed.BYTE;
-        let a = col.alpha * Dark.precomputed.BYTE;
+        let r = col.red * p.BYTE;
+        let g = col.green * p.BYTE;
+        let b = col.blue * p.BYTE;
+
+        let hue, saturation, value;
 
         let min = Math.min(r, Math.min(g, b));
         let max = Math.max(r, Math.max(g, b));
         let range = max - min;
-
-        let hue, saturation, value;
 
         if(range == 0) {
             hue = 0;
@@ -4381,7 +4521,16 @@ Dark.objects = (() => {
 
         value = max * 100;
 
-        return new DColor([hue, saturation, value, a], k.HSV);
+        return new DColor([hue, saturation, value, col.alpha], k.HSV);
+    };
+    DColor.HSVtoRGB = function(col) {
+        let h = col.hue * p.CIRCLE;
+        let s = col.saturation / 100;
+        let v = col.value / 100;
+
+        let red, green, blue;
+
+        return new DColor([red, green, blue, col.alpha], k.RGB);
     };
 
     // console.log(DColor.convert(DColor.convert(new DColor([57, 188, 214, 255], k.RGB), k.HSV)), k.RGB);
